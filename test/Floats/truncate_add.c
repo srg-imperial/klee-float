@@ -11,8 +11,8 @@
 int main() {
   float x, y, z;
   klee_make_symbolic(&x, sizeof(float), "x");
-  klee_assume(x > 0.0); // This also implies x isn't a NaN
-  y = 1.0e12;
+  klee_assume(x > 0.0f); // This also implies x isn't a NaN
+  y = 1.0e12f;
   z = x + y;
   if ( z == y ) {
     // Note if we use reals to approximate floats this branch won't be feasible
