@@ -334,28 +334,36 @@ public:
     print(e, PC);
   }
 
-  void printConst(const ref<ConstantExpr> &e, PrintContext &PC, 
+  void printConst(const ref<ConstantExpr> &e, PrintContext &PC,
                   bool printWidth) {
     if (e->getWidth() == Expr::Bool)
       PC << (e->isTrue() ? "true" : "false");
     else {
       if (PCAllConstWidths)
-	printWidth = true;
-    
-      if (printWidth)
-	PC << "(w" << e->getWidth() << " ";
+        printWidth = true;
 
-      if (e->getWidth() <= 64) {
+      if (printWidth)
+        PC << "(w" << e->getWidth() << " ";
+
+      if (e->getWidth() <= 64 && !(e->isFloat())) {
         PC << e->getZExtValue();
       } else {
         std::string S;
-        e->toString(S);
+        if (e->isFloat()) {
+          // Emit as precise c99 hexfloat
+          // Is this the right design choice?
+          // They are quite hard to read but they're
+          // always bit-precise (no precision loss).
+          e->toString(S, /*radix=*/16);
+        } else {
+          e->toString(S);
+        }
         PC << S;
       }
 
       if (printWidth)
-	PC << ")";
-    }    
+        PC << ")";
+    }
   }
 
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
