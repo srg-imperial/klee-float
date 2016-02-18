@@ -11,8 +11,8 @@
 int main() {
   float x, y, z;
   klee_make_symbolic(&x, sizeof(float), "x");
-  klee_assume(x < 10000.0); // This also implies x isn't a NaN
-  y = 1.0e12;
+  klee_assume(x < 10000.0f); // This also implies x isn't a NaN
+  y = 1.0e12f;
   z = x + y;
   if ( z > y ) {
     // Note this branch should not be feasible when modelling floating point
