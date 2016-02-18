@@ -323,6 +323,36 @@ void Expr::dump() const {
 }
 
 /***/
+ConstantExpr::ConstantExpr(const llvm::APFloat &v)
+    : value(v.bitcastToAPInt()), mIsFloat(true) {
+  assert(&(v.getSemantics()) == &(getFloatSemantics()) &&
+         "float semantics mismatch");
+}
+
+llvm::APFloat ConstantExpr::getAPFloatValue() const {
+  const llvm::fltSemantics &fs = getFloatSemantics();
+  assert(&fs != &(llvm::APFloat::Bogus) && "Invalid float semantics");
+  return llvm::APFloat(fs, getAPValue());
+}
+bool ConstantExpr::isFloat() const { return mIsFloat; }
+
+const llvm::fltSemantics &ConstantExpr::getFloatSemantics() const {
+  switch (getWidth()) {
+  case Expr::Int16:
+    return llvm::APFloat::IEEEhalf;
+  case Expr::Int32:
+    return llvm::APFloat::IEEEsingle;
+  case Expr::Int64:
+    return llvm::APFloat::IEEEdouble;
+  case Expr::Fl80:
+    return llvm::APFloat::x87DoubleExtended;
+  case 128:
+    // FIXME: We could also have PPCDoubleDouble here...
+    return llvm::APFloat::IEEEquad;
+  default:
+    return llvm::APFloat::Bogus;
+  }
+}
 
 ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   switch (width) {
@@ -355,6 +385,49 @@ void ConstantExpr::toMemory(void *address) {
 }
 
 void ConstantExpr::toString(std::string &Res, unsigned radix) const {
+  if (mIsFloat) {
+    llvm::APFloat asF = getAPFloatValue();
+    switch (radix) {
+    case 10: {
+      llvm::SmallVector<char, 16> result;
+      // This is supposed to print with enough precision that it can
+      // survive a round trip (without precision loss) when using round
+      // to nearest even.
+      asF.toString(result, /*FormatPrecision=*/0, /*FormatMaxPadding=*/0);
+      Res = std::string(result.begin(), result.end());
+      return;
+    }
+    case 16: {
+      // Emit C99 Hex float
+      unsigned count = 0;
+      // Example format is -0x1.000p+4
+      // The total number of characters needed is approximately
+      //
+      // 5 + ceil(significand_bits/4) + 2 + ceil(exponent_bits*log_10(2)) + 1
+      //
+      // + 1 is for null terminator
+      //
+      // For IEEEquad (largest we support)
+      // significand_bits = 112
+      // exponent_bits = 15
+      //
+      // so we need a buffer size at most 41 bits
+      char buffer[41];
+      // The rounding mode does not matter here when we set hexDigits to 0 which
+      // will give the precise representation. So any rounding mode will do.
+      count = asF.convertToHexString(buffer,
+                                     /*hexDigits=*/0,
+                                     /*upperCase=*/false,
+                                     llvm::APFloat::rmNearestTiesToEven);
+      assert(count < sizeof(buffer) / sizeof(char));
+      Res = buffer;
+      return;
+    }
+    default:
+      assert(0 && "Unsupported radix for floating point constant");
+    }
+  }
+
   Res = value.toString(radix, false);
 }
 
