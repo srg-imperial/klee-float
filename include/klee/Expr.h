@@ -943,8 +943,12 @@ public:
 
 private:
   llvm::APInt value;
+  // Do we really need this? This is just used to determine how to print the
+  // constant.
+  bool mIsFloat : 1;
 
-  ConstantExpr(const llvm::APInt &v) : value(v) {}
+  ConstantExpr(const llvm::APInt &v) : value(v), mIsFloat(false) {}
+  ConstantExpr(const llvm::APFloat &v);
 
 public:
   ~ConstantExpr() {}
@@ -960,6 +964,10 @@ public:
   /// Clients should generally not use the APInt value directly and instead use
   /// native ConstantExpr APIs.
   const llvm::APInt &getAPValue() const { return value; }
+
+  /// \return Constant bitcasted to an APFloat
+  llvm::APFloat getAPFloatValue() const;
+  const llvm::fltSemantics &getFloatSemantics() const;
 
   /// getZExtValue - Returns the constant value zero extended to the
   /// return type of this method.
@@ -1012,7 +1020,9 @@ public:
   }
 
   static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
-    return alloc(f.bitcastToAPInt());
+    ref<ConstantExpr> r(new ConstantExpr(f));
+    r->computeHash();
+    return r;
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {
@@ -1047,6 +1057,10 @@ public:
 
   /// isAllOnes - Is this constant all ones.
   bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
+
+  /// \return True iff this ConstantExpr represents a floating
+  ///         point number
+  bool isFloat() const;
 
   /* Constant Operations */
 

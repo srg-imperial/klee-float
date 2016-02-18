@@ -1025,8 +1025,8 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
-    } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
-      return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
+    } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {
+      return ConstantExpr::alloc(cf->getValueAPF());
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
       return globalAddresses.find(gv)->second;
     } else if (isa<ConstantPointerNull>(c)) {
