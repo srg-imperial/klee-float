@@ -5,7 +5,7 @@
 #include "klee/klee.h"
 #include <stdio.h>
 
-// This based off an example from
+// This test is based off an example from
 // "Symbolic execution of floating-point computations"
 // by Bernard Botella, Arnaud Gotlieb, and Claude Michel
 int main() {
@@ -16,7 +16,7 @@ int main() {
   z = x + y;
   if ( z == y ) {
     // Note if we use reals to approximate floats this branch won't be feasible
-    printf("add x truncates\n");
+    printf("add x absorbed\n");
   } else {
     printf("addition visible\n");
   }

@@ -5,7 +5,7 @@
 #include "klee/klee.h"
 #include <stdio.h>
 
-// This based off an example from
+// This test is based off an example from
 // "Symbolic execution of floating-point computations"
 // by Bernard Botella, Arnaud Gotlieb, and Claude Michel
 int main() {
@@ -20,7 +20,7 @@ int main() {
     // then this branch is feasible.
     klee_report_error(__FILE__, __LINE__, "Branch should not be reachable", "fpfeas");
   } else {
-    printf("addition visible\n");
+    printf("add x absorbed\n");
   }
   return 0;
 }
