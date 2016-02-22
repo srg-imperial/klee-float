@@ -210,6 +210,16 @@ unsigned NotExpr::computeHash() {
   return hashValue;
 }
 
+unsigned FCmpExpr::computeHash() {
+  unsigned result = CmpExpr::computeHash();
+  // The predicate is not treated as a child so we have to manually modify the
+  // hash
+  result <<= 1;
+  result ^= this->pred * Expr::MAGIC_HASH_CONSTANT;
+  hashValue = result;
+  return hashValue;
+}
+
 ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   unsigned numArgs = args.size();
   (void) numArgs;
@@ -544,6 +554,88 @@ ref<ConstantExpr> ConstantExpr::Sgt(const ref<ConstantExpr> &RHS) {
 
 ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value.sge(RHS->value), Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::FCmp(const ref<ConstantExpr> &RHS,
+                                     FCmpExpr::Predicate p) {
+  APFloat lhsF = this->getAPFloatValue();
+  APFloat rhsF = RHS->getAPFloatValue();
+
+  APFloat::cmpResult CmpRes = lhsF.compare(rhsF);
+  bool result = false;
+  switch(p) {
+    // Predicates which only care about whether or not the operands are NaNs.
+  case FCmpExpr::FCMP_ORD:
+    result = CmpRes != APFloat::cmpUnordered;
+    break;
+
+  case FCmpExpr::FCMP_UNO:
+    result = CmpRes == APFloat::cmpUnordered;
+    break;
+
+    // Ordered comparisons return false if either operand is NaN.  Unordered
+    // comparisons return true if either operand is NaN.
+  case FCmpExpr::FCMP_UEQ:
+    if (CmpRes == APFloat::cmpUnordered) {
+      result = true;
+      break;
+    }
+  case FCmpExpr::FCMP_OEQ:
+    result = CmpRes == APFloat::cmpEqual;
+    break;
+
+  case FCmpExpr::FCMP_UGT:
+    if (CmpRes == APFloat::cmpUnordered) {
+      result = true;
+      break;
+    }
+  case FCmpExpr::FCMP_OGT:
+    result = CmpRes == APFloat::cmpGreaterThan;
+    break;
+
+  case FCmpExpr::FCMP_UGE:
+    if (CmpRes == APFloat::cmpUnordered) {
+      result = true;
+      break;
+    }
+  case FCmpExpr::FCMP_OGE:
+    result = CmpRes == APFloat::cmpGreaterThan || CmpRes == APFloat::cmpEqual;
+    break;
+
+  case FCmpExpr::FCMP_ULT:
+    if (CmpRes == APFloat::cmpUnordered) {
+      result = true;
+      break;
+    }
+  case FCmpExpr::FCMP_OLT:
+    result = CmpRes == APFloat::cmpLessThan;
+    break;
+
+  case FCmpExpr::FCMP_ULE:
+    if (CmpRes == APFloat::cmpUnordered) {
+      result = true;
+      break;
+    }
+  case FCmpExpr::FCMP_OLE:
+    result = CmpRes == APFloat::cmpLessThan || CmpRes == APFloat::cmpEqual;
+    break;
+
+  case FCmpExpr::FCMP_UNE:
+    result = CmpRes == APFloat::cmpUnordered || CmpRes != APFloat::cmpEqual;
+    break;
+  case FCmpExpr::FCMP_ONE:
+    result = CmpRes != APFloat::cmpUnordered && CmpRes != APFloat::cmpEqual;
+    break;
+  default:
+    llvm_unreachable("Invalid predicate");
+  }
+
+  if (result) {
+    // True
+    return ConstantExpr::alloc(1, Expr::Bool);
+  }
+  // False
+  return ConstantExpr::alloc(0, Expr::Bool);
 }
 
 /***/
@@ -1239,3 +1331,51 @@ CMPCREATE(UltExpr, Ult)
 CMPCREATE(UleExpr, Ule)
 CMPCREATE(SltExpr, Slt)
 CMPCREATE(SleExpr, Sle)
+
+ref<Expr> FCmpExpr::create(const ref<Expr> &l, const ref<Expr> &r,
+                           const Predicate p) {
+  assert(p < FCmpExpr::BAD_FCMP_PREDICATE);
+
+  // FIXME: Why doesn't KLEE have functions for making true and false?
+
+  // Handle predicates that we always fold
+  if (p == FCmpExpr::FCMP_FALSE) {
+    return ConstantExpr::alloc(0, Expr::Bool);
+  } else if (p == FCmpExpr::FCMP_TRUE) {
+    return ConstantExpr::alloc(1, Expr::Bool);
+  }
+
+// Handle one of the args being a NaN.
+// An ordered predicate which will return false if any operand is NaN.
+// An unordered predicate which will return true if either operand is NaN.
+#define CHECK_FOR_NAN(ARG)                                                     \
+  if (ConstantExpr *carg = dyn_cast<ConstantExpr>(ARG)) {                      \
+    assert(carg->isFloat() && "Should be float");                              \
+    llvm::APFloat cargF = carg->getAPFloatValue();                             \
+    if (cargF.isNaN()) {                                                       \
+      if (p >= FCmpExpr::FIRST_ORDERED_PREDICATE &&                            \
+          p <= FCmpExpr::LAST_ORDERED_PREDICATE) {                             \
+        return ConstantExpr::alloc(0, Expr::Bool);                             \
+      } else {                                                                 \
+        assert(p >= FCmpExpr::FIRST_UNORDERED_PREDICATE &&                     \
+               p <= FCmpExpr::LAST_UNORDERED_PREDICATE);                       \
+        return ConstantExpr::alloc(1, Expr::Bool);                             \
+      }                                                                        \
+    }                                                                          \
+  }
+  CHECK_FOR_NAN(l)
+  CHECK_FOR_NAN(r)
+#undef CHECK_FOR_NAN
+
+  // TODO: Can we fold if one of the args is +/- Inf?
+
+  // Fold if both args constant
+  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {
+    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {
+      return cl->FCmp(cr, p);
+    }
+  }
+
+  // Can't fold so construct
+  return FCmpExpr::alloc(l, r, p);
+}

@@ -102,7 +102,6 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
-  
 
   enum Kind {
     InvalidKind = -1,
@@ -119,7 +118,7 @@ public:
     NotOptimized,
 
     //// Skip old varexpr, just for deserialization, purge at some point
-    Read=NotOptimized+2, 
+    Read = NotOptimized + 2,
     Select,
     Concat,
     Extract,
@@ -149,27 +148,29 @@ public:
     Shl,
     LShr,
     AShr,
-    
+
     // Compare
     Eq,
-    Ne,  ///< Not used in canonical form
+    Ne, ///< Not used in canonical form
     Ult,
     Ule,
     Ugt, ///< Not used in canonical form
     Uge, ///< Not used in canonical form
     Slt,
     Sle,
-    Sgt, ///< Not used in canonical form
-    Sge, ///< Not used in canonical form
+    Sgt,  ///< Not used in canonical form
+    Sge,  ///< Not used in canonical form
+    FCmp, ///< Technically takes 3 operands, but 1 is immediate so can think of
+    /// as a binary operator
 
-    LastKind=Sge,
+    LastKind = FCmp,
 
-    CastKindFirst=ZExt,
-    CastKindLast=SExt,
-    BinaryKindFirst=Add,
-    BinaryKindLast=Sge,
-    CmpKindFirst=Eq,
-    CmpKindLast=Sge
+    CastKindFirst = ZExt,
+    CastKindLast = SExt,
+    BinaryKindFirst = Add,
+    BinaryKindLast = FCmp,
+    CmpKindFirst = Eq,
+    CmpKindLast = FCmp
   };
 
   unsigned refCount;
@@ -934,6 +935,66 @@ COMPARISON_EXPR_CLASS(Sle)
 COMPARISON_EXPR_CLASS(Sgt)
 COMPARISON_EXPR_CLASS(Sge)
 
+// Can't reuse COMPARISON_EXPR_CLASS macro as we need different constructor
+class FCmpExpr : public CmpExpr {
+public:
+  static const Kind kind = FCmp;
+  static const unsigned numKids = 2;
+  // This is copied out of ``llvm/IR/InstrTypes.h`` to avoid
+  // including the header file
+  enum Predicate {
+    // Opcode            U L G E    Intuitive operation
+    FCMP_FALSE = 0, ///< 0 0 0 0    Always false (always folded)
+    FCMP_OEQ = 1,   ///< 0 0 0 1    True if ordered and equal
+    FCMP_OGT = 2,   ///< 0 0 1 0    True if ordered and greater than
+    FCMP_OGE = 3,   ///< 0 0 1 1    True if ordered and greater than or equal
+    FCMP_OLT = 4,   ///< 0 1 0 0    True if ordered and less than
+    FCMP_OLE = 5,   ///< 0 1 0 1    True if ordered and less than or equal
+    FCMP_ONE = 6,   ///< 0 1 1 0    True if ordered and operands are unequal
+    FCMP_ORD = 7,   ///< 0 1 1 1    True if ordered (no nans)
+    FCMP_UNO = 8,   ///< 1 0 0 0    True if unordered: isnan(X) | isnan(Y)
+    FCMP_UEQ = 9,   ///< 1 0 0 1    True if unordered or equal
+    FCMP_UGT = 10,  ///< 1 0 1 0    True if unordered or greater than
+    FCMP_UGE = 11,  ///< 1 0 1 1    True if unordered, greater than, or equal
+    FCMP_ULT = 12,  ///< 1 1 0 0    True if unordered or less than
+    FCMP_ULE = 13,  ///< 1 1 0 1    True if unordered, less than, or equal
+    FCMP_UNE = 14,  ///< 1 1 1 0    True if unordered or not equal
+    FCMP_TRUE = 15, ///< 1 1 1 1    Always true (always folded)
+    FIRST_FCMP_PREDICATE = FCMP_FALSE,
+    LAST_FCMP_PREDICATE = FCMP_TRUE,
+    BAD_FCMP_PREDICATE = FCMP_TRUE + 1,
+    // A few extra helpful aliases not in LLVM
+    FIRST_ORDERED_PREDICATE = FCMP_OEQ,
+    LAST_ORDERED_PREDICATE = FCMP_ORD,
+    FIRST_UNORDERED_PREDICATE = FCMP_UNO,
+    LAST_UNORDERED_PREDICATE = FCMP_UNE
+  };
+
+protected:
+  Predicate pred;
+  FCmpExpr(const ref<Expr> &l, const ref<Expr> &r, const Predicate p)
+      : CmpExpr(l, r), pred(p){};
+
+public:
+  static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r,
+                         const Predicate p) {
+    ref<Expr> res(new FCmpExpr(l, r, p));
+    res->computeHash();
+    return res;
+  }
+  static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r,
+                          const Predicate p);
+  Kind getKind() const { return Expr::FCmp; }
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+    return create(kids[0], kids[1], this->pred);
+  }
+
+  static bool classof(const Expr *E) { return E->getKind() == Expr::FCmp; }
+  static bool classof(const FCmpExpr *) { return true; }
+  Predicate getPredicate() const { return pred; }
+  virtual unsigned computeHash();
+};
+
 // Terminal Exprs
 
 class ConstantExpr : public Expr {
@@ -1094,6 +1155,7 @@ public:
   ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FCmp(const ref<ConstantExpr> &RHS, FCmpExpr::Predicate p);
 
   ref<ConstantExpr> Neg();
   ref<ConstantExpr> Not();
