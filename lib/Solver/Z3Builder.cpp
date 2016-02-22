@@ -801,6 +801,13 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return sbvLeExpr(left, right);
   }
 
+  case Expr::FCmp: {
+    FCmpExpr *fcmp = cast<FCmpExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fcmp->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fcmp->right, width_out));
+    *width_out = 1;
+    return FCmp(left, right, fcmp->getPredicate());
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
@@ -815,4 +822,108 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return getTrue();
   }
 }
+
+Z3ASTHandle Z3Builder::castToFloat(Z3ASTHandle e) {
+  Z3SortHandle currentSort = Z3SortHandle(Z3_get_sort(ctx, e), ctx);
+  Z3_sort_kind kind = Z3_get_sort_kind(ctx, currentSort);
+  switch (kind) {
+  case Z3_FLOATING_POINT_SORT:
+    // Already a float
+    return e;
+  case Z3_BV_SORT: {
+    unsigned bitWidth = Z3_get_bv_sort_size(ctx, currentSort);
+    return Z3ASTHandle(
+        Z3_mk_fpa_to_fp_bv(ctx, e, getFloatSortFromBitWidth(bitWidth)), ctx);
+  }
+  default:
+    assert(0 && "Sort cannot be cast to float");
+  }
+}
+
+Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
+  // FIXME: Cache these
+  switch (bitWidth) {
+  case Expr::Int16: {
+    return Z3SortHandle(Z3_mk_fpa_sort_16(ctx), ctx);
+  }
+  case Expr::Int32: {
+    return Z3SortHandle(Z3_mk_fpa_sort_32(ctx), ctx);
+  }
+  case Expr::Int64: {
+    return Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
+  }
+  case 128: {
+    return Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
+  }
+  default:
+    assert(0 &&
+           "bitWidth cannot converted to a IEEE-754 binary-* number by Z3");
+  }
+}
+
+Z3ASTHandle Z3Builder::eitherArgsAreNaN(Z3ASTHandle l, Z3ASTHandle r) {
+  Z3ASTHandle lhsIsNan = Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, l), ctx);
+  Z3ASTHandle rhsIsNan = Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, r), ctx);
+  return orExpr(lhsIsNan, rhsIsNan);
+}
+
+Z3ASTHandle Z3Builder::FCmp(Z3ASTHandle l, Z3ASTHandle r,
+                            FCmpExpr::Predicate p) {
+  switch (p) {
+  // Ordered comparisions return false if either operand is NaN
+  // FIXME: Check these return false for NaN
+  case FCmpExpr::FCMP_OEQ: {
+    return Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
+  }
+  case FCmpExpr::FCMP_OGT: {
+    return Z3ASTHandle(Z3_mk_fpa_gt(ctx, l, r), ctx);
+  }
+  case FCmpExpr::FCMP_OGE: {
+    return Z3ASTHandle(Z3_mk_fpa_geq(ctx, l, r), ctx);
+  }
+  case FCmpExpr::FCMP_OLT: {
+    return Z3ASTHandle(Z3_mk_fpa_lt(ctx, l, r), ctx);
+  }
+  case FCmpExpr::FCMP_OLE: {
+    return Z3ASTHandle(Z3_mk_fpa_leq(ctx, l, r), ctx);
+  }
+  case FCmpExpr::FCMP_ONE: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
+    return notExpr(eqExpr);
+  }
+  case FCmpExpr::FCMP_UNO: {
+    return eitherArgsAreNaN(l, r);
+  }
+  // Unordered comparisions return true if either operand is NaN
+  case FCmpExpr::FCMP_UEQ: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
+    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
+  }
+  case FCmpExpr::FCMP_UGT: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_gt(ctx, l, r), ctx);
+    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
+  }
+  case FCmpExpr::FCMP_UGE: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_geq(ctx, l, r), ctx);
+    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
+  }
+  case FCmpExpr::FCMP_ULT: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_lt(ctx, l, r), ctx);
+    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
+  }
+  case FCmpExpr::FCMP_ULE: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_leq(ctx, l, r), ctx);
+    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
+  }
+  case FCmpExpr::FCMP_UNE: {
+    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
+    return orExpr(notExpr(eqExpr), eitherArgsAreNaN(l, r));
+  }
+  // case FCmpExpr::FCMP_FALSE:
+  // case FCMPExpr::FCMP_TRUE:
+  default:
+    assert(0 && "unhandled FCmpExpr predicate");
+  }
+}
+
 #endif // ENABLE_Z3
