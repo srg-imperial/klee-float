@@ -1369,9 +1369,10 @@ ref<Expr> FCmpExpr::create(const ref<Expr> &l, const ref<Expr> &r,
 // Handle one of the args being a NaN.
 // An ordered predicate which will return false if any operand is NaN.
 // An unordered predicate which will return true if either operand is NaN.
+// Note: We can't assert here that the ``carg->isFloat()`` because the
+// constant may come from ``Assignment::evaluate()``.
 #define CHECK_FOR_NAN(ARG)                                                     \
   if (ConstantExpr *carg = dyn_cast<ConstantExpr>(ARG)) {                      \
-    assert(carg->isFloat() && "Should be float");                              \
     llvm::APFloat cargF = carg->getAPFloatValue();                             \
     if (cargF.isNaN()) {                                                       \
       if (p >= FCmpExpr::FIRST_ORDERED_PREDICATE &&                            \
