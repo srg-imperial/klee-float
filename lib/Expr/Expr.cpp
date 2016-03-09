@@ -135,6 +135,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(URem);
     X(SRem);
     X(Not);
+    X(IsNaN);
     X(And);
     X(Or);
     X(Xor);
@@ -151,7 +152,11 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Sle);
     X(Sgt);
     X(Sge);
-    X(FCmp);
+    X(FOEq);
+    X(FOLt);
+    X(FOLe);
+    X(FOGt);
+    X(FOGe);
 #undef X
   default:
     assert(0 && "invalid kind");
@@ -211,13 +216,8 @@ unsigned NotExpr::computeHash() {
   return hashValue;
 }
 
-unsigned FCmpExpr::computeHash() {
-  unsigned result = CmpExpr::computeHash();
-  // The predicate is not treated as a child so we have to manually modify the
-  // hash
-  result <<= 1;
-  result ^= this->pred * Expr::MAGIC_HASH_CONSTANT;
-  hashValue = result;
+unsigned IsNaNExpr::computeHash() {
+  hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::IsNaN;
   return hashValue;
 }
 
@@ -557,86 +557,46 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value.sge(RHS->value), Expr::Bool);
 }
 
-ref<ConstantExpr> ConstantExpr::FCmp(const ref<ConstantExpr> &RHS,
-                                     FCmpExpr::Predicate p) {
+ref<ConstantExpr> ConstantExpr::FOEq(const ref<ConstantExpr> &RHS) {
   APFloat lhsF = this->getAPFloatValue();
   APFloat rhsF = RHS->getAPFloatValue();
+  APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
+  bool result = (cmpRes == APFloat::cmpEqual);
+  return ConstantExpr::alloc(result, Expr::Bool);
+}
 
-  APFloat::cmpResult CmpRes = lhsF.compare(rhsF);
-  bool result = false;
-  switch(p) {
-    // Predicates which only care about whether or not the operands are NaNs.
-  case FCmpExpr::FCMP_ORD:
-    result = CmpRes != APFloat::cmpUnordered;
-    break;
+ref<ConstantExpr> ConstantExpr::FOLt(const ref<ConstantExpr> &RHS) {
+  APFloat lhsF = this->getAPFloatValue();
+  APFloat rhsF = RHS->getAPFloatValue();
+  APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
+  bool result = (cmpRes == APFloat::cmpLessThan);
+  return ConstantExpr::alloc(result, Expr::Bool);
+}
 
-  case FCmpExpr::FCMP_UNO:
-    result = CmpRes == APFloat::cmpUnordered;
-    break;
+ref<ConstantExpr> ConstantExpr::FOLe(const ref<ConstantExpr> &RHS) {
+  APFloat lhsF = this->getAPFloatValue();
+  APFloat rhsF = RHS->getAPFloatValue();
+  APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
+  bool result =
+      (cmpRes == APFloat::cmpLessThan) || (cmpRes == APFloat::cmpEqual);
+  return ConstantExpr::alloc(result, Expr::Bool);
+}
 
-    // Ordered comparisons return false if either operand is NaN.  Unordered
-    // comparisons return true if either operand is NaN.
-  case FCmpExpr::FCMP_UEQ:
-    if (CmpRes == APFloat::cmpUnordered) {
-      result = true;
-      break;
-    }
-  case FCmpExpr::FCMP_OEQ:
-    result = CmpRes == APFloat::cmpEqual;
-    break;
+ref<ConstantExpr> ConstantExpr::FOGt(const ref<ConstantExpr> &RHS) {
+  APFloat lhsF = this->getAPFloatValue();
+  APFloat rhsF = RHS->getAPFloatValue();
+  APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
+  bool result = (cmpRes == APFloat::cmpGreaterThan);
+  return ConstantExpr::alloc(result, Expr::Bool);
+}
 
-  case FCmpExpr::FCMP_UGT:
-    if (CmpRes == APFloat::cmpUnordered) {
-      result = true;
-      break;
-    }
-  case FCmpExpr::FCMP_OGT:
-    result = CmpRes == APFloat::cmpGreaterThan;
-    break;
-
-  case FCmpExpr::FCMP_UGE:
-    if (CmpRes == APFloat::cmpUnordered) {
-      result = true;
-      break;
-    }
-  case FCmpExpr::FCMP_OGE:
-    result = CmpRes == APFloat::cmpGreaterThan || CmpRes == APFloat::cmpEqual;
-    break;
-
-  case FCmpExpr::FCMP_ULT:
-    if (CmpRes == APFloat::cmpUnordered) {
-      result = true;
-      break;
-    }
-  case FCmpExpr::FCMP_OLT:
-    result = CmpRes == APFloat::cmpLessThan;
-    break;
-
-  case FCmpExpr::FCMP_ULE:
-    if (CmpRes == APFloat::cmpUnordered) {
-      result = true;
-      break;
-    }
-  case FCmpExpr::FCMP_OLE:
-    result = CmpRes == APFloat::cmpLessThan || CmpRes == APFloat::cmpEqual;
-    break;
-
-  case FCmpExpr::FCMP_UNE:
-    result = CmpRes == APFloat::cmpUnordered || CmpRes != APFloat::cmpEqual;
-    break;
-  case FCmpExpr::FCMP_ONE:
-    result = CmpRes != APFloat::cmpUnordered && CmpRes != APFloat::cmpEqual;
-    break;
-  default:
-    llvm_unreachable("Invalid predicate");
-  }
-
-  if (result) {
-    // True
-    return ConstantExpr::alloc(1, Expr::Bool);
-  }
-  // False
-  return ConstantExpr::alloc(0, Expr::Bool);
+ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
+  APFloat lhsF = this->getAPFloatValue();
+  APFloat rhsF = RHS->getAPFloatValue();
+  APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
+  bool result =
+      (cmpRes == APFloat::cmpGreaterThan) || (cmpRes == APFloat::cmpEqual);
+  return ConstantExpr::alloc(result, Expr::Bool);
 }
 
 /***/
@@ -1333,51 +1293,34 @@ CMPCREATE(UleExpr, Ule)
 CMPCREATE(SltExpr, Slt)
 CMPCREATE(SleExpr, Sle)
 
-ref<Expr> FCmpExpr::create(const ref<Expr> &l, const ref<Expr> &r,
-                           const Predicate p) {
-  assert(p < FCmpExpr::BAD_FCMP_PREDICATE);
-
-  // FIXME: Why doesn't KLEE have functions for making true and false?
-
-  // Handle predicates that we always fold
-  if (p == FCmpExpr::FCMP_FALSE) {
-    return ConstantExpr::alloc(0, Expr::Bool);
-  } else if (p == FCmpExpr::FCMP_TRUE) {
-    return ConstantExpr::alloc(1, Expr::Bool);
-  }
-
-// Handle one of the args being a NaN.
-// An ordered predicate which will return false if any operand is NaN.
-// An unordered predicate which will return true if either operand is NaN.
-// Note: We can't assert here that the ``carg->isFloat()`` because the
-// constant may come from ``Assignment::evaluate()``.
-#define CHECK_FOR_NAN(ARG)                                                     \
-  if (ConstantExpr *carg = dyn_cast<ConstantExpr>(ARG)) {                      \
-    llvm::APFloat cargF = carg->getAPFloatValue();                             \
-    if (cargF.isNaN()) {                                                       \
-      if (p >= FCmpExpr::FIRST_ORDERED_PREDICATE &&                            \
-          p <= FCmpExpr::LAST_ORDERED_PREDICATE) {                             \
+#define FOCMPCREATE(_e_op, _op)                                                \
+  ref<Expr> _e_op::create(const ref<Expr> &l, const ref<Expr> &r) {            \
+    assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                        \
+      if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
+        return cl->_op(cr);                                                    \
+      if (cl->getAPFloatValue().isNaN())                                       \
         return ConstantExpr::alloc(0, Expr::Bool);                             \
-      } else {                                                                 \
-        assert(p >= FCmpExpr::FIRST_UNORDERED_PREDICATE &&                     \
-               p <= FCmpExpr::LAST_UNORDERED_PREDICATE);                       \
-        return ConstantExpr::alloc(1, Expr::Bool);                             \
-      }                                                                        \
+    } else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {                 \
+      if (cr->getAPFloatValue().isNaN())                                       \
+        return ConstantExpr::alloc(0, Expr::Bool);                             \
     }                                                                          \
-  }
-  CHECK_FOR_NAN(l)
-  CHECK_FOR_NAN(r)
-#undef CHECK_FOR_NAN
-
-  // TODO: Can we fold if one of the args is +/- Inf?
-
-  // Fold if both args constant
-  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {
-    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {
-      return cl->FCmp(cr, p);
-    }
+    return _e_op::alloc(l, r);                                                 \
   }
 
-  // Can't fold so construct
-  return FCmpExpr::alloc(l, r, p);
+FOCMPCREATE(FOEqExpr, FOEq)
+FOCMPCREATE(FOLtExpr, FOLt)
+FOCMPCREATE(FOLeExpr, FOLe)
+FOCMPCREATE(FOGtExpr, FOGt)
+FOCMPCREATE(FOGeExpr, FOGe)
+
+ref<Expr> IsNaNExpr::create(const ref<Expr> &e) {
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {
+    return ConstantExpr::alloc(ce->getAPFloatValue().isNaN(), Expr::Bool);
+  }
+  return IsNaNExpr::alloc(e);
+}
+
+ref<Expr> IsNaNExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
+  return OrExpr::create(IsNaNExpr::create(e0), IsNaNExpr::create(e1));
 }
