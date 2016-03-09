@@ -141,6 +141,9 @@ public:
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
+  /// @brief The floating point rounding mode for the current state
+  llvm::APFloat::roundingMode roundingMode;
+
   std::string getFnAlias(std::string fn);
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
