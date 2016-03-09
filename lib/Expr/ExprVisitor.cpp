@@ -86,8 +86,23 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::Sle: res = visitSle(static_cast<SleExpr&>(ep)); break;
     case Expr::Sgt: res = visitSgt(static_cast<SgtExpr&>(ep)); break;
     case Expr::Sge: res = visitSge(static_cast<SgeExpr&>(ep)); break;
-    case Expr::FCmp:
-      res = visitFCmp(static_cast<FCmpExpr &>(ep));
+    case Expr::FOEq:
+      res = visitFOEq(static_cast<FOEqExpr &>(ep));
+      break;
+    case Expr::FOLt:
+      res = visitFOLt(static_cast<FOLtExpr &>(ep));
+      break;
+    case Expr::FOLe:
+      res = visitFOLe(static_cast<FOLeExpr &>(ep));
+      break;
+    case Expr::FOGt:
+      res = visitFOGt(static_cast<FOGtExpr &>(ep));
+      break;
+    case Expr::FOGe:
+      res = visitFOGe(static_cast<FOGeExpr &>(ep));
+      break;
+    case Expr::IsNaN:
+      res = visitIsNaN(static_cast<IsNaNExpr &>(ep));
       break;
     case Expr::Constant:
     default:
@@ -259,6 +274,26 @@ ExprVisitor::Action ExprVisitor::visitSge(const SgeExpr&) {
   return Action::doChildren(); 
 }
 
-ExprVisitor::Action ExprVisitor::visitFCmp(const FCmpExpr &) {
+ExprVisitor::Action ExprVisitor::visitFOEq(const FOEqExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOLt(const FOLtExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOLe(const FOLeExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOGt(const FOGtExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOGe(const FOGeExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsNaN(const IsNaNExpr &) {
   return Action::doChildren();
 }

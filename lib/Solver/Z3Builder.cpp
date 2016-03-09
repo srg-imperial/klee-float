@@ -801,12 +801,51 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return sbvLeExpr(left, right);
   }
 
-  case Expr::FCmp: {
-    FCmpExpr *fcmp = cast<FCmpExpr>(e);
+  case Expr::FOEq: {
+    FOEqExpr *fcmp = cast<FOEqExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fcmp->left, width_out));
     Z3ASTHandle right = castToFloat(construct(fcmp->right, width_out));
     *width_out = 1;
-    return FCmp(left, right, fcmp->getPredicate());
+    return Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx);
+  }
+
+  case Expr::FOLt: {
+    FOLtExpr *fcmp = cast<FOLtExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fcmp->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fcmp->right, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx);
+  }
+
+  case Expr::FOLe: {
+    FOLeExpr *fcmp = cast<FOLeExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fcmp->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fcmp->right, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx);
+  }
+
+  case Expr::FOGt: {
+    FOGtExpr *fcmp = cast<FOGtExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fcmp->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fcmp->right, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx);
+  }
+
+  case Expr::FOGe: {
+    FOGeExpr *fcmp = cast<FOGeExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fcmp->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fcmp->right, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx);
+  }
+
+  case Expr::IsNaN: {
+    IsNaNExpr *ine = cast<IsNaNExpr>(e);
+    Z3ASTHandle arg = castToFloat(construct(ine->expr, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, arg), ctx);
   }
 // unused due to canonicalization
 #if 0
@@ -860,70 +899,4 @@ Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
            "bitWidth cannot converted to a IEEE-754 binary-* number by Z3");
   }
 }
-
-Z3ASTHandle Z3Builder::eitherArgsAreNaN(Z3ASTHandle l, Z3ASTHandle r) {
-  Z3ASTHandle lhsIsNan = Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, l), ctx);
-  Z3ASTHandle rhsIsNan = Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, r), ctx);
-  return orExpr(lhsIsNan, rhsIsNan);
-}
-
-Z3ASTHandle Z3Builder::FCmp(Z3ASTHandle l, Z3ASTHandle r,
-                            FCmpExpr::Predicate p) {
-  switch (p) {
-  // Ordered comparisions return false if either operand is NaN
-  // FIXME: Check these return false for NaN
-  case FCmpExpr::FCMP_OEQ: {
-    return Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
-  }
-  case FCmpExpr::FCMP_OGT: {
-    return Z3ASTHandle(Z3_mk_fpa_gt(ctx, l, r), ctx);
-  }
-  case FCmpExpr::FCMP_OGE: {
-    return Z3ASTHandle(Z3_mk_fpa_geq(ctx, l, r), ctx);
-  }
-  case FCmpExpr::FCMP_OLT: {
-    return Z3ASTHandle(Z3_mk_fpa_lt(ctx, l, r), ctx);
-  }
-  case FCmpExpr::FCMP_OLE: {
-    return Z3ASTHandle(Z3_mk_fpa_leq(ctx, l, r), ctx);
-  }
-  case FCmpExpr::FCMP_ONE: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
-    return notExpr(eqExpr);
-  }
-  case FCmpExpr::FCMP_UNO: {
-    return eitherArgsAreNaN(l, r);
-  }
-  // Unordered comparisions return true if either operand is NaN
-  case FCmpExpr::FCMP_UEQ: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
-    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
-  }
-  case FCmpExpr::FCMP_UGT: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_gt(ctx, l, r), ctx);
-    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
-  }
-  case FCmpExpr::FCMP_UGE: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_geq(ctx, l, r), ctx);
-    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
-  }
-  case FCmpExpr::FCMP_ULT: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_lt(ctx, l, r), ctx);
-    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
-  }
-  case FCmpExpr::FCMP_ULE: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_leq(ctx, l, r), ctx);
-    return orExpr(eqExpr, eitherArgsAreNaN(l, r));
-  }
-  case FCmpExpr::FCMP_UNE: {
-    Z3ASTHandle eqExpr = Z3ASTHandle(Z3_mk_fpa_eq(ctx, l, r), ctx);
-    return orExpr(notExpr(eqExpr), eitherArgsAreNaN(l, r));
-  }
-  // case FCmpExpr::FCMP_FALSE:
-  // case FCMPExpr::FCMP_TRUE:
-  default:
-    assert(0 && "unhandled FCmpExpr predicate");
-  }
-}
-
 #endif // ENABLE_Z3

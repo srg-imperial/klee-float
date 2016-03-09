@@ -172,10 +172,6 @@ private:
   Z3SortHandle getArraySort(Z3SortHandle domainSort, Z3SortHandle rangeSort);
   Z3SortHandle getFloatSortFromBitWidth(unsigned bitWidth);
 
-  // Float comparision
-  Z3ASTHandle eitherArgsAreNaN(Z3ASTHandle l, Z3ASTHandle r);
-  Z3ASTHandle FCmp(Z3ASTHandle l, Z3ASTHandle r, FCmpExpr::Predicate p);
-
   // Float casts
   Z3ASTHandle castToFloat(Z3ASTHandle e);
 
