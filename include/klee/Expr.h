@@ -130,6 +130,9 @@ public:
     // Bit
     Not,
 
+    // Floating point predicates
+    IsNaN,
+
     // All subsequent kinds are binary.
 
     // Arithmetic
@@ -158,19 +161,22 @@ public:
     Uge, ///< Not used in canonical form
     Slt,
     Sle,
-    Sgt,  ///< Not used in canonical form
-    Sge,  ///< Not used in canonical form
-    FCmp, ///< Technically takes 3 operands, but 1 is immediate so can think of
-    /// as a binary operator
+    Sgt, ///< Not used in canonical form
+    Sge, ///< Not used in canonical form
+    FOEq,
+    FOLt,
+    FOLe,
+    FOGt,
+    FOGe,
 
-    LastKind = FCmp,
+    LastKind = FOGe,
 
     CastKindFirst = ZExt,
     CastKindLast = SExt,
     BinaryKindFirst = Add,
-    BinaryKindLast = FCmp,
+    BinaryKindLast = FOGe,
     CmpKindFirst = Eq,
-    CmpKindLast = FCmp
+    CmpKindLast = FOGe
   };
 
   unsigned refCount;
@@ -934,65 +940,54 @@ COMPARISON_EXPR_CLASS(Slt)
 COMPARISON_EXPR_CLASS(Sle)
 COMPARISON_EXPR_CLASS(Sgt)
 COMPARISON_EXPR_CLASS(Sge)
+COMPARISON_EXPR_CLASS(FOEq)
+COMPARISON_EXPR_CLASS(FOLt)
+COMPARISON_EXPR_CLASS(FOLe)
+COMPARISON_EXPR_CLASS(FOGt)
+COMPARISON_EXPR_CLASS(FOGe)
 
-// Can't reuse COMPARISON_EXPR_CLASS macro as we need different constructor
-class FCmpExpr : public CmpExpr {
+// Floating point predicates
+class IsNaNExpr : public NonConstantExpr {
 public:
-  static const Kind kind = FCmp;
-  static const unsigned numKids = 2;
-  // This is copied out of ``llvm/IR/InstrTypes.h`` to avoid
-  // including the header file
-  enum Predicate {
-    // Opcode            U L G E    Intuitive operation
-    FCMP_FALSE = 0, ///< 0 0 0 0    Always false (always folded)
-    FCMP_OEQ = 1,   ///< 0 0 0 1    True if ordered and equal
-    FCMP_OGT = 2,   ///< 0 0 1 0    True if ordered and greater than
-    FCMP_OGE = 3,   ///< 0 0 1 1    True if ordered and greater than or equal
-    FCMP_OLT = 4,   ///< 0 1 0 0    True if ordered and less than
-    FCMP_OLE = 5,   ///< 0 1 0 1    True if ordered and less than or equal
-    FCMP_ONE = 6,   ///< 0 1 1 0    True if ordered and operands are unequal
-    FCMP_ORD = 7,   ///< 0 1 1 1    True if ordered (no nans)
-    FCMP_UNO = 8,   ///< 1 0 0 0    True if unordered: isnan(X) | isnan(Y)
-    FCMP_UEQ = 9,   ///< 1 0 0 1    True if unordered or equal
-    FCMP_UGT = 10,  ///< 1 0 1 0    True if unordered or greater than
-    FCMP_UGE = 11,  ///< 1 0 1 1    True if unordered, greater than, or equal
-    FCMP_ULT = 12,  ///< 1 1 0 0    True if unordered or less than
-    FCMP_ULE = 13,  ///< 1 1 0 1    True if unordered, less than, or equal
-    FCMP_UNE = 14,  ///< 1 1 1 0    True if unordered or not equal
-    FCMP_TRUE = 15, ///< 1 1 1 1    Always true (always folded)
-    FIRST_FCMP_PREDICATE = FCMP_FALSE,
-    LAST_FCMP_PREDICATE = FCMP_TRUE,
-    BAD_FCMP_PREDICATE = FCMP_TRUE + 1,
-    // A few extra helpful aliases not in LLVM
-    FIRST_ORDERED_PREDICATE = FCMP_OEQ,
-    LAST_ORDERED_PREDICATE = FCMP_ORD,
-    FIRST_UNORDERED_PREDICATE = FCMP_UNO,
-    LAST_UNORDERED_PREDICATE = FCMP_UNE
-  };
+  static const Kind kind = Expr::IsNaN;
+  static const unsigned numKids = 1;
 
-protected:
-  Predicate pred;
-  FCmpExpr(const ref<Expr> &l, const ref<Expr> &r, const Predicate p)
-      : CmpExpr(l, r), pred(p){};
+  ref<Expr> expr;
 
 public:
-  static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r,
-                         const Predicate p) {
-    ref<Expr> res(new FCmpExpr(l, r, p));
-    res->computeHash();
-    return res;
-  }
-  static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r,
-                          const Predicate p);
-  Kind getKind() const { return Expr::FCmp; }
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
-    return create(kids[0], kids[1], this->pred);
+  static ref<Expr> alloc(const ref<Expr> &e) {
+    ref<Expr> r(new IsNaNExpr(e));
+    r->computeHash();
+    return r;
   }
 
-  static bool classof(const Expr *E) { return E->getKind() == Expr::FCmp; }
-  static bool classof(const FCmpExpr *) { return true; }
-  Predicate getPredicate() const { return pred; }
+  static ref<Expr> create(const ref<Expr> &e);
+
+  Width getWidth() const { return Expr::Bool; }
+  Kind getKind() const { return Expr::IsNaN; }
+
+  unsigned getNumKids() const { return numKids; }
+  ref<Expr> getKid(unsigned i) const { return expr; }
+
+  int compareContents(const Expr &b) const {
+    const IsNaNExpr &eb = static_cast<const IsNaNExpr &>(b);
+    if (expr != eb.expr)
+      return expr < eb.expr ? -1 : 1;
+    return 0;
+  }
+
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
+
   virtual unsigned computeHash();
+
+  static ref<Expr> either(const ref<Expr> &e0, const ref<Expr> &e1);
+
+public:
+  static bool classof(const Expr *E) { return E->getKind() == Expr::IsNaN; }
+  static bool classof(const IsNaNExpr *) { return true; }
+
+private:
+  IsNaNExpr(const ref<Expr> &e) : expr(e) {}
 };
 
 // Terminal Exprs
@@ -1155,7 +1150,11 @@ public:
   ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> FCmp(const ref<ConstantExpr> &RHS, FCmpExpr::Predicate p);
+  ref<ConstantExpr> FOEq(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOLt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOLe(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOGt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOGe(const ref<ConstantExpr> &RHS);
 
   ref<ConstantExpr> Neg();
   ref<ConstantExpr> Not();

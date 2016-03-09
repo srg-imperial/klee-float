@@ -2418,37 +2418,97 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!fpWidthToSemantics(left->getWidth()) ||
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FCmp operation");
-    // Convert FCmpInst predicate to FCmpExpr predicate.
-    // These should be the same values but we assert to be sure.
-    FCmpExpr::Predicate fcmpExprPredicate;
+
+    ref<Expr> result = 0;
     switch (fi->getPredicate()) {
-#define PMATCH(_PRED) \
-      case FCmpInst::_PRED: \
-        fcmpExprPredicate = FCmpExpr::_PRED ;\
-        assert(static_cast<int>(FCmpInst::_PRED) == \
-               static_cast<int>(FCmpExpr::_PRED)); \
+    case FCmpInst::FCMP_FALSE: {
+      result = ConstantExpr::alloc(0, Expr::Bool);
+      break;
+    }
+    case FCmpInst::FCMP_OEQ: {
+      result = FOEqExpr::create(left, right);
+      break;
+    }
+    case FCmpInst::FCMP_OGT: {
+      result = FOGtExpr::create(left, right);
+      break;
+    }
+    case FCmpInst::FCMP_OGE: {
+      result = FOGeExpr::create(left, right);
+      break;
+    }
+    case FCmpInst::FCMP_OLT: {
+      result = FOLtExpr::create(left, right);
+      break;
+    }
+    case FCmpInst::FCMP_OLE: {
+      result = FOLeExpr::create(left, right);
+      break;
+    }
+    case FCmpInst::FCMP_ONE: {
+      // This isn't NotExpr(FOEqExpr(arg))
+      // because it is an ordered comparision and
+      // should return false if either operand is NaN.
+      //
+      // ¬(isnan(l) ∨ isnan(r)) ∧ ¬(foeq(l, r))
+      //
+      //  ===
+      //
+      // ¬( (isnan(l) ∨ isnan(r)) ∨ foeq(l,r))
+      result = NotExpr::create(OrExpr::create(IsNaNExpr::either(left, right),
+                                              FOEqExpr::create(left, right)));
+      break;
+    }
+    case FCmpInst::FCMP_ORD: {
+      result = NotExpr::create(IsNaNExpr::either(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_UNO: {
+      result = IsNaNExpr::either(left, right);
+      break;
+    }
+    case FCmpInst::FCMP_UEQ: {
+      result = OrExpr::create(IsNaNExpr::either(left, right),
+                              FOEqExpr::create(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_UGT: {
+      result = OrExpr::create(IsNaNExpr::either(left, right),
+                              FOGtExpr::create(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_UGE: {
+      result = OrExpr::create(IsNaNExpr::either(left, right),
+                              FOGeExpr::create(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_ULT: {
+      result = OrExpr::create(IsNaNExpr::either(left, right),
+                              FOLtExpr::create(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_ULE: {
+      result = OrExpr::create(IsNaNExpr::either(left, right),
+                              FOLeExpr::create(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_UNE: {
+      // Unordered comparision so should
+      // return true if either arg is NaN.
+      // If either arg to ``FOEqExpr::create()``
+      // is a NaN then the result is false which gets
+      // negated giving us true when either arg to the instruction
+      // is a NaN.
+      result = NotExpr::create(FOEqExpr::create(left, right));
+      break;
+    }
+    case FCmpInst::FCMP_TRUE: {
+      result = ConstantExpr::alloc(1, Expr::Bool);
         break;
-      PMATCH(FCMP_FALSE)
-      PMATCH(FCMP_OEQ)
-      PMATCH(FCMP_OGT)
-      PMATCH(FCMP_OGE)
-      PMATCH(FCMP_OLT)
-      PMATCH(FCMP_OLE)
-      PMATCH(FCMP_ONE)
-      PMATCH(FCMP_ORD)
-      PMATCH(FCMP_UNO)
-      PMATCH(FCMP_UEQ)
-      PMATCH(FCMP_UGT)
-      PMATCH(FCMP_UGE)
-      PMATCH(FCMP_ULT)
-      PMATCH(FCMP_ULE)
-      PMATCH(FCMP_UNE)
-      PMATCH(FCMP_TRUE)
-#undef PMATCH
+    }
       default:
         llvm_unreachable("Unhandled FCmp predicate");
     }
-    ref<Expr> result = FCmpExpr::create(left, right, fcmpExprPredicate);
     bindLocal(ki, state, result);
     break;
   }
