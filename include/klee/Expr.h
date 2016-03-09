@@ -127,6 +127,9 @@ public:
     ZExt,
     SExt,
 
+    // Bit
+    Not,
+
     // All subsequent kinds are binary.
 
     // Arithmetic
@@ -139,7 +142,6 @@ public:
     SRem,
 
     // Bit
-    Not,
     And,
     Or,
     Xor,
