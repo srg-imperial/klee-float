@@ -60,6 +60,7 @@ endif
 
 # This is filename that KLEE will look for when trying to load klee-uclibc
 KLEE_UCLIBC_BCA_NAME="klee-uclibc.bca"
+KLEE_UCLIBC_LIBM_BCA_NAME="klee-uclibc-libm.bca"
 
 ifneq ($(ENABLE_STP),0)
   CXX.Flags += $(STP_CFLAGS)
@@ -74,7 +75,9 @@ CXX.Flags += -DKLEE_DIR=\"$(PROJ_OBJ_ROOT)\" -DKLEE_INSTALL_BIN_DIR=\"$(PROJ_bin
 CXX.Flags += -DKLEE_INSTALL_RUNTIME_DIR=\"$(BYTECODE_DESTINATION)\"
 
 ifeq ($(ENABLE_UCLIBC),1)
+	# FIXME: This is disgusting
 	CXX.Flags += -DKLEE_UCLIBC_BCA_NAME=\"$(KLEE_UCLIBC_BCA_NAME)\"
+	CXX.Flags += -DKLEE_UCLIBC_LIBM_BCA_NAME=\"$(KLEE_UCLIBC_LIBM_BCA_NAME)\"
 endif
 
 # For metaSMT
