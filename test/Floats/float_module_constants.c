@@ -7,9 +7,11 @@
 int main() {
   const float x = 0.5;
   const double y = 0.75;
-  // CHECK: x:0x1p-1
+  // OLD_CHECK: x:0x1p-1
+  // CHECK: x:5.0E-1
   klee_print_expr("x", x);
-  // CHECK: y:0x1.8p-1
+  // OLD_CHECK: y:0x1.8p-1
+  // CHECK: y:7.5E-1
   klee_print_expr("y", y);
   return 0;
 }
