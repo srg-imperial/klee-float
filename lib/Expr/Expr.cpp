@@ -151,6 +151,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(AShr);
     X(FAdd);
     X(FSub);
+    X(FMul);
     X(Eq);
     X(Ne);
     X(Ult);
@@ -620,6 +621,14 @@ ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   APFloat result(this->getAPFloatValue());
   llvm::APFloat::opStatus status = result.subtract(RHS->getAPFloatValue(), rm);
+  assert(status != llvm::APFloat::opInvalidOp);
+  return ConstantExpr::alloc(result);
+}
+
+ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS,
+                                     llvm::APFloat::roundingMode rm) const {
+  APFloat result(this->getAPFloatValue());
+  llvm::APFloat::opStatus status = result.multiply(RHS->getAPFloatValue(), rm);
   assert(status != llvm::APFloat::opInvalidOp);
   return ConstantExpr::alloc(result);
 }
@@ -1364,6 +1373,7 @@ FOCMPCREATE(FOGeExpr, FOGe)
 
 FARITHCREATE(FAddExpr, FAdd)
 FARITHCREATE(FSubExpr, FSub)
+FARITHCREATE(FMulExpr, FMul)
 
 ref<Expr> IsNaNExpr::create(const ref<Expr> &e) {
   if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {
