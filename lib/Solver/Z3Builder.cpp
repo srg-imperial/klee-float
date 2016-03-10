@@ -847,6 +847,16 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     *width_out = 1;
     return Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, arg), ctx);
   }
+  case Expr::FAdd: {
+    FAddExpr *fadd = cast<FAddExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fadd->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fadd->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized sle");
+    return Z3ASTHandle(Z3_mk_fpa_add(ctx,
+                                     getRoundingModeSort(fadd->roundingMode),
+                                     left, right),
+                       ctx);
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
@@ -897,6 +907,24 @@ Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
   default:
     assert(0 &&
            "bitWidth cannot converted to a IEEE-754 binary-* number by Z3");
+  }
+}
+
+Z3ASTHandle Z3Builder::getRoundingModeSort(llvm::APFloat::roundingMode rm) {
+  // FIXME: Cache these
+  switch(rm) {
+    case llvm::APFloat::rmNearestTiesToEven:
+      return Z3ASTHandle(Z3_mk_fpa_round_nearest_ties_to_even(ctx), ctx);
+    case llvm::APFloat::rmTowardPositive:
+      return Z3ASTHandle(Z3_mk_fpa_round_toward_positive(ctx), ctx);
+    case llvm::APFloat::rmTowardNegative:
+      return Z3ASTHandle(Z3_mk_fpa_round_toward_negative(ctx), ctx);
+    case llvm::APFloat::rmTowardZero:
+      return Z3ASTHandle(Z3_mk_fpa_round_toward_zero(ctx), ctx);
+    case llvm::APFloat::rmNearestTiesToAway:
+      return Z3ASTHandle(Z3_mk_fpa_round_nearest_ties_to_away(ctx), ctx);
+    default:
+      llvm_unreachable("Unhandled rounding mode");
   }
 }
 #endif // ENABLE_Z3

@@ -144,6 +144,9 @@ public:
     URem,
     SRem,
 
+    // Float Arithmetic
+    FAdd,
+
     // Bit
     And,
     Or,
@@ -901,6 +904,40 @@ ARITHMETIC_EXPR_CLASS(Shl)
 ARITHMETIC_EXPR_CLASS(LShr)
 ARITHMETIC_EXPR_CLASS(AShr)
 
+#define FLOAT_ARITHMETIC_EXPR_CLASS(_class_kind)                               \
+  class _class_kind##Expr : public BinaryExpr {                                \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 2;                                         \
+    const llvm::APFloat::roundingMode roundingMode;                            \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r,                  \
+                      const llvm::APFloat::roundingMode rm)                    \
+        : BinaryExpr(l, r), roundingMode(rm) {}                                \
+    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r,             \
+                           const llvm::APFloat::roundingMode rm) {             \
+      ref<Expr> res(new _class_kind##Expr(l, r, rm));                          \
+      res->computeHash();                                                      \
+      return res;                                                              \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r,            \
+                            llvm::APFloat::roundingMode rm);                   \
+    Width getWidth() const { return left->getWidth(); }                        \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], kids[1], roundingMode);                           \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+  };
+
+FLOAT_ARITHMETIC_EXPR_CLASS(FAdd)
+#undef FLOAT_ARITHMETIC_EXPR_CLASS
+
 // Comparison Exprs
 
 #define COMPARISON_EXPR_CLASS(_class_kind)                           \
@@ -1137,6 +1174,10 @@ public:
   ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
+
+  // Float Arithmetic
+  ref<ConstantExpr> FAdd(const ref<ConstantExpr> &RHS,
+                         llvm::APFloat::roundingMode rm) const;
 
   // Comparisons return a constant expression of width 1.
 
