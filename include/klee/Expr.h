@@ -147,6 +147,7 @@ public:
     // Float Arithmetic
     FAdd,
     FSub,
+    FMul,
 
     // Bit
     And,
@@ -938,6 +939,7 @@ ARITHMETIC_EXPR_CLASS(AShr)
 
 FLOAT_ARITHMETIC_EXPR_CLASS(FAdd)
 FLOAT_ARITHMETIC_EXPR_CLASS(FSub)
+FLOAT_ARITHMETIC_EXPR_CLASS(FMul)
 #undef FLOAT_ARITHMETIC_EXPR_CLASS
 
 // Comparison Exprs
@@ -1181,6 +1183,8 @@ public:
   ref<ConstantExpr> FAdd(const ref<ConstantExpr> &RHS,
                          llvm::APFloat::roundingMode rm) const;
   ref<ConstantExpr> FSub(const ref<ConstantExpr> &RHS,
+                         llvm::APFloat::roundingMode rm) const;
+  ref<ConstantExpr> FMul(const ref<ConstantExpr> &RHS,
                          llvm::APFloat::roundingMode rm) const;
 
   // Comparisons return a constant expression of width 1.

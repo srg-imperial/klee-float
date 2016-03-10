@@ -868,6 +868,17 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
                                      left, right),
                        ctx);
   }
+
+  case Expr::FMul: {
+    FMulExpr *fmul = cast<FMulExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fmul->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fmul->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized sle");
+    return Z3ASTHandle(Z3_mk_fpa_mul(ctx,
+                                     getRoundingModeSort(fmul->roundingMode),
+                                     left, right),
+                       ctx);
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
