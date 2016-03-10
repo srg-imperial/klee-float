@@ -25,6 +25,8 @@ include $(LEVEL)/Makefile.common
 # in the same place it looks for all the other
 # run time libraries
 uclibc_symlink:=$(PROJ_OBJ_ROOT)/$(BuildMode)/lib/$(KLEE_UCLIBC_BCA_NAME)
+uclibc_libm_symlink:=$(PROJ_OBJ_ROOT)/$(BuildMode)/lib/$(KLEE_UCLIBC_LIBM_BCA_NAME)
+
 #
 # Force our extra rules to run
 all-local:: $(uclibc_symlink)
@@ -33,6 +35,7 @@ $(uclibc_symlink):
 	@echo "Setting up symbolic link to klee-uclibc"
 	-$(Verb) $(MKDIR) $(PROJ_OBJ_ROOT)/$(BuildMode)/lib
 	$(Verb) ln -s -f $(KLEE_UCLIBC_BCA) $(uclibc_symlink)
+	$(Verb) ln -s -f $(KLEE_UCLIBC_LIBM_BCA) $(uclibc_libm_symlink)
 
 # The reasons for copying over klee-uclibc on install are
 #
@@ -48,7 +51,9 @@ uninstall:: remove_klee_uclibc
 copy_klee_uclibc:
 	@echo "Installing klee-uclibc archive"
 	$(Verb) $(CP) $(KLEE_UCLIBC_BCA) $(BYTECODE_DESTINATION)/$(KLEE_UCLIBC_BCA_NAME)
+	$(Verb) $(CP) $(KLEE_UCLIBC_LIBM_BCA) $(BYTECODE_DESTINATION)/$(KLEE_UCLIBC_LIBM_BCA_NAME)
 
 remove_klee_uclibc:
 	@echo "Removing klee-uclibc archive"
 	$(Verb) $(RM) $(BYTECODE_DESTINATION)/$(KLEE_UCLIBC_BCA_NAME)
+	$(Verb) $(RM) $(BYTECODE_DESTINATION)/$(KLEE_UCLIBC_LIBM_BCA_NAME)
