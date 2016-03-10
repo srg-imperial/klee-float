@@ -107,6 +107,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::FAdd:
       res = visitFAdd(static_cast<FAddExpr&>(ep));
       break;
+    case Expr::FSub:
+      res = visitFSub(static_cast<FSubExpr&>(ep));
+      break;
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -302,5 +305,9 @@ ExprVisitor::Action ExprVisitor::visitIsNaN(const IsNaNExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitFAdd(const FAddExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFSub(const FSubExpr &) {
   return Action::doChildren();
 }

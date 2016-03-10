@@ -86,6 +86,7 @@ namespace klee {
     virtual Action visitFOGe(const FOGeExpr &);
     virtual Action visitIsNaN(const IsNaNExpr &);
     virtual Action visitFAdd(const FAddExpr &);
+    virtual Action visitFSub(const FSubExpr &);
 
   private:
     typedef ExprHashMap< ref<Expr> > visited_ty;

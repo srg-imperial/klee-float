@@ -11,19 +11,16 @@
 int main() {
   float x, y, z;
   klee_make_symbolic(&x, sizeof(float), "x");
-  klee_assume(x < 10000.0f); // This also implies x isn't a NaN
+  klee_assume(x > 0.0f); // This also implies x isn't a NaN
   y = 1.0e12f;
-  z = x + y;
-  if ( z > y ) {
-    // Note this branch should not be feasible when modelling floating point
-    // constraints precisely. However when using reals to approximate floats
-    // then this branch is feasible.
-    klee_report_error(__FILE__, __LINE__, "Branch should not be reachable", "fpfeas");
+  z = y - x;
+  if ( z == y ) {
+    // Note if we use reals to approximate floats this branch won't be feasible
+    printf("sub x absorbed\n");
   } else {
-    fprintf(stderr, "add x absorbed\n");
+    printf("subtraction visible\n");
   }
   return 0;
 }
-// CHECK: add x absorbed
 // CHECK-NOT: silently concretizing (reason: floating point)
-// CHECK: KLEE: done: completed paths = 1
+// CHECK: KLEE: done: completed paths = 2
