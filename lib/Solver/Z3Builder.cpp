@@ -852,7 +852,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FAddExpr *fadd = cast<FAddExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fadd->left, width_out));
     Z3ASTHandle right = castToFloat(construct(fadd->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized sle");
+    assert(*width_out != 1 && "uncanonicalized FAdd");
     return Z3ASTHandle(Z3_mk_fpa_add(ctx,
                                      getRoundingModeSort(fadd->roundingMode),
                                      left, right),
@@ -863,7 +863,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FSubExpr *fsub = cast<FSubExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fsub->left, width_out));
     Z3ASTHandle right = castToFloat(construct(fsub->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized sle");
+    assert(*width_out != 1 && "uncanonicalized FSub");
     return Z3ASTHandle(Z3_mk_fpa_sub(ctx,
                                      getRoundingModeSort(fsub->roundingMode),
                                      left, right),
@@ -874,7 +874,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FMulExpr *fmul = cast<FMulExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fmul->left, width_out));
     Z3ASTHandle right = castToFloat(construct(fmul->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized sle");
+    assert(*width_out != 1 && "uncanonicalized FMul");
     return Z3ASTHandle(Z3_mk_fpa_mul(ctx,
                                      getRoundingModeSort(fmul->roundingMode),
                                      left, right),
