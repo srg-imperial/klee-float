@@ -613,32 +613,32 @@ ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
 ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   APFloat result(this->getAPFloatValue());
-  llvm::APFloat::opStatus status = result.add(RHS->getAPFloatValue(), rm);
-  assert(status != llvm::APFloat::opInvalidOp);
+  // Should we use the status?
+  result.add(RHS->getAPFloatValue(), rm);
   return ConstantExpr::alloc(result);
 }
 
 ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   APFloat result(this->getAPFloatValue());
-  llvm::APFloat::opStatus status = result.subtract(RHS->getAPFloatValue(), rm);
-  assert(status != llvm::APFloat::opInvalidOp);
+  // Should we use the status?
+  result.subtract(RHS->getAPFloatValue(), rm);
   return ConstantExpr::alloc(result);
 }
 
 ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   APFloat result(this->getAPFloatValue());
-  llvm::APFloat::opStatus status = result.multiply(RHS->getAPFloatValue(), rm);
-  assert(status != llvm::APFloat::opInvalidOp);
+  // Should we use the status?
+  result.multiply(RHS->getAPFloatValue(), rm);
   return ConstantExpr::alloc(result);
 }
 
 ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   APFloat result(this->getAPFloatValue());
-  llvm::APFloat::opStatus status = result.divide(RHS->getAPFloatValue(), rm);
-  assert(status != llvm::APFloat::opInvalidOp);
+  // Should we use the status?
+  result.divide(RHS->getAPFloatValue(), rm);
   return ConstantExpr::alloc(result);
 }
 
