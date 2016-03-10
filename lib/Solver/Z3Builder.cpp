@@ -858,6 +858,17 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
                                      left, right),
                        ctx);
   }
+
+  case Expr::FSub: {
+    FSubExpr *fsub = cast<FSubExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fsub->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fsub->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized sle");
+    return Z3ASTHandle(Z3_mk_fpa_sub(ctx,
+                                     getRoundingModeSort(fsub->roundingMode),
+                                     left, right),
+                       ctx);
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
