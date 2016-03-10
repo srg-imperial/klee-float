@@ -113,6 +113,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::FMul:
       res = visitFMul(static_cast<FMulExpr &>(ep));
       break;
+    case Expr::FDiv:
+      res = visitFDiv(static_cast<FDivExpr &>(ep));
+      break;
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -316,5 +319,9 @@ ExprVisitor::Action ExprVisitor::visitFSub(const FSubExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitFMul(const FMulExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFDiv(const FDivExpr &) {
   return Action::doChildren();
 }
