@@ -603,8 +603,27 @@ if (ENABLE_KLEE_UCLIBC)
     "${KLEE_UCLIBC_C_BCA}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_NAME}"
   )
+
   list(APPEND KLEE_COMPONENT_CXX_DEFINES
     -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
+
+  # Find the C Math library bitcode archive
+  set(KLEE_UCLIBC_LIBM_BCA_NAME "klee-uclibc-libm.bca")
+  set(KLEE_UCLIBC_LIBM_BCA "${KLEE_UCLIBC_PATH}/lib/libm.a")
+  if (NOT EXISTS "${KLEE_UCLIBC_LIBM_BCA}")
+    message(FATAL_ERROR
+      "klee-uclibc math library not found at \"${KLEE_UCLIBC_LIBM_BCA}\"")
+  endif()
+  message(STATUS "Found klee-uclibc math library: \"${KLEE_UCLIBC_LIBM_BCA}\"")
+  # Make a symlink to KLEE_UCLIBC_LIBM_BCA so KLEE can find it where it
+  # is expected.
+  file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+    "${KLEE_UCLIBC_LIBM_BCA}"
+    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_LIBM_BCA_NAME}"
+  )
+  list(APPEND KLEE_COMPONENT_CXX_DEFINES
+    -DKLEE_UCLIBC_LIBM_BCA_NAME=\"${KLEE_UCLIBC_LIBM_BCA_NAME}\")
 
   # Add klee-uclibc to the install target. We install the original
   # file rather than the symlink because CMake would just copy the symlink
@@ -612,6 +631,14 @@ if (ENABLE_KLEE_UCLIBC)
   install(FILES "${KLEE_UCLIBC_C_BCA}"
     DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
     RENAME "${KLEE_UCLIBC_BCA_NAME}"
+    )
+
+  # Add klee-uclibc math library to the install target. We install the original
+  # file rather than the symlink because CMake would just copy the symlink
+  # rather than the file.
+  install(FILES "${KLEE_UCLIBC_LIBM_BCA}"
+    DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
+    RENAME "${KLEE_UCLIBC_LIBM_BCA_NAME}"
     )
 
 else()
