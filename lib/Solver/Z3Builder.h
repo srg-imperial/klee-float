@@ -175,6 +175,8 @@ private:
   // Float casts
   Z3ASTHandle castToFloat(Z3ASTHandle e);
 
+  Z3ASTHandle getRoundingModeSort(llvm::APFloat::roundingMode);
+
   bool autoClearConstructCache;
 
 public:

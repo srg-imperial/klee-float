@@ -104,6 +104,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::IsNaN:
       res = visitIsNaN(static_cast<IsNaNExpr &>(ep));
       break;
+    case Expr::FAdd:
+      res = visitFAdd(static_cast<FAddExpr&>(ep));
+      break;
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -295,5 +298,9 @@ ExprVisitor::Action ExprVisitor::visitFOGe(const FOGeExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitIsNaN(const IsNaNExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFAdd(const FAddExpr &) {
   return Action::doChildren();
 }
