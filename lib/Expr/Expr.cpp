@@ -142,6 +142,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Shl);
     X(LShr);
     X(AShr);
+    X(FAdd);
     X(Eq);
     X(Ne);
     X(Ult);
@@ -597,6 +598,14 @@ ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
   bool result =
       (cmpRes == APFloat::cmpGreaterThan) || (cmpRes == APFloat::cmpEqual);
   return ConstantExpr::alloc(result, Expr::Bool);
+}
+
+ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
+                                     llvm::APFloat::roundingMode rm) const {
+  APFloat result(this->getAPFloatValue());
+  llvm::APFloat::opStatus status = result.add(RHS->getAPFloatValue(), rm);
+  assert(status != llvm::APFloat::opInvalidOp);
+  return ConstantExpr::alloc(result);
 }
 
 /***/
@@ -1313,6 +1322,18 @@ FOCMPCREATE(FOLtExpr, FOLt)
 FOCMPCREATE(FOLeExpr, FOLe)
 FOCMPCREATE(FOGtExpr, FOGt)
 FOCMPCREATE(FOGeExpr, FOGe)
+
+#define FARITHCREATE(_e_op, _op)                                               \
+  ref<Expr> _e_op::create(const ref<Expr> &l, const ref<Expr> &r,              \
+                          llvm::APFloat::roundingMode rm) {                    \
+    assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                          \
+      if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
+        return cl->_op(cr, rm);                                                \
+    return _e_op::alloc(l, r, rm);                                             \
+  }
+
+FARITHCREATE(FAddExpr, FAdd)
 
 ref<Expr> IsNaNExpr::create(const ref<Expr> &e) {
   if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {

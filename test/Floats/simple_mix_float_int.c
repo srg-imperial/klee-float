@@ -30,4 +30,4 @@ int main() {
   return 0;
 }
 // CHECK-NOT: silently concretizing (reason: floating point)
-// CHECK: KLEE: done: completed paths = 2
+// CHECK: KLEE: done: completed paths = 4
