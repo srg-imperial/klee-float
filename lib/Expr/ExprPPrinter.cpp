@@ -35,6 +35,11 @@ namespace {
 
   llvm::cl::opt<bool>
   PCAllConstWidths("pc-all-const-widths",  llvm::cl::init(false));
+
+  llvm::cl::opt<bool> PCFloatConstantsAsHexFloat(
+      "pc-float-constants-as-hex-float", llvm::cl::init(false),
+      llvm::cl::desc("Enable floating point constants as C99 hexfloats if "
+                     "true, otherwise emit decimal constants (default=false)"));
 }
 
 class PPrinter : public ExprPPrinter {
@@ -350,11 +355,7 @@ public:
       } else {
         std::string S;
         if (e->isFloat()) {
-          // Emit as precise c99 hexfloat
-          // Is this the right design choice?
-          // They are quite hard to read but they're
-          // always bit-precise (no precision loss).
-          e->toString(S, /*radix=*/16);
+          e->toString(S, /*radix=*/(PCFloatConstantsAsHexFloat ? 16 : 10));
         } else {
           e->toString(S);
         }
