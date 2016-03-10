@@ -880,6 +880,17 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
                                      left, right),
                        ctx);
   }
+
+  case Expr::FDiv: {
+    FDivExpr *fdiv = cast<FDivExpr>(e);
+    Z3ASTHandle left = castToFloat(construct(fdiv->left, width_out));
+    Z3ASTHandle right = castToFloat(construct(fdiv->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FDiv");
+    return Z3ASTHandle(Z3_mk_fpa_div(ctx,
+                                     getRoundingModeSort(fdiv->roundingMode),
+                                     left, right),
+                       ctx);
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
