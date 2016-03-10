@@ -138,6 +138,10 @@ namespace {
 		  clEnumValEnd),
        cl::init(NoLibc));
 
+  cl::opt<bool> LinkWithUclibcMath(
+      "libm",
+      cl::desc("Link with uclibc math library if using uclibc (default=false)"),
+      cl::init(false));
 
   cl::opt<bool>
   WithPOSIXRuntime("posix-runtime",
@@ -1014,6 +1018,18 @@ static void replaceOrRenameFunction(llvm::Module *module,
   }
 }
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
+  // Link withh math library first if requested
+  if(LinkWithUclibcMath) {
+    // Ensure that klee-uclibc-libm exists
+    SmallString<128> uclibclibmBCA(libDir);
+    llvm::sys::path::append(uclibclibmBCA, KLEE_UCLIBC_LIBM_BCA_NAME);
+    klee_message("Linking with libm");
+    bool uclibclibmExists=false;
+    llvm::sys::fs::exists(uclibclibmBCA.c_str(), uclibclibmExists);
+    if (!uclibclibmExists)
+      klee_error("Cannot find klee-uclibc-libm : %s", uclibclibmBCA.c_str());
+    mainModule = klee::linkWithLibrary(mainModule, uclibclibmBCA.c_str());
+  }
   // Ensure that klee-uclibc exists
   SmallString<128> uclibcBCA(libDir);
   llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);

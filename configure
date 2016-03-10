@@ -642,6 +642,7 @@ RUNTIME_DEBUG_SYMBOLS
 RUNTIME_DISABLE_ASSERTIONS
 RUNTIME_ENABLE_OPTIMIZED
 ENABLE_POSIX_RUNTIME
+KLEE_UCLIBC_LIBM_BCA
 KLEE_UCLIBC_BCA
 ENABLE_UCLIBC
 KLEE_BITCODE_CXX_COMPILER
@@ -3997,9 +3998,13 @@ if (test X${with_uclibc} != X); then
             with_uclibc=`cd $with_uclibc 2> /dev/null; pwd`
 
             KLEE_UCLIBC_BCA="${with_uclibc}/lib/libc.a"
+      KLEE_UCLIBC_LIBM_BCA="${with_uclibc}/lib/libm.a"
 
       if test ! -e "${KLEE_UCLIBC_BCA}"; then
-      as_fn_error $? "Could not find file ${KLEE_UCLIBC_BCA}" "$LINENO" 5
+        as_fn_error $? "Could not find file ${KLEE_UCLIBC_BCA}" "$LINENO" 5
+      fi
+      if test ! -e "${KLEE_UCLIBC_LIBM_BCA}"; then
+        as_fn_error $? "Could not find file ${KLEE_UCLIBC_LIBM_BCA}" "$LINENO" 5
       fi
    elif test -f ${with_uclibc}; then
 
@@ -4016,6 +4021,7 @@ if (test X${with_uclibc} != X); then
    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $KLEE_UCLIBC_BCA" >&5
 $as_echo "$KLEE_UCLIBC_BCA" >&6; }
    ENABLE_UCLIBC=1
+
 
 
 

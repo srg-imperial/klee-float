@@ -402,9 +402,13 @@ if (test X${with_uclibc} != X); then
 
       dnl create path to libc file
       KLEE_UCLIBC_BCA="${with_uclibc}/lib/libc.a"
+      KLEE_UCLIBC_LIBM_BCA="${with_uclibc}/lib/libm.a"
 
       if test ! -e "${KLEE_UCLIBC_BCA}"; then
-      AC_MSG_ERROR([Could not find file ${KLEE_UCLIBC_BCA}])
+        AC_MSG_ERROR([Could not find file ${KLEE_UCLIBC_BCA}])
+      fi
+      if test ! -e "${KLEE_UCLIBC_LIBM_BCA}"; then
+        AC_MSG_ERROR([Could not find file ${KLEE_UCLIBC_LIBM_BCA}])
       fi
    elif test -f ${with_uclibc}; then
       dnl Support the new way of configuring klee-uclibc
@@ -426,6 +430,7 @@ if (test X${with_uclibc} != X); then
    AC_MSG_RESULT([$KLEE_UCLIBC_BCA])
    AC_SUBST(ENABLE_UCLIBC,[[1]])
    AC_SUBST(KLEE_UCLIBC_BCA)
+   AC_SUBST(KLEE_UCLIBC_LIBM_BCA)
    AC_DEFINE(SUPPORT_KLEE_UCLIBC, [[1]], [klee-uclibc is supported])
 else
    AC_MSG_RESULT([no])
