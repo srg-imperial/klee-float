@@ -127,6 +127,7 @@ public:
     ZExt,
     SExt,
     FPExt,
+    FPTrunc,
 
     // Bit
     Not,
@@ -179,7 +180,7 @@ public:
     LastKind = FOGe,
 
     CastKindFirst = ZExt,
-    CastKindLast = FPExt,
+    CastKindLast = FPTrunc,
     BinaryKindFirst = Add,
     BinaryKindLast = FOGe,
     CmpKindFirst = Eq,
@@ -915,6 +916,36 @@ CAST_EXPR_CLASS(SExt)
 CAST_EXPR_CLASS(ZExt)
 CAST_EXPR_CLASS(FPExt)
 
+#define FP_CAST_EXPR_CLASS(_class_kind)                                        \
+  class _class_kind##Expr : public CastExpr {                                  \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 1;                                         \
+    const llvm::APFloat::roundingMode roundingMode;                            \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(ref<Expr> e, Width w, llvm::APFloat::roundingMode rm)    \
+        : CastExpr(e, w), roundingMode(rm) {}                                  \
+    static ref<Expr> alloc(const ref<Expr> &e, Width w,                        \
+                           llvm::APFloat::roundingMode rm) {                   \
+      ref<Expr> r(new _class_kind##Expr(e, w, rm));                            \
+      r->computeHash();                                                        \
+      return r;                                                                \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &e, Width w,                       \
+                            llvm::APFloat::roundingMode rm);                   \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], width, roundingMode);                             \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+  };
+FP_CAST_EXPR_CLASS(FPTrunc)
+
 // Arithmetic/Bit Exprs
 
 #define ARITHMETIC_EXPR_CLASS(_class_kind)                                     \
@@ -1245,6 +1276,7 @@ public:
   ref<ConstantExpr> ZExt(Width W);
   ref<ConstantExpr> SExt(Width W);
   ref<ConstantExpr> FPExt(Width W) const;
+  ref<ConstantExpr> FPTrunc(Width W, llvm::APFloat::roundingMode rm) const;
   ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);

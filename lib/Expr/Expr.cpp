@@ -135,6 +135,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(ZExt);
     X(SExt);
     X(FPExt);
+    X(FPTrunc);
     X(Add);
     X(Sub);
     X(Mul);
@@ -648,6 +649,7 @@ ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS,
 }
 
 ref<ConstantExpr> ConstantExpr::FPExt(Width W) const {
+  assert(W > this->getWidth() && "Invalid FPExt");
   APFloat result(this->getAPFloatValue());
   const llvm::fltSemantics &newType = widthToFloatSemantics(W);
   bool losesInfo = false;
@@ -656,6 +658,17 @@ ref<ConstantExpr> ConstantExpr::FPExt(Width W) const {
 
   // Should we use the status?
   result.convert(newType, llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+  return ConstantExpr::alloc(result);
+}
+
+ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
+                                        llvm::APFloat::roundingMode rm) const {
+  assert(W < this->getWidth() && "Invalid FPTrunc");
+  APFloat result(this->getAPFloatValue());
+  const llvm::fltSemantics &newType = widthToFloatSemantics(W);
+  bool losesInfo = false;
+  // Should we use the status?
+  result.convert(newType, rm, &losesInfo);
   return ConstantExpr::alloc(result);
 }
 
@@ -896,6 +909,18 @@ ref<Expr> FPExtExpr::create(const ref<Expr> &e, Width w) {
     return CE->FPExt(w);
   } else {
     return FPExtExpr::alloc(e, w);
+  }
+}
+
+ref<Expr> FPTruncExpr::create(const ref<Expr> &e, Width w,
+                              llvm::APFloat::roundingMode rm) {
+  unsigned kBits = e->getWidth();
+  if (w == kBits) {
+    return e;
+  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->FPTrunc(w, rm);
+  } else {
+    return FPTruncExpr::alloc(e, w, rm);
   }
 }
 
