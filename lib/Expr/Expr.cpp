@@ -127,6 +127,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Extract);
     X(ZExt);
     X(SExt);
+    X(FPExt);
     X(Add);
     X(Sub);
     X(Mul);
@@ -345,7 +346,11 @@ llvm::APFloat ConstantExpr::getAPFloatValue() const {
 bool ConstantExpr::isFloat() const { return mIsFloat; }
 
 const llvm::fltSemantics &ConstantExpr::getFloatSemantics() const {
-  switch (getWidth()) {
+  return widthToFloatSemantics(getWidth());
+}
+
+const llvm::fltSemantics &ConstantExpr::widthToFloatSemantics(Width width) {
+  switch (width) {
   case Expr::Int16:
     return llvm::APFloat::IEEEhalf;
   case Expr::Int32:
@@ -635,6 +640,18 @@ ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS,
   return ConstantExpr::alloc(result);
 }
 
+ref<ConstantExpr> ConstantExpr::FPExt(Width W) const {
+  APFloat result(this->getAPFloatValue());
+  const llvm::fltSemantics &newType = widthToFloatSemantics(W);
+  bool losesInfo = false;
+  // The rounding mode has no meaning when extending so we can use any
+  // rounding mode here.
+
+  // Should we use the status?
+  result.convert(newType, llvm::APFloat::rmNearestTiesToEven, &losesInfo);
+  return ConstantExpr::alloc(result);
+}
+
 /***/
 
 ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
@@ -848,6 +865,17 @@ ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
     return CE->SExt(w);
   } else {    
     return SExtExpr::alloc(e, w);
+  }
+}
+
+ref<Expr> FPExtExpr::create(const ref<Expr> &e, Width w) {
+  unsigned kBits = e->getWidth();
+  if (w == kBits) {
+    return e;
+  } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->FPExt(w);
+  } else {
+    return FPExtExpr::alloc(e, w);
   }
 }
 
