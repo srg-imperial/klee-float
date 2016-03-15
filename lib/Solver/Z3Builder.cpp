@@ -545,6 +545,23 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
   }
 
+  case Expr::FPExt: {
+    int srcWidth;
+    FPExtExpr *ce = cast<FPExtExpr>(e);
+    Z3ASTHandle src = castToFloat(construct(ce->src, &srcWidth));
+    *width_out = ce->getWidth();
+    assert(&(ConstantExpr::widthToFloatSemantics(*width_out)) !=
+               &(llvm::APFloat::Bogus) &&
+           "Invalid FPExt width");
+    assert(*width_out >= srcWidth && "Invalid FPExt");
+    // Just use any arounding mode here as we are extending
+    return Z3ASTHandle(
+        Z3_mk_fpa_to_fp_float(
+            ctx, getRoundingModeSort(llvm::APFloat::rmNearestTiesToEven), src,
+            getFloatSortFromBitWidth(*width_out)),
+        ctx);
+  }
+
   // Arithmetic
   case Expr::Add: {
     AddExpr *ae = cast<AddExpr>(e);

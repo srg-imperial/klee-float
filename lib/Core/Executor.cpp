@@ -2078,20 +2078,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPExt: {
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                        "floating point");
-    if (!fpWidthToSemantics(arg->getWidth()) || arg->getWidth() > resultType)
+    ref<Expr> arg = eval(ki, 0, state).value;
+    if (!fpWidthToSemantics(arg->getWidth()) || !fpWidthToSemantics(resultType))
       return terminateStateOnExecError(state, "Unsupported FPExt operation");
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-    llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
-#else
-    llvm::APFloat Res(arg->getAPValue());
-#endif
-    bool losesInfo = false;
-    Res.convert(*fpWidthToSemantics(resultType),
-                llvm::APFloat::rmNearestTiesToEven,
-                &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    if (arg->getWidth() >= resultType)
+      return terminateStateOnExecError(state, "Invalid FPExt");
+    ref<Expr> result = FPExtExpr::create(arg, resultType);
+    bindLocal(ki, state, result);
     break;
   }
 
