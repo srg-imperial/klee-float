@@ -62,6 +62,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::Extract: res = visitExtract(static_cast<ExtractExpr&>(ep)); break;
     case Expr::ZExt: res = visitZExt(static_cast<ZExtExpr&>(ep)); break;
     case Expr::SExt: res = visitSExt(static_cast<SExtExpr&>(ep)); break;
+    case Expr::FPExt:
+      res = visitFPExt(static_cast<FPExtExpr &>(ep));
+      break;
     case Expr::Add: res = visitAdd(static_cast<AddExpr&>(ep)); break;
     case Expr::Sub: res = visitSub(static_cast<SubExpr&>(ep)); break;
     case Expr::Mul: res = visitMul(static_cast<MulExpr&>(ep)); break;
@@ -323,5 +326,9 @@ ExprVisitor::Action ExprVisitor::visitFMul(const FMulExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitFDiv(const FDivExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFPExt(const FPExtExpr &) {
   return Action::doChildren();
 }
