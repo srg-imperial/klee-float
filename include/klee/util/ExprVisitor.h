@@ -57,6 +57,7 @@ namespace klee {
     virtual Action visitSExt(const SExtExpr&);
     virtual Action visitFPExt(const FPExtExpr &);
     virtual Action visitFPTrunc(const FPTruncExpr &);
+    virtual Action visitFPToUI(const FPToUIExpr &);
     virtual Action visitAdd(const AddExpr&);
     virtual Action visitSub(const SubExpr&);
     virtual Action visitMul(const MulExpr&);
