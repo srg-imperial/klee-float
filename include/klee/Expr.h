@@ -126,6 +126,7 @@ public:
     // Casting,
     ZExt,
     SExt,
+    FPExt,
 
     // Bit
     Not,
@@ -178,7 +179,7 @@ public:
     LastKind = FOGe,
 
     CastKindFirst = ZExt,
-    CastKindLast = SExt,
+    CastKindLast = FPExt,
     BinaryKindFirst = Add,
     BinaryKindLast = FOGe,
     CmpKindFirst = Eq,
@@ -912,6 +913,7 @@ public:                                                          \
 
 CAST_EXPR_CLASS(SExt)
 CAST_EXPR_CLASS(ZExt)
+CAST_EXPR_CLASS(FPExt)
 
 // Arithmetic/Bit Exprs
 
@@ -1136,6 +1138,10 @@ public:
   llvm::APFloat getAPFloatValue() const;
   const llvm::fltSemantics &getFloatSemantics() const;
 
+  // FIXME: Not sure if this really belongs here. This isn't
+  // specific to constants
+  static const llvm::fltSemantics &widthToFloatSemantics(Width width);
+
   /// getZExtValue - Returns the constant value zero extended to the
   /// return type of this method.
   ///
@@ -1238,6 +1244,7 @@ public:
   ref<ConstantExpr> Extract(unsigned offset, Width W);
   ref<ConstantExpr> ZExt(Width W);
   ref<ConstantExpr> SExt(Width W);
+  ref<ConstantExpr> FPExt(Width W) const;
   ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
