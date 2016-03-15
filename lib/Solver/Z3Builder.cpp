@@ -563,6 +563,21 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
         ctx);
   }
 
+  case Expr::FPTrunc: {
+    int srcWidth;
+    FPTruncExpr *ce = cast<FPTruncExpr>(e);
+    Z3ASTHandle src = castToFloat(construct(ce->src, &srcWidth));
+    *width_out = ce->getWidth();
+    assert(&(ConstantExpr::widthToFloatSemantics(*width_out)) !=
+               &(llvm::APFloat::Bogus) &&
+           "Invalid FPTrunc width");
+    assert(*width_out <= srcWidth && "Invalid FPTrunc");
+    return Z3ASTHandle(
+        Z3_mk_fpa_to_fp_float(ctx, getRoundingModeSort(ce->roundingMode), src,
+                              getFloatSortFromBitWidth(*width_out)),
+        ctx);
+  }
+
   // Arithmetic
   case Expr::Add: {
     AddExpr *ae = cast<AddExpr>(e);
