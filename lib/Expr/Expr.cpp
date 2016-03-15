@@ -10,6 +10,7 @@
 #include "klee/Expr.h"
 #include "klee/Config/Version.h"
 
+#include "llvm/ADT/APSInt.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
 #include "llvm/ADT/Hashing.h"
 #endif
@@ -136,6 +137,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(SExt);
     X(FPExt);
     X(FPTrunc);
+    X(FPToUI);
     X(Add);
     X(Sub);
     X(Mul);
@@ -672,6 +674,18 @@ ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
   return ConstantExpr::alloc(result);
 }
 
+ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
+                                       llvm::APFloat::roundingMode rm) const {
+  assert(W >= this->getWidth() && "Invalid FPToUI");
+  APFloat asF(this->getAPFloatValue());
+  // Should we use the status?
+  APSInt result(/*BitWidth=*/W, /*isUnsigned=*/true);
+  bool isExact = false;
+  // What are the semantics when ``asF`` is negative?
+  asF.convertToInteger(result, rm, &isExact);
+  return ConstantExpr::alloc(result);
+}
+
 /***/
 
 ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
@@ -921,6 +935,15 @@ ref<Expr> FPTruncExpr::create(const ref<Expr> &e, Width w,
     return CE->FPTrunc(w, rm);
   } else {
     return FPTruncExpr::alloc(e, w, rm);
+  }
+}
+
+ref<Expr> FPToUIExpr::create(const ref<Expr> &e, Width w,
+                             llvm::APFloat::roundingMode rm) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->FPToUI(w, rm);
+  } else {
+    return FPToUIExpr::alloc(e, w, rm);
   }
 }
 
