@@ -2316,16 +2316,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::UIToFP: {
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
+    ref<Expr> arg = eval(ki, 0, state).value;
     const llvm::fltSemantics *semantics = fpWidthToSemantics(resultType);
     if (!semantics)
       return terminateStateOnExecError(state, "Unsupported UIToFP operation");
-    llvm::APFloat f(*semantics, 0);
-    f.convertFromAPInt(arg->getAPValue(), false,
-                       llvm::APFloat::rmNearestTiesToEven);
-
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    ref<Expr> result = UIToFPExpr::create(arg, resultType, state.roundingMode);
+    bindLocal(ki, state, result);
     break;
   }
 
