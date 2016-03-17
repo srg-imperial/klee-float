@@ -131,6 +131,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FPExt);
     X(FPTrunc);
     X(FPToUI);
+    X(FPToSI);
     X(Add);
     X(Sub);
     X(Mul);
@@ -679,6 +680,17 @@ ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
   return ConstantExpr::alloc(result);
 }
 
+ref<ConstantExpr> ConstantExpr::FPToSI(Width W,
+                                       llvm::APFloat::roundingMode rm) const {
+  assert(W >= this->getWidth() && "Invalid FPToSI");
+  APFloat asF(this->getAPFloatValue());
+  // Should we use the status?
+  APSInt result(/*BitWidth=*/W, /*isUnsigned=*/false);
+  bool isExact = false;
+  asF.convertToInteger(result, rm, &isExact);
+  return ConstantExpr::alloc(result);
+}
+
 /***/
 
 ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
@@ -924,6 +936,15 @@ ref<Expr> FPToUIExpr::create(const ref<Expr> &e, Width w,
     return CE->FPToUI(w, rm);
   } else {
     return FPToUIExpr::alloc(e, w, rm);
+  }
+}
+
+ref<Expr> FPToSIExpr::create(const ref<Expr> &e, Width w,
+                             llvm::APFloat::roundingMode rm) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->FPToSI(w, rm);
+  } else {
+    return FPToSIExpr::alloc(e, w, rm);
   }
 }
 
