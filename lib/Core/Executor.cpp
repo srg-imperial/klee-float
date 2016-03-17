@@ -1135,10 +1135,6 @@ ref<klee::ConstantExpr>
 Executor::toConstant(ExecutionState &state, 
                      ref<Expr> e,
                      const char *reason) {
-  // HACK
-  if (strcmp("floating point", reason) == 0 ) {
-    klee_error("Shouldn't be concretizing floating point expressions");
-  }
   e = state.constraints.simplifyExpr(e);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
