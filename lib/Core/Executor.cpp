@@ -2303,21 +2303,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::FPToSI: {
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
-                                       "floating point");
-    if (!fpWidthToSemantics(arg->getWidth()) || resultType > 64)
+    ref<Expr> arg = eval(ki, 0, state).value;
+    if (!fpWidthToSemantics(arg->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FPToSI operation");
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-    llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
-#else
-    llvm::APFloat Arg(arg->getAPValue());
-
-#endif
-    uint64_t value = 0;
-    bool isExact = true;
-    Arg.convertToInteger(&value, resultType, true,
-                         llvm::APFloat::rmTowardZero, &isExact);
-    bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
+    // LLVM IR Ref manual says that it rounds toward zero
+    ref<Expr> result =
+        FPToSIExpr::create(arg, resultType, llvm::APFloat::rmTowardZero);
+    bindLocal(ki, state, result);
     break;
   }
 

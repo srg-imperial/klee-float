@@ -129,6 +129,7 @@ public:
     FPExt,
     FPTrunc,
     FPToUI,
+    FPToSI,
 
     // Bit
     Not,
@@ -181,7 +182,7 @@ public:
     LastKind = FOGe,
 
     CastKindFirst = ZExt,
-    CastKindLast = FPToUI,
+    CastKindLast = FPToSI,
     BinaryKindFirst = Add,
     BinaryKindLast = FOGe,
     CmpKindFirst = Eq,
@@ -897,6 +898,7 @@ CAST_EXPR_CLASS(FPExt)
   };
 FP_CAST_EXPR_CLASS(FPTrunc)
 FP_CAST_EXPR_CLASS(FPToUI)
+FP_CAST_EXPR_CLASS(FPToSI)
 
 // Arithmetic/Bit Exprs
 
@@ -1209,6 +1211,7 @@ public:
   ref<ConstantExpr> FPExt(Width W) const;
   ref<ConstantExpr> FPTrunc(Width W, llvm::APFloat::roundingMode rm) const;
   ref<ConstantExpr> FPToUI(Width W, llvm::APFloat::roundingMode rm) const;
+  ref<ConstantExpr> FPToSI(Width W, llvm::APFloat::roundingMode rm) const;
   ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
