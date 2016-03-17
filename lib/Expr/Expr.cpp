@@ -133,6 +133,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FPToUI);
     X(FPToSI);
     X(UIToFP);
+    X(SIToFP);
     X(Add);
     X(Sub);
     X(Mul);
@@ -699,6 +700,15 @@ ref<ConstantExpr> ConstantExpr::UIToFP(Width W,
   return ConstantExpr::alloc(asF);
 }
 
+ref<ConstantExpr> ConstantExpr::SIToFP(Width W,
+                                       llvm::APFloat::roundingMode rm) const {
+  const llvm::fltSemantics &newType = widthToFloatSemantics(W);
+  llvm::APFloat asF(newType);
+  // Should we use the status?
+  asF.convertFromAPInt(value, /*isSigned=*/true, rm);
+  return ConstantExpr::alloc(asF);
+}
+
 /***/
 
 ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
@@ -962,6 +972,15 @@ ref<Expr> UIToFPExpr::create(const ref<Expr> &e, Width w,
     return CE->UIToFP(w, rm);
   } else {
     return UIToFPExpr::alloc(e, w, rm);
+  }
+}
+
+ref<Expr> SIToFPExpr::create(const ref<Expr> &e, Width w,
+                             llvm::APFloat::roundingMode rm) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
+    return CE->SIToFP(w, rm);
+  } else {
+    return SIToFPExpr::alloc(e, w, rm);
   }
 }
 
