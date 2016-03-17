@@ -2250,22 +2250,63 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::FRem: {
-    ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
-                                        "floating point");
-    ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
-                                         "floating point");
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
     if (!fpWidthToSemantics(left->getWidth()) ||
         !fpWidthToSemantics(right->getWidth()))
       return terminateStateOnExecError(state, "Unsupported FRem operation");
+
+    // FIXME:
+    // For now assume that the semantics of this instruction are that
+    // of C99's ``fmod()`` function. This is quite odd but ``lli``
+    // currently uses ``APFloat.mod()`` to interpret this instruction which
+    // code comments seem suggest is the same as C99's ``fmod()``. I have not
+    // verified this though. Because of the unclear semantics here I have not
+    // created an expression type for this instruction and so constant folding and
+    // the code for generating the right expressions lives here.
+    //
+    // fmod(x, y)
+    // C99 7.12.10.1 - The fmod functions
+    // The fmod functions return the value x − ny, for some integer n such that, if y is nonzero,
+    // the result has the same sign as x and magnitude less than the magnitude of y. If y is zero,
+    // whether a domain error occurs or the fmod functions return zero is implementation-
+    // defined.
+    ref<Expr> result = 0;
+    if (ConstantExpr* cl = dyn_cast<ConstantExpr>(left)) {
+      if (ConstantExpr* cr = dyn_cast<ConstantExpr>(right)) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-    llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
-    Res.mod(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()),
-            APFloat::rmNearestTiesToEven);
+        llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), cl->getAPValue());
+        Res.mod(APFloat(*fpWidthToSemantics(right->getWidth()), cr->getAPValue()),
+                state.roundingMode);
 #else
-    llvm::APFloat Res(left->getAPValue());
-    Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+        llvm::APFloat Res(cl->getAPValue());
+        Res.mod(APFloat(cr->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+        result = ConstantExpr::alloc(Res);
+      }
+    }
+
+    if (result.isNull()) {
+      // Based on the constraint |x - n*y| < |y| we can derive the following equality
+      // (x/y) -1 < n < (x/y) + 1
+      //
+      // where (x/y) is real division (i.e. the exact result on reals).
+      //
+      // Based only on this constraint a possible value for n is RTZ(x/y).
+      // However I'm not sure if n == RTZ(x/y) satifies the other constraint that (x - n*y) has the
+      // same sign as x.
+      //
+      // This is rounded several times... is that correct?
+      //
+      // TODO: n needs to be rounded to an integral value. Need to add an expression type for doing this
+      // ref<Expr> n = FDivExpr::create(left, right, llvm::APFloat::rmTowardZero);
+      // result = FSubExpr::create(left, FMulExpr::create(n, right, state.roundingMode), state.roundingMode);
+      //
+      // FIXME: Can't implement the above without a FPRoundToIntegralExpr. Even then I'm not sure it would
+      // be correct so just bail out for now!
+      return terminateStateOnExecError(state, "Support for non concrete FRem is not implemented");
+    }
+    bindLocal(ki, state, result);
     break;
   }
 
