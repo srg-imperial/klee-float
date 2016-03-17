@@ -586,7 +586,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     assert(&(ConstantExpr::widthToFloatSemantics(srcWidth)) !=
                &(llvm::APFloat::Bogus) &&
            "Invalid FPToUI width");
-    assert(*width_out >= srcWidth && "Invalid FPToUI");
     return Z3ASTHandle(Z3_mk_fpa_to_ubv(ctx,
                                         getRoundingModeSort(ce->roundingMode),
                                         src, *width_out),
@@ -601,7 +600,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     assert(&(ConstantExpr::widthToFloatSemantics(srcWidth)) !=
                &(llvm::APFloat::Bogus) &&
            "Invalid FPToSI width");
-    assert(*width_out >= srcWidth && "Invalid FPToSI");
     return Z3ASTHandle(Z3_mk_fpa_to_sbv(ctx,
                                         getRoundingModeSort(ce->roundingMode),
                                         src, *width_out),
