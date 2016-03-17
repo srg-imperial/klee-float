@@ -670,7 +670,6 @@ ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
 
 ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
                                        llvm::APFloat::roundingMode rm) const {
-  assert(W >= this->getWidth() && "Invalid FPToUI");
   APFloat asF(this->getAPFloatValue());
   // Should we use the status?
   APSInt result(/*BitWidth=*/W, /*isUnsigned=*/true);
@@ -682,7 +681,6 @@ ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
 
 ref<ConstantExpr> ConstantExpr::FPToSI(Width W,
                                        llvm::APFloat::roundingMode rm) const {
-  assert(W >= this->getWidth() && "Invalid FPToSI");
   APFloat asF(this->getAPFloatValue());
   // Should we use the status?
   APSInt result(/*BitWidth=*/W, /*isUnsigned=*/false);
