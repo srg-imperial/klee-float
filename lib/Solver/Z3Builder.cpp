@@ -593,6 +593,21 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
                        ctx);
   }
 
+  case Expr::FPToSI: {
+    int srcWidth;
+    FPToSIExpr *ce = cast<FPToSIExpr>(e);
+    Z3ASTHandle src = castToFloat(construct(ce->src, &srcWidth));
+    *width_out = ce->getWidth();
+    assert(&(ConstantExpr::widthToFloatSemantics(srcWidth)) !=
+               &(llvm::APFloat::Bogus) &&
+           "Invalid FPToSI width");
+    assert(*width_out >= srcWidth && "Invalid FPToSI");
+    return Z3ASTHandle(Z3_mk_fpa_to_sbv(ctx,
+                                        getRoundingModeSort(ce->roundingMode),
+                                        src, *width_out),
+                       ctx);
+  }
+
   // Arithmetic
   case Expr::Add: {
     AddExpr *ae = cast<AddExpr>(e);
