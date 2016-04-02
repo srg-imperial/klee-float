@@ -99,6 +99,11 @@ namespace {
   cl::opt<bool>
   DebugPrintEscapingFunctions("debug-print-escaping-functions", 
                               cl::desc("Print functions whose address is taken."));
+
+  cl::opt<bool> UseKleeInternalFloatClassificationFunctions(
+      "internal-float-classify",
+      cl::desc("Use KLEE internal functions for classifying floats"),
+      cl::init(true));
 }
 
 KModule::KModule(Module *_module) 
@@ -227,6 +232,18 @@ static void forceImport(Module *m, const char *name, LLVM_TYPE_Q Type *retType,
 }
 #endif
 
+static void replaceFunctionIfPresent(Module *m, const char *original,
+                       const char *replacement) {
+  llvm::Function* originalFunc = m->getFunction(original);
+  llvm::Function* replacementFunc = m->getFunction(replacement);
+  if (!originalFunc)
+    return;
+  klee_message("Replacing function \"%s\" with \"%s\"", original, replacement);
+  assert(replacementFunc && "Replacement function not found");
+  assert(!(replacementFunc->isDeclaration()) && "replacement must have body");
+  originalFunc->replaceAllUsesWith(replacementFunc);
+  originalFunc->eraseFromParent();
+}
 
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
@@ -349,6 +366,13 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
 #endif
     );
   module = linkWithLibrary(module, LibPath.str());
+
+  // Use KLEE's internal float classification functions if requested.
+  if (UseKleeInternalFloatClassificationFunctions) {
+    // Note these are internal glibc/uclibc names
+    replaceFunctionIfPresent(module, "__isnanf", "klee_internal_isnanf");
+    replaceFunctionIfPresent(module, "__isnan", "klee_internal_isnan");
+  }
 
   // Add internal functions which are not used to check if instructions
   // have been already visited
