@@ -1031,48 +1031,41 @@ COMPARISON_EXPR_CLASS(FOGt)
 COMPARISON_EXPR_CLASS(FOGe)
 
 // Floating point predicates
-class IsNaNExpr : public NonConstantExpr {
-public:
-  static const Kind kind = Expr::IsNaN;
-  static const unsigned numKids = 1;
-
-  ref<Expr> expr;
-
-public:
-  static ref<Expr> alloc(const ref<Expr> &e) {
-    ref<Expr> r(new IsNaNExpr(e));
-    r->computeHash();
-    return r;
-  }
-
-  static ref<Expr> create(const ref<Expr> &e);
-
-  Width getWidth() const { return Expr::Bool; }
-  Kind getKind() const { return Expr::IsNaN; }
-
-  unsigned getNumKids() const { return numKids; }
-  ref<Expr> getKid(unsigned i) const { return expr; }
-
-  int compareContents(const Expr &b) const {
-    const IsNaNExpr &eb = static_cast<const IsNaNExpr &>(b);
-    if (expr != eb.expr)
-      return expr < eb.expr ? -1 : 1;
-    return 0;
-  }
-
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
-
-  virtual unsigned computeHash();
-
-  static ref<Expr> either(const ref<Expr> &e0, const ref<Expr> &e1);
-
-public:
-  static bool classof(const Expr *E) { return E->getKind() == Expr::IsNaN; }
-  static bool classof(const IsNaNExpr *) { return true; }
-
-private:
-  IsNaNExpr(const ref<Expr> &e) : expr(e) {}
+#define FP_PRED_EXPR_CLASS(_class_kind) \
+class _class_kind ## Expr : public NonConstantExpr { \
+public: \
+  static const Kind kind = Expr::_class_kind; \
+  static const unsigned numKids = 1; \
+  ref<Expr> expr; \
+  static ref<Expr> alloc(const ref<Expr> &e) { \
+    ref<Expr> r(new _class_kind ## Expr(e)); \
+    r->computeHash(); \
+    return r; \
+  } \
+  static ref<Expr> create(const ref<Expr> &e); \
+  \
+  Width getWidth() const { return Expr::Bool; } \
+  Kind getKind() const { return Expr::_class_kind; } \
+ \
+  unsigned getNumKids() const { return numKids; } \
+  ref<Expr> getKid(unsigned i) const { return expr; } \
+  \
+  int compareContents(const Expr &b) const { \
+    const _class_kind ## Expr &eb = static_cast<const _class_kind ## Expr &>(b); \
+    if (expr != eb.expr) \
+      return expr < eb.expr ? -1 : 1; \
+    return 0; \
+  } \
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); } \
+  virtual unsigned computeHash(); \
+  static ref<Expr> either(const ref<Expr> &e0, const ref<Expr> &e1); \
+  static bool classof(const Expr *E) { return E->getKind() == Expr::_class_kind; } \
+  static bool classof(const _class_kind ## Expr *) { return true; } \
+private: \
+  _class_kind ## Expr(const ref<Expr> &e) : expr(e) {} \
 };
+FP_PRED_EXPR_CLASS(IsNaN)
+#undef FP_PRED_EXPR_CLASS
 
 // Terminal Exprs
 
