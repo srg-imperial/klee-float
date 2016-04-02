@@ -138,6 +138,7 @@ public:
 
     // Floating point predicates
     IsNaN,
+    IsInfinite,
 
     // All subsequent kinds are binary.
 
@@ -1065,6 +1066,7 @@ private: \
   _class_kind ## Expr(const ref<Expr> &e) : expr(e) {} \
 };
 FP_PRED_EXPR_CLASS(IsNaN)
+FP_PRED_EXPR_CLASS(IsInfinite)
 #undef FP_PRED_EXPR_CLASS
 
 // Terminal Exprs
