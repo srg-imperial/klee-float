@@ -132,6 +132,9 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
+  // float classification instrinsics
+  add("klee_is_nan_float", handleIsNaN, true),
+  add("klee_is_nan_double", handleIsNaN, true),
 #undef addDNR
 #undef add  
 };
@@ -773,4 +776,11 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
   executor.terminateStateOnError(state,
                                  "overflow on division or remainder",
                                  "overflow.err");
+}
+void SpecialFunctionHandler::handleIsNaN(ExecutionState &state,
+                                               KInstruction *target,
+                                               std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsNaN");
+  ref<Expr> result = IsNaNExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
 }
