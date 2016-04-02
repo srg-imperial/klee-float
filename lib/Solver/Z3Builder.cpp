@@ -936,6 +936,14 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     *width_out = 1;
     return Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, arg), ctx);
   }
+
+  case Expr::IsInfinite: {
+    IsInfiniteExpr *iie = cast<IsInfiniteExpr>(e);
+    Z3ASTHandle arg = castToFloat(construct(iie->expr, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_is_infinite(ctx, arg), ctx);
+  }
+
   case Expr::FAdd: {
     FAddExpr *fadd = cast<FAddExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fadd->left, width_out));
