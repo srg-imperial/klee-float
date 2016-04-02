@@ -150,6 +150,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(SRem);
     X(Not);
     X(IsNaN);
+    X(IsInfinite);
     X(And);
     X(Or);
     X(Xor);
@@ -236,6 +237,11 @@ unsigned NotExpr::computeHash() {
 
 unsigned IsNaNExpr::computeHash() {
   hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::IsNaN;
+  return hashValue;
+}
+
+unsigned IsInfiniteExpr::computeHash() {
+  hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::IsInfinite;
   return hashValue;
 }
 
@@ -1525,6 +1531,17 @@ ref<Expr> IsNaNExpr::create(const ref<Expr> &e) {
   return IsNaNExpr::alloc(e);
 }
 
+ref<Expr> IsInfiniteExpr::create(const ref<Expr> &e) {
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {
+    return ConstantExpr::alloc(ce->getAPFloatValue().isInfinity(), Expr::Bool);
+  }
+  return IsInfiniteExpr::alloc(e);
+}
+
 ref<Expr> IsNaNExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
   return OrExpr::create(IsNaNExpr::create(e0), IsNaNExpr::create(e1));
+}
+
+ref<Expr> IsInfiniteExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
+  return OrExpr::create(IsInfiniteExpr::create(e0), IsInfiniteExpr::create(e1));
 }

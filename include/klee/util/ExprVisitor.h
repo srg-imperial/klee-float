@@ -91,6 +91,7 @@ namespace klee {
     virtual Action visitFOGt(const FOGtExpr &);
     virtual Action visitFOGe(const FOGeExpr &);
     virtual Action visitIsNaN(const IsNaNExpr &);
+    virtual Action visitIsInfinite(const IsInfiniteExpr &);
     virtual Action visitFAdd(const FAddExpr &);
     virtual Action visitFSub(const FSubExpr &);
     virtual Action visitFMul(const FMulExpr &);
