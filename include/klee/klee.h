@@ -154,6 +154,15 @@ extern "C" {
 
   /* Merge current states together if possible */
   void klee_merge();
+
+#ifdef __cplusplus
+#define KLEE_BOOL_TYPE bool
+#else
+#define KLEE_BOOL_TYPE _Bool
+#endif
+  KLEE_BOOL_TYPE klee_is_nan_float(float f);
+  KLEE_BOOL_TYPE klee_is_nan_double(double f);
+#undef KLEE_BOOL_TYPE
 #ifdef __cplusplus
 }
 #endif
