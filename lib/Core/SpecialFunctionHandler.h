@@ -138,6 +138,7 @@ namespace klee {
     HANDLER(handleSubOverflow);
     HANDLER(handleDivRemOverflow);
     HANDLER(handleIsNaN);
+    HANDLER(handleIsInfinite);
 #undef HANDLER
   };
 } // End klee namespace
