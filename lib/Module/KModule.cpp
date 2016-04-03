@@ -372,6 +372,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     // Note these are internal glibc/uclibc names
     replaceFunctionIfPresent(module, "__isnanf", "klee_internal_isnanf");
     replaceFunctionIfPresent(module, "__isnan", "klee_internal_isnan");
+    replaceFunctionIfPresent(module, "__isinff", "klee_internal_isinff");
+    replaceFunctionIfPresent(module, "__isinf", "klee_internal_isinf");
   }
 
   // Add internal functions which are not used to check if instructions
