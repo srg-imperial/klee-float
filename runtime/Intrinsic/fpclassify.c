@@ -76,3 +76,13 @@ int klee_internal_fpclassify(double f) {
   }
   return FP_SUBNORMAL;
 }
+
+// __finitef
+int klee_internal_finitef(float f) {
+  return (!klee_is_nan_float(f)) & (!klee_is_infinite_float(f));
+}
+
+// __finite
+int klee_internal_finite(double f) {
+  return (!klee_is_nan_double(f)) & (!klee_is_infinite_double(f));
+}
