@@ -454,22 +454,30 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (*width_out == 1)
       return CE->isTrue() ? getTrue() : getFalse();
 
-    // Fast path.
-    if (*width_out <= 32)
-      return bvConst32(*width_out, CE->getZExtValue(32));
-    if (*width_out <= 64)
-      return bvConst64(*width_out, CE->getZExtValue());
+    Z3ASTHandle Res;
+    if (*width_out <= 32) {
+      // Fast path.
+      Res = bvConst32(*width_out, CE->getZExtValue(32));
+    } else if (*width_out <= 64) {
+      // Fast path.
+      Res = bvConst64(*width_out, CE->getZExtValue());
+    } else {
+      ref<ConstantExpr> Tmp = CE;
+      Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
+      while (Tmp->getWidth() > 64) {
+        Tmp = Tmp->Extract(64, Tmp->getWidth() - 64);
+        unsigned Width = std::min(64U, Tmp->getWidth());
+        Res = Z3ASTHandle(
+            Z3_mk_concat(
+                ctx, bvConst64(Width, Tmp->Extract(0, Width)->getZExtValue()),
+                Res),
+            ctx);
+      }
+    }
 
-    ref<ConstantExpr> Tmp = CE;
-    Z3ASTHandle Res = bvConst64(64, Tmp->Extract(0, 64)->getZExtValue());
-    while (Tmp->getWidth() > 64) {
-      Tmp = Tmp->Extract(64, Tmp->getWidth() - 64);
-      unsigned Width = std::min(64U, Tmp->getWidth());
-      Res = Z3ASTHandle(
-          Z3_mk_concat(ctx,
-                       bvConst64(Width, Tmp->Extract(0, Width)->getZExtValue()),
-                       Res),
-          ctx);
+    // Coerce to float if necesary
+    if (CE->isFloat()) {
+      Res = castToFloat(Res);
     }
     return Res;
   }
