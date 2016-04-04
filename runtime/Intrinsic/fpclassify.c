@@ -35,3 +35,44 @@ int klee_internal_isinf(double d) {
   _Bool isinf = klee_is_infinite_double(d);
   return isinf ? (d > 0 ? 1 : -1) : 0;
 }
+
+// HACK: Taken from ``math.h``. I don't want
+// include all of ``math.h`` just for this enum
+// so just make a copy here for now
+enum {
+  FP_NAN = 0,
+  FP_INFINITE = 1,
+  FP_ZERO = 2,
+  FP_SUBNORMAL = 3,
+  FP_NORMAL = 4
+};
+
+// __fpclassifyf
+int klee_internal_fpclassifyf(float f) {
+  // Do we want a version of this that doesn't fork?
+  if (klee_is_nan_float(f)) {
+    return FP_NAN;
+  } else if (klee_is_infinite_float(f)) {
+    return FP_INFINITE;
+  } else if (f == 0.0f) {
+    return FP_ZERO;
+  } else if (klee_is_normal_float(f)) {
+    return FP_NORMAL;
+  }
+  return FP_SUBNORMAL;
+}
+
+// __fpclassify
+int klee_internal_fpclassify(double f) {
+  // Do we want a version of this that doesn't fork?
+  if (klee_is_nan_double(f)) {
+    return FP_NAN;
+  } else if (klee_is_infinite_double(f)) {
+    return FP_INFINITE;
+  } else if (f == 0.0) {
+    return FP_ZERO;
+  } else if (klee_is_normal_double(f)) {
+    return FP_NORMAL;
+  }
+  return FP_SUBNORMAL;
+}
