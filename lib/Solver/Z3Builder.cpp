@@ -943,6 +943,13 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return Z3ASTHandle(Z3_mk_fpa_is_infinite(ctx, arg), ctx);
   }
 
+  case Expr::IsNormal: {
+    IsNormalExpr *ine = cast<IsNormalExpr>(e);
+    Z3ASTHandle arg = castToFloat(construct(ine->expr, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_is_normal(ctx, arg), ctx);
+  }
+
   case Expr::FAdd: {
     FAddExpr *fadd = cast<FAddExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fadd->left, width_out));
