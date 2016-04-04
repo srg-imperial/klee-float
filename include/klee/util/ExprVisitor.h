@@ -93,6 +93,7 @@ namespace klee {
     virtual Action visitIsNaN(const IsNaNExpr &);
     virtual Action visitIsInfinite(const IsInfiniteExpr &);
     virtual Action visitIsNormal(const IsNormalExpr &);
+    virtual Action visitIsSubnormal(const IsSubnormalExpr &);
     virtual Action visitFAdd(const FAddExpr &);
     virtual Action visitFSub(const FSubExpr &);
     virtual Action visitFMul(const FMulExpr &);
