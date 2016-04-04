@@ -8,8 +8,8 @@
 #include <assert.h>
 
 int main() {
-  float x, y, z;
-  klee_make_symbolic(&x, sizeof(float), "x");
+  double x, y, z;
+  klee_make_symbolic(&x, sizeof(double), "x");
   switch (fpclassify(x)) {
   case FP_NAN:
     printf("nan\n");
