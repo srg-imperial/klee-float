@@ -125,6 +125,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::IsInfinite:
       res = visitIsInfinite(static_cast<IsInfiniteExpr &>(ep));
       break;
+    case Expr::IsNormal:
+      res = visitIsNormal(static_cast<IsNormalExpr &>(ep));
+      break;
     case Expr::FAdd:
       res = visitFAdd(static_cast<FAddExpr&>(ep));
       break;
@@ -332,6 +335,10 @@ ExprVisitor::Action ExprVisitor::visitIsNaN(const IsNaNExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitIsInfinite(const IsInfiniteExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsNormal(const IsNormalExpr &) {
   return Action::doChildren();
 }
 

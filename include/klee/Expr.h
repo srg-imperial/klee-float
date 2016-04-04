@@ -139,6 +139,7 @@ public:
     // Floating point predicates
     IsNaN,
     IsInfinite,
+    IsNormal,
 
     // All subsequent kinds are binary.
 
@@ -1067,6 +1068,7 @@ private: \
 };
 FP_PRED_EXPR_CLASS(IsNaN)
 FP_PRED_EXPR_CLASS(IsInfinite)
+FP_PRED_EXPR_CLASS(IsNormal)
 #undef FP_PRED_EXPR_CLASS
 
 // Terminal Exprs
