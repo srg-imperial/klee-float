@@ -951,6 +951,13 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return Z3ASTHandle(Z3_mk_fpa_is_normal(ctx, arg), ctx);
   }
 
+  case Expr::IsSubnormal: {
+    IsSubnormalExpr *ise = cast<IsSubnormalExpr>(e);
+    Z3ASTHandle arg = castToFloat(construct(ise->expr, width_out));
+    *width_out = 1;
+    return Z3ASTHandle(Z3_mk_fpa_is_subnormal(ctx, arg), ctx);
+  }
+
   case Expr::FAdd: {
     FAddExpr *fadd = cast<FAddExpr>(e);
     Z3ASTHandle left = castToFloat(construct(fadd->left, width_out));

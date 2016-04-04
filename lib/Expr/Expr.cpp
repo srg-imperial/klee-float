@@ -145,6 +145,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(IsNaN);
     X(IsInfinite);
     X(IsNormal);
+    X(IsSubnormal);
     X(And);
     X(Or);
     X(Xor);
@@ -241,6 +242,11 @@ unsigned IsInfiniteExpr::computeHash() {
 
 unsigned IsNormalExpr::computeHash() {
   hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::IsNormal;
+  return hashValue;
+}
+
+unsigned IsSubnormalExpr::computeHash() {
+  hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::IsSubnormal;
   return hashValue;
 }
 
@@ -1531,6 +1537,13 @@ ref<Expr> IsNormalExpr::create(const ref<Expr> &e) {
   return IsNormalExpr::alloc(e);
 }
 
+ref<Expr> IsSubnormalExpr::create(const ref<Expr> &e) {
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {
+    return ConstantExpr::alloc(ce->getAPFloatValue().isDenormal(), Expr::Bool);
+  }
+  return IsSubnormalExpr::alloc(e);
+}
+
 ref<Expr> IsNaNExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
   return OrExpr::create(IsNaNExpr::create(e0), IsNaNExpr::create(e1));
 }
@@ -1541,4 +1554,9 @@ ref<Expr> IsInfiniteExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
 
 ref<Expr> IsNormalExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
   return OrExpr::create(IsNormalExpr::create(e0), IsNormalExpr::create(e1));
+}
+
+ref<Expr> IsSubnormalExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
+  return OrExpr::create(IsSubnormalExpr::create(e0),
+                        IsSubnormalExpr::create(e1));
 }

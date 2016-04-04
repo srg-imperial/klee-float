@@ -140,6 +140,7 @@ public:
     IsNaN,
     IsInfinite,
     IsNormal,
+    IsSubnormal,
 
     // All subsequent kinds are binary.
 
@@ -1069,6 +1070,7 @@ private: \
 FP_PRED_EXPR_CLASS(IsNaN)
 FP_PRED_EXPR_CLASS(IsInfinite)
 FP_PRED_EXPR_CLASS(IsNormal)
+FP_PRED_EXPR_CLASS(IsSubnormal)
 #undef FP_PRED_EXPR_CLASS
 
 // Terminal Exprs
