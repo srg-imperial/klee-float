@@ -139,6 +139,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_is_infinite_double", handleIsInfinite, true),
     add("klee_is_normal_float", handleIsNormal, true),
     add("klee_is_normal_double", handleIsNormal, true),
+    add("klee_is_subnormal_float", handleIsSubnormal, true),
+    add("klee_is_subnormal_double", handleIsSubnormal, true),
 #undef addDNR
 #undef add
 };
@@ -802,5 +804,13 @@ void SpecialFunctionHandler::handleIsNormal(
     std::vector<ref<Expr> > &arguments) {
   assert(arguments.size() == 1 && "invalid number of arguments to IsNormal");
   ref<Expr> result = IsNormalExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleIsSubnormal(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsSubnormal");
+  ref<Expr> result = IsSubnormalExpr::create(arguments[0]);
   executor.bindLocal(target, state, result);
 }
