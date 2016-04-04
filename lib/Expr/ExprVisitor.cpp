@@ -128,6 +128,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::IsNormal:
       res = visitIsNormal(static_cast<IsNormalExpr &>(ep));
       break;
+    case Expr::IsSubnormal:
+      res = visitIsSubnormal(static_cast<IsSubnormalExpr &>(ep));
+      break;
     case Expr::FAdd:
       res = visitFAdd(static_cast<FAddExpr&>(ep));
       break;
@@ -339,6 +342,10 @@ ExprVisitor::Action ExprVisitor::visitIsInfinite(const IsInfiniteExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitIsNormal(const IsNormalExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsSubnormal(const IsSubnormalExpr &) {
   return Action::doChildren();
 }
 
