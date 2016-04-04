@@ -375,6 +375,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                              "klee_internal_fpclassifyf");
     replaceFunctionIfPresent(module, "__fpclassify",
                              "klee_internal_fpclassify");
+    replaceFunctionIfPresent(module, "__finitef", "klee_internal_finitef");
+    replaceFunctionIfPresent(module, "__finite", "klee_internal_finite");
   }
 
   // Add internal functions which are not used to check if instructions
