@@ -137,6 +137,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_is_nan_double", handleIsNaN, true),
     add("klee_is_infinite_float", handleIsInfinite, true),
     add("klee_is_infinite_double", handleIsInfinite, true),
+    add("klee_is_normal_float", handleIsNormal, true),
+    add("klee_is_normal_double", handleIsNormal, true),
 #undef addDNR
 #undef add
 };
@@ -792,5 +794,13 @@ void SpecialFunctionHandler::handleIsInfinite(
     std::vector<ref<Expr> > &arguments) {
   assert(arguments.size() == 1 && "invalid number of arguments to IsInfinite");
   ref<Expr> result = IsInfiniteExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleIsNormal(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsNormal");
+  ref<Expr> result = IsNormalExpr::create(arguments[0]);
   executor.bindLocal(target, state, result);
 }

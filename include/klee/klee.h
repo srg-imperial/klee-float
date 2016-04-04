@@ -164,6 +164,8 @@ extern "C" {
   KLEE_BOOL_TYPE klee_is_nan_double(double f);
   KLEE_BOOL_TYPE klee_is_infinite_float(float f);
   KLEE_BOOL_TYPE klee_is_infinite_double(double f);
+  KLEE_BOOL_TYPE klee_is_normal_float(float f);
+  KLEE_BOOL_TYPE klee_is_normal_double(double f);
 #undef KLEE_BOOL_TYPE
 #ifdef __cplusplus
 }
