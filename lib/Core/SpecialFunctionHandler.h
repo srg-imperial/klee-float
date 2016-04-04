@@ -140,6 +140,7 @@ namespace klee {
     HANDLER(handleIsNaN);
     HANDLER(handleIsInfinite);
     HANDLER(handleIsNormal);
+    HANDLER(handleIsSubnormal);
 #undef HANDLER
   };
 } // End klee namespace
