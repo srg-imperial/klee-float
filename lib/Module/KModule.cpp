@@ -371,6 +371,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     replaceFunctionIfPresent(module, "__isnan", "klee_internal_isnan");
     replaceFunctionIfPresent(module, "__isinff", "klee_internal_isinff");
     replaceFunctionIfPresent(module, "__isinf", "klee_internal_isinf");
+    replaceFunctionIfPresent(module, "__fpclassifyf",
+                             "klee_internal_fpclassifyf");
+    replaceFunctionIfPresent(module, "__fpclassify",
+                             "klee_internal_fpclassify");
   }
 
   // Add internal functions which are not used to check if instructions
