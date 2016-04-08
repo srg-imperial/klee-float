@@ -1401,14 +1401,14 @@ int main(int argc, char **argv, char **envp) {
     assert(SeedOutFile.empty());
     assert(SeedOutDir.empty());
 
-    std::vector<std::string> outFiles = ReplayKTestFile;
+    std::vector<std::string> kTestFiles = ReplayKTestFile;
     for (std::vector<std::string>::iterator
            it = ReplayKTestDir.begin(), ie = ReplayKTestDir.end();
          it != ie; ++it)
-      KleeHandler::getKTestFilesInDir(*it, outFiles);
+      KleeHandler::getKTestFilesInDir(*it, kTestFiles);
     std::vector<KTest*> kTests;
     for (std::vector<std::string>::iterator
-           it = outFiles.begin(), ie = outFiles.end();
+           it = kTestFiles.begin(), ie = kTestFiles.end();
          it != ie; ++it) {
       KTest *out = kTest_fromFile(it->c_str());
       if (out) {
@@ -1433,7 +1433,7 @@ int main(int argc, char **argv, char **envp) {
       interpreter->setReplayOut(out);
       llvm::errs() << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out)
                    << " bytes)"
-                   << " (" << ++i << "/" << outFiles.size() << ")\n";
+                   << " (" << ++i << "/" << kTestFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
       if (interrupted) break;
@@ -1458,10 +1458,10 @@ int main(int argc, char **argv, char **envp) {
     for (std::vector<std::string>::iterator
            it = SeedOutDir.begin(), ie = SeedOutDir.end();
          it != ie; ++it) {
-      std::vector<std::string> outFiles;
-      KleeHandler::getKTestFilesInDir(*it, outFiles);
+      std::vector<std::string> kTestFiles;
+      KleeHandler::getKTestFilesInDir(*it, kTestFiles);
       for (std::vector<std::string>::iterator
-             it2 = outFiles.begin(), ie = outFiles.end();
+             it2 = kTestFiles.begin(), ie = kTestFiles.end();
            it2 != ie; ++it2) {
         KTest *out = kTest_fromFile(it2->c_str());
         if (!out) {
@@ -1470,7 +1470,7 @@ int main(int argc, char **argv, char **envp) {
         }
         seeds.push_back(out);
       }
-      if (outFiles.empty()) {
+      if (kTestFiles.empty()) {
         llvm::errs() << "KLEE: seeds directory is empty: " << *it << "\n";
         exit(1);
       }
