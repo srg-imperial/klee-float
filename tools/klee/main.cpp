@@ -1430,7 +1430,7 @@ int main(int argc, char **argv, char **envp) {
            it = kTests.begin(), ie = kTests.end();
          it != ie; ++it) {
       KTest *out = *it;
-      interpreter->setReplayOut(out);
+      interpreter->setReplayKTest(out);
       llvm::errs() << "KLEE: replaying: " << *it << " (" << kTest_numBytes(out)
                    << " bytes)"
                    << " (" << ++i << "/" << kTestFiles.size() << ")\n";
@@ -1438,7 +1438,7 @@ int main(int argc, char **argv, char **envp) {
       interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
       if (interrupted) break;
     }
-    interpreter->setReplayOut(0);
+    interpreter->setReplayKTest(0);
     while (!kTests.empty()) {
       kTest_free(kTests.back());
       kTests.pop_back();
