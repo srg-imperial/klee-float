@@ -161,13 +161,13 @@ extern "C" {
 #define KLEE_BOOL_TYPE _Bool
 #endif
   KLEE_BOOL_TYPE klee_is_nan_float(float f);
-  KLEE_BOOL_TYPE klee_is_nan_double(double f);
+  KLEE_BOOL_TYPE klee_is_nan_double(double d);
   KLEE_BOOL_TYPE klee_is_infinite_float(float f);
-  KLEE_BOOL_TYPE klee_is_infinite_double(double f);
+  KLEE_BOOL_TYPE klee_is_infinite_double(double d);
   KLEE_BOOL_TYPE klee_is_normal_float(float f);
-  KLEE_BOOL_TYPE klee_is_normal_double(double f);
+  KLEE_BOOL_TYPE klee_is_normal_double(double d);
   KLEE_BOOL_TYPE klee_is_subnormal_float(float f);
-  KLEE_BOOL_TYPE klee_is_subnormal_double(double f);
+  KLEE_BOOL_TYPE klee_is_subnormal_double(double d);
 #undef KLEE_BOOL_TYPE
 #ifdef __cplusplus
 }
