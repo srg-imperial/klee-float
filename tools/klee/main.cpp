@@ -255,8 +255,8 @@ public:
   static void loadPathFile(std::string name,
                            std::vector<bool> &buffer);
 
-  static void getOutFiles(std::string path,
-			  std::vector<std::string> &results);
+  static void getKTestFilesInDir(std::string directoryPath,
+                                 std::vector<std::string> &results);
 
   static std::string getRunTimeLibraryPath(const char *argv0);
 };
@@ -552,14 +552,15 @@ void KleeHandler::loadPathFile(std::string name,
   }
 }
 
-void KleeHandler::getOutFiles(std::string path,
-			      std::vector<std::string> &results) {
+void KleeHandler::getKTestFilesInDir(std::string directoryPath,
+                                     std::vector<std::string> &results) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
   error_code ec;
 #else
   std::error_code ec;
 #endif
-  for (llvm::sys::fs::directory_iterator i(path,ec),e; i!=e && !ec; i.increment(ec)){
+  for (llvm::sys::fs::directory_iterator i(directoryPath, ec), e; i != e && !ec;
+       i.increment(ec)) {
     std::string f = (*i).path();
     if (f.substr(f.size()-6,f.size()) == ".ktest") {
           results.push_back(f);
@@ -567,8 +568,8 @@ void KleeHandler::getOutFiles(std::string path,
   }
 
   if (ec) {
-    llvm::errs() << "ERROR: unable to read output directory: " << path << ": "
-                 << ec.message() << "\n";
+    llvm::errs() << "ERROR: unable to read output directory: " << directoryPath
+                 << ": " << ec.message() << "\n";
     exit(1);
   }
 }
@@ -1404,7 +1405,7 @@ int main(int argc, char **argv, char **envp) {
     for (std::vector<std::string>::iterator
            it = ReplayKTestDir.begin(), ie = ReplayKTestDir.end();
          it != ie; ++it)
-      KleeHandler::getOutFiles(*it, outFiles);
+      KleeHandler::getKTestFilesInDir(*it, outFiles);
     std::vector<KTest*> kTests;
     for (std::vector<std::string>::iterator
            it = outFiles.begin(), ie = outFiles.end();
@@ -1458,7 +1459,7 @@ int main(int argc, char **argv, char **envp) {
            it = SeedOutDir.begin(), ie = SeedOutDir.end();
          it != ie; ++it) {
       std::vector<std::string> outFiles;
-      KleeHandler::getOutFiles(*it, outFiles);
+      KleeHandler::getKTestFilesInDir(*it, outFiles);
       for (std::vector<std::string>::iterator
              it2 = outFiles.begin(), ie = outFiles.end();
            it2 != ie; ++it2) {
