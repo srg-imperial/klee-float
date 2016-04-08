@@ -174,14 +174,14 @@ namespace {
                               "the bytes, not necessarily making them concrete."));
 
   cl::list<std::string>
-  ReplayOutFile("replay-out",
-                cl::desc("Specify an out file to replay"),
-                cl::value_desc("out file"));
+      ReplayKTestFile("replay-ktest-file",
+                      cl::desc("Specify a ktest file to use for replay"),
+                      cl::value_desc("ktest file"));
 
   cl::list<std::string>
-  ReplayOutDir("replay-out-dir",
-	       cl::desc("Specify a directory to replay .out files from"),
-	       cl::value_desc("output directory"));
+      ReplayKTestDir("replay-ktest-dir",
+                   cl::desc("Specify a directory to replay ktest files from"),
+                   cl::value_desc("output directory"));
 
   cl::opt<std::string>
   ReplayPathFile("replay-path",
@@ -1400,13 +1400,13 @@ int main(int argc, char **argv, char **envp) {
   infoFile << buf;
   infoFile.flush();
 
-  if (!ReplayOutDir.empty() || !ReplayOutFile.empty()) {
+  if (!ReplayKTestDir.empty() || !ReplayKTestFile.empty()) {
     assert(SeedOutFile.empty());
     assert(SeedOutDir.empty());
 
-    std::vector<std::string> outFiles = ReplayOutFile;
+    std::vector<std::string> outFiles = ReplayKTestFile;
     for (std::vector<std::string>::iterator
-           it = ReplayOutDir.begin(), ie = ReplayOutDir.end();
+           it = ReplayKTestDir.begin(), ie = ReplayKTestDir.end();
          it != ie; ++it)
       KleeHandler::getOutFiles(*it, outFiles);
     std::vector<KTest*> kTests;
