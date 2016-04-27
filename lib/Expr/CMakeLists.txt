@@ -17,6 +17,7 @@ klee_add_component(kleaverExpr
   ExprSMTLIBPrinter.cpp
   ExprUtil.cpp
   ExprVisitor.cpp
+  FindArrayAckermannizationVisitor.cpp
   Lexer.cpp
   Parser.cpp
   Updates.cpp
