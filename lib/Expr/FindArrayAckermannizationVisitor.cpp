@@ -10,6 +10,9 @@
 
 namespace klee {
 
+ArrayAckermannizationInfo::ArrayAckermannizationInfo()
+    : contiguousMSBitIndex(0), contiguousLSBitIndex(0) {}
+
 bool ArrayAckermannizationInfo::isContiguousArrayRead() {
   if (isa<ConcatExpr>(toReplace)) {
     return true;
@@ -28,6 +31,19 @@ const Array *ArrayAckermannizationInfo::getArray() {
   }
   llvm_unreachable("Unhandled expr type");
   return NULL;
+}
+
+bool ArrayAckermannizationInfo::isWholeArray() {
+  const Array *theArray = getArray();
+  if (isContiguousArrayRead()) {
+    unsigned bitWidthOfArray = theArray->size * theArray->range;
+    assert(contiguousMSBitIndex > contiguousLSBitIndex);
+    unsigned bitWidthOfRegion = contiguousMSBitIndex - contiguousLSBitIndex +1;
+    if (bitWidthOfArray == bitWidthOfRegion) {
+      return true;
+    }
+  }
+  return false;
 }
 
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
@@ -71,7 +87,8 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   const ConcatExpr *currentConcat = &ce;
   std::vector<ref<ReadExpr> > reads;
   bool isFirst = true;
-  unsigned lastReadIndex = 0;  // In bits
+  unsigned MSBitIndex = 0;
+  unsigned LSBitIndex = 0;
   unsigned widthReadSoFar = 0; // In bits
 
   // I'm sorry about the use of goto here but without having lambdas (we're
@@ -91,7 +108,8 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
       goto failedMatch;
     }
 
-    // Check the array doesn't exceed the threshold
+    // FIXME: We should be able to handle no-overlapping contiguous
+    // reads from an array
     if ((theArray->size * theArray->range) >= this->maxArrayWidth) {
       goto failedMatch;
     }
@@ -153,23 +171,27 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
       if (!isFirst) {
         // Check we are reading the next region along in the array. This
         // implementation supports ReadExpr of different sizes although
-        // currently they are always 1 byte.
+        // currently in KLEE they are always 8-bits (1 byte).
         unsigned difference =
-            lastReadIndex - (index->getZExtValue() * read->getWidth());
+            LSBitIndex - (index->getZExtValue() * read->getWidth());
         if (difference != read->getWidth()) {
           goto failedMatch;
         }
+      } else {
+        // Compute most significant bit
+        // E.g. if index was 2 and width is 8 then this is a byte read
+        // but the most significant bit read is not 16, it is 23.
+        MSBitIndex = (index->getZExtValue() * read->getWidth()) + (read->getWidth() -1);
       }
-      // Record the last read index
-      lastReadIndex = index->getZExtValue() * read->getWidth();
+      // Record the least significant bit read
+      LSBitIndex = index->getZExtValue() * read->getWidth();
     } else {
       goto failedMatch;
     }
 
     isFirst = false;
   }
-  // FIXME: We can probably support partially contiguous regions with bit
-  // masking and shifting.
+  // FIXME: We can probably support partially contiguous regions as different variables.
   // Check that the width we are reading is the whole array
   if (widthReadSoFar != (theArray->size * theArray->range)) {
     goto failedMatch;
@@ -177,6 +199,9 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
 
   // We found a match
   ackInfo.toReplace = ref<Expr>(const_cast<ConcatExpr *>(&ce));
+  ackInfo.contiguousMSBitIndex = MSBitIndex;
+  ackInfo.contiguousLSBitIndex = LSBitIndex;
+  assert(ackInfo.contiguousMSBitIndex > ackInfo.contiguousLSBitIndex && "bit indicies incorrectly ordered");
   ackInfos->push_back(ackInfo);
   // We know the indices are simple constants so need to traverse children
   return Action::skipChildren();
