@@ -127,6 +127,11 @@ public:
     // Casting,
     ZExt,
     SExt,
+    FExt,
+    FToU,
+    FToS,
+    UToF,
+    SToF,
 
     // Bit
     Not,
@@ -150,6 +155,13 @@ public:
     LShr,
     AShr,
     
+    // Floating-point
+    FAdd,
+    FSub,
+    FMul,
+    FDiv,
+    FRem,
+
     // Compare
     Eq,
     Ne,  ///< Not used in canonical form
@@ -162,14 +174,30 @@ public:
     Sgt, ///< Not used in canonical form
     Sge, ///< Not used in canonical form
 
-    LastKind=Sge,
+    // Compare floating-point
+    FOrd,
+    FUno,
+    FUeq,
+    FOeq,
+    FUgt,
+    FOgt,
+    FUge,
+    FOge,
+    FUlt,
+    FOlt,
+    FUle,
+    FOle,
+    FUne,
+    FOne,
+
+    LastKind=FOne,
 
     CastKindFirst=ZExt,
-    CastKindLast=SExt,
+    CastKindLast=SToF,
     BinaryKindFirst=Add,
-    BinaryKindLast=Sge,
+    BinaryKindLast=FOne,
     CmpKindFirst=Eq,
-    CmpKindLast=Sge
+    CmpKindLast=FOne
   };
 
   unsigned refCount;
@@ -849,6 +877,11 @@ public:                                                          \
 
 CAST_EXPR_CLASS(SExt)
 CAST_EXPR_CLASS(ZExt)
+CAST_EXPR_CLASS(FExt)
+CAST_EXPR_CLASS(FToU)
+CAST_EXPR_CLASS(FToS)
+CAST_EXPR_CLASS(UToF)
+CAST_EXPR_CLASS(SToF)
 
 // Arithmetic/Bit Exprs
 
@@ -893,6 +926,11 @@ ARITHMETIC_EXPR_CLASS(Xor)
 ARITHMETIC_EXPR_CLASS(Shl)
 ARITHMETIC_EXPR_CLASS(LShr)
 ARITHMETIC_EXPR_CLASS(AShr)
+ARITHMETIC_EXPR_CLASS(FAdd)
+ARITHMETIC_EXPR_CLASS(FSub)
+ARITHMETIC_EXPR_CLASS(FMul)
+ARITHMETIC_EXPR_CLASS(FDiv)
+ARITHMETIC_EXPR_CLASS(FRem)
 
 // Comparison Exprs
 
@@ -933,6 +971,20 @@ COMPARISON_EXPR_CLASS(Slt)
 COMPARISON_EXPR_CLASS(Sle)
 COMPARISON_EXPR_CLASS(Sgt)
 COMPARISON_EXPR_CLASS(Sge)
+COMPARISON_EXPR_CLASS(FOrd)
+COMPARISON_EXPR_CLASS(FUno)
+COMPARISON_EXPR_CLASS(FUeq)
+COMPARISON_EXPR_CLASS(FOeq)
+COMPARISON_EXPR_CLASS(FUgt)
+COMPARISON_EXPR_CLASS(FOgt)
+COMPARISON_EXPR_CLASS(FUge)
+COMPARISON_EXPR_CLASS(FOge)
+COMPARISON_EXPR_CLASS(FUlt)
+COMPARISON_EXPR_CLASS(FOlt)
+COMPARISON_EXPR_CLASS(FUle)
+COMPARISON_EXPR_CLASS(FOle)
+COMPARISON_EXPR_CLASS(FUne)
+COMPARISON_EXPR_CLASS(FOne)
 
 // Terminal Exprs
 
@@ -1054,6 +1106,11 @@ public:
   ref<ConstantExpr> Extract(unsigned offset, Width W);
   ref<ConstantExpr> ZExt(Width W);
   ref<ConstantExpr> SExt(Width W);
+  ref<ConstantExpr> FExt(Width W);
+  ref<ConstantExpr> FToU(Width W);
+  ref<ConstantExpr> FToS(Width W);
+  ref<ConstantExpr> UToF(Width W);
+  ref<ConstantExpr> SToF(Width W);
   ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
@@ -1067,6 +1124,11 @@ public:
   ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FAdd(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FSub(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FMul(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FDiv(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FRem(const ref<ConstantExpr> &RHS);
 
   // Comparisons return a constant expression of width 1.
 
@@ -1080,6 +1142,20 @@ public:
   ref<ConstantExpr> Sle(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sgt(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOrd(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUno(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUeq(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOeq(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUgt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOgt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOge(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUlt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOlt(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUle(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOle(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FUne(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FOne(const ref<ConstantExpr> &RHS);
 
   ref<ConstantExpr> Neg();
   ref<ConstantExpr> Not();

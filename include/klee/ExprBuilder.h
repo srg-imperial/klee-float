@@ -34,6 +34,11 @@ namespace klee {
                               unsigned Offset, Expr::Width W) = 0;
     virtual ref<Expr> ZExt(const ref<Expr> &LHS, Expr::Width W) = 0;
     virtual ref<Expr> SExt(const ref<Expr> &LHS, Expr::Width W) = 0;
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) = 0;
+    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) = 0;
+    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) = 0;
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) = 0;
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) = 0;
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Sub(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Mul(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
@@ -48,6 +53,11 @@ namespace klee {
     virtual ref<Expr> Shl(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> LShr(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> AShr(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Ne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Ult(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
@@ -58,6 +68,20 @@ namespace klee {
     virtual ref<Expr> Sle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Sgt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOrd(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUno(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUeq(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOeq(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUgt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOgt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUge(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOge(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUlt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOlt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
 
     // Utility functions
 

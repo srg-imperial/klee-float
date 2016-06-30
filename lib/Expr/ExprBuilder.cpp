@@ -54,6 +54,26 @@ namespace {
       return SExtExpr::alloc(LHS, W);
     }
 
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) {
+      return FExtExpr::alloc(LHS, W);
+    }
+
+    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) {
+      return FToUExpr::alloc(LHS, W);
+    }
+
+    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) {
+      return FToSExpr::alloc(LHS, W);
+    }
+
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) {
+      return UToFExpr::alloc(LHS, W);
+    }
+
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) {
+      return SToFExpr::alloc(LHS, W);
+    }
+
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return AddExpr::alloc(LHS, RHS);
     }
@@ -110,6 +130,26 @@ namespace {
       return AShrExpr::alloc(LHS, RHS);
     }
 
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FAddExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FSubExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FMulExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FDivExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FRemExpr::alloc(LHS, RHS);
+    }
+
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return EqExpr::alloc(LHS, RHS);
     }
@@ -148,6 +188,62 @@ namespace {
 
     virtual ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return SgeExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOrd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOrdExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUno(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUnoExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUeqExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOeqExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUgtExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOgtExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUgeExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOgeExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUltExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOltExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUleExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOleExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FUneExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FOneExpr::alloc(LHS, RHS);
     }
   };
 
@@ -201,6 +297,26 @@ namespace {
 
     ref<Expr> SExt(const ref<Expr> &LHS, Expr::Width W) {
       return Base->SExt(LHS, W);
+    }
+
+    ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->FExt(LHS, W);
+    }
+
+    ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->FToU(LHS, W);
+    }
+
+    ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->FToS(LHS, W);
+    }
+
+    ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->UToF(LHS, W);
+    }
+
+    ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->SToF(LHS, W);
     }
 
     ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -259,6 +375,26 @@ namespace {
       return Base->AShr(LHS, RHS);
     }
 
+    ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FAdd(LHS, RHS);
+    }
+
+    ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FSub(LHS, RHS);
+    }
+
+    ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FMul(LHS, RHS);
+    }
+
+    ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FDiv(LHS, RHS);
+    }
+
+    ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FRem(LHS, RHS);
+    }
+
     ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->Eq(LHS, RHS);
     }
@@ -297,6 +433,62 @@ namespace {
 
     ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->Sge(LHS, RHS);
+    }
+
+    ref<Expr> FOrd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOrd(LHS, RHS);
+    }
+
+    ref<Expr> FUno(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUno(LHS, RHS);
+    }
+
+    ref<Expr> FUeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUeq(LHS, RHS);
+    }
+
+    ref<Expr> FOeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOeq(LHS, RHS);
+    }
+
+    ref<Expr> FUgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUgt(LHS, RHS);
+    }
+
+    ref<Expr> FOgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOgt(LHS, RHS);
+    }
+
+    ref<Expr> FUge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUge(LHS, RHS);
+    }
+
+    ref<Expr> FOge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOge(LHS, RHS);
+    }
+
+    ref<Expr> FUlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUlt(LHS, RHS);
+    }
+
+    ref<Expr> FOlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOlt(LHS, RHS);
+    }
+
+    ref<Expr> FUle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUle(LHS, RHS);
+    }
+
+    ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOle(LHS, RHS);
+    }
+
+    ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FUne(LHS, RHS);
+    }
+
+    ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FOne(LHS, RHS);
     }
   };
 
@@ -377,6 +569,26 @@ namespace {
         return CE->SExt(W);
 
       return Builder.SExt(cast<NonConstantExpr>(LHS), W);
+    }
+
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) {
+      return Builder.FExt(LHS, W);
+    }
+
+    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) {
+      return Builder.FToU(LHS, W);
+    }
+
+    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) {
+      return Builder.FToS(LHS, W);
+    }
+
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) {
+      return Builder.UToF(LHS, W);
+    }
+
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) {
+      return Builder.SToF(LHS, W);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -559,6 +771,26 @@ namespace {
                           cast<NonConstantExpr>(RHS));
     }
 
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FAdd(LHS, RHS);
+    }
+
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FSub(LHS, RHS);
+    }
+
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FMul(LHS, RHS);
+    }
+
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FDiv(LHS, RHS);
+    }
+
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FRem(LHS, RHS);
+    }
+
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
         if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
@@ -687,6 +919,62 @@ namespace {
 
       return Builder.Sge(cast<NonConstantExpr>(LHS),
                          cast<NonConstantExpr>(RHS));
+    }
+
+    virtual ref<Expr> FOrd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOrd(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUno(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUno(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUeq(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOeq(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUgt(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOgt(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUge(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOge(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUlt(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOlt(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUle(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOle(LHS, RHS);
+    }
+
+    virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FUne(LHS, RHS);
+    }
+
+    virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Builder.FOne(LHS, RHS);
     }
   };
 

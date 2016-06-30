@@ -2010,7 +2010,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Floating point instructions
 
-  case Instruction::FAdd: {
+  case Instruction::FAdd: if(CoreSolverToUse != Z3_SOLVER) {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2028,9 +2028,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
+  } else {
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    bindLocal(ki, state, FAddExpr::create(left, right));
+    break;
   }
 
-  case Instruction::FSub: {
+  case Instruction::FSub: if(CoreSolverToUse != Z3_SOLVER) {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2047,9 +2052,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
+  } else {
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    bindLocal(ki, state, FSubExpr::create(left, right));
+    break;
   }
  
-  case Instruction::FMul: {
+  case Instruction::FMul: if(CoreSolverToUse != Z3_SOLVER) {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2067,9 +2077,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
+  } else {
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    bindLocal(ki, state, FMulExpr::create(left, right));
+    break;
   }
 
-  case Instruction::FDiv: {
+  case Instruction::FDiv: if(CoreSolverToUse != Z3_SOLVER) {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2087,9 +2102,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
+  } else {
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    bindLocal(ki, state, FDivExpr::create(left, right));
+    break;
   }
 
-  case Instruction::FRem: {
+  case Instruction::FRem: if(CoreSolverToUse != Z3_SOLVER) {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
     ref<ConstantExpr> right = toConstant(state, eval(ki, 1, state).value,
@@ -2107,9 +2127,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
+  } else {
+    ref<Expr> left = eval(ki, 0, state).value;
+    ref<Expr> right = eval(ki, 1, state).value;
+    bindLocal(ki, state, FRemExpr::create(left, right));
+    break;
   }
 
-  case Instruction::FPTrunc: {
+  case Instruction::FPTrunc: if(CoreSolverToUse != Z3_SOLVER) {
     FPTruncInst *fi = cast<FPTruncInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2128,9 +2153,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
-  }
+  } //else fall through to FPExt
 
-  case Instruction::FPExt: {
+  case Instruction::FPExt: if(CoreSolverToUse != Z3_SOLVER) {
     FPExtInst *fi = cast<FPExtInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2148,9 +2173,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
+  } else {
+    CastInst *ci = cast<CastInst>(i);
+    ref<Expr> result = FExtExpr::create(eval(ki, 0, state).value,
+                                        getWidthForLLVMType(ci->getType()));
+    bindLocal(ki, state, result);
+    break;
   }
 
-  case Instruction::FPToUI: {
+  case Instruction::FPToUI: if(CoreSolverToUse != Z3_SOLVER) {
     FPToUIInst *fi = cast<FPToUIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2169,9 +2200,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
+  } else {
+    CastInst *ci = cast<CastInst>(i);
+    ref<Expr> result = FToUExpr::create(eval(ki, 0, state).value,
+                                        getWidthForLLVMType(ci->getType()));
+    bindLocal(ki, state, result);
+    break;
   }
 
-  case Instruction::FPToSI: {
+  case Instruction::FPToSI: if(CoreSolverToUse != Z3_SOLVER) {
     FPToSIInst *fi = cast<FPToSIInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2190,9 +2227,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
+  } else {
+    CastInst *ci = cast<CastInst>(i);
+    ref<Expr> result = FToSExpr::create(eval(ki, 0, state).value,
+                                        getWidthForLLVMType(ci->getType()));
+    bindLocal(ki, state, result);
+    break;
   }
 
-  case Instruction::UIToFP: {
+  case Instruction::UIToFP: if(CoreSolverToUse != Z3_SOLVER) {
     UIToFPInst *fi = cast<UIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2206,9 +2249,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
+  } else {
+    CastInst *ci = cast<CastInst>(i);
+    ref<Expr> result = UToFExpr::create(eval(ki, 0, state).value,
+                                        getWidthForLLVMType(ci->getType()));
+    bindLocal(ki, state, result);
+    break;
   }
 
-  case Instruction::SIToFP: {
+  case Instruction::SIToFP: if(CoreSolverToUse != Z3_SOLVER) {
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
     ref<ConstantExpr> arg = toConstant(state, eval(ki, 0, state).value,
@@ -2222,9 +2271,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
+  } else {
+    CastInst *ci = cast<CastInst>(i);
+    ref<Expr> result = SToFExpr::create(eval(ki, 0, state).value,
+                                        getWidthForLLVMType(ci->getType()));
+    bindLocal(ki, state, result);
+    break;
   }
 
-  case Instruction::FCmp: {
+  case Instruction::FCmp: if(CoreSolverToUse != Z3_SOLVER) {
     FCmpInst *fi = cast<FCmpInst>(i);
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
@@ -2319,6 +2374,127 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     bindLocal(ki, state, ConstantExpr::alloc(Result, Expr::Bool));
+    break;
+  } else {
+    CmpInst *ci = cast<CmpInst>(i);
+    FCmpInst *fi = cast<FCmpInst>(ci);
+
+    switch(fi->getPredicate()) {
+    case FCmpInst::FCMP_ORD: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOrdExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_UNO: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUnoExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_UEQ: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUeqExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_OEQ: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOeqExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_UGT: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUgtExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_OGT: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOgtExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_UGE: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUgeExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_OGE: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOgeExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_ULT: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUltExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_OLT: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOltExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_ULE: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUleExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_OLE: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOleExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_UNE: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FUneExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case FCmpInst::FCMP_ONE: {
+      ref<Expr> left = eval(ki, 0, state).value;
+      ref<Expr> right = eval(ki, 1, state).value;
+      ref<Expr> result = FOneExpr::create(left, right);
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    default:
+      assert(0 && "Invalid FCMP predicate!");
+    }
     break;
   }
   case Instruction::InsertValue: {

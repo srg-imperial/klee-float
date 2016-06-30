@@ -271,6 +271,11 @@ Z3ASTHandle Z3Builder::orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   return Z3ASTHandle(Z3_mk_or(ctx, 2, args), ctx);
 }
 
+Z3ASTHandle Z3Builder::orExpr(Z3ASTHandle first, Z3ASTHandle second, Z3ASTHandle third) {
+  ::Z3_ast args[3] = {first, second, third};
+  return Z3ASTHandle(Z3_mk_or(ctx, 3, args), ctx);
+}
+
 Z3ASTHandle Z3Builder::bvOrExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   return Z3ASTHandle(Z3_mk_bvor(ctx, lhs, rhs), ctx);
 }
@@ -294,6 +299,37 @@ Z3ASTHandle Z3Builder::bvSignExtend(Z3ASTHandle src, unsigned width) {
   assert(src_width <= width && "attempted to extend longer data");
 
   return Z3ASTHandle(Z3_mk_sign_ext(ctx, width - src_width, src), ctx);
+}
+
+Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
+  unsigned width = Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, expr), ctx));
+  Z3SortHandle sort;
+  switch (width) {
+  case 16:
+    sort = Z3SortHandle(Z3_mk_fpa_sort_16(ctx), ctx);
+    break;
+  case 32:
+    sort = Z3SortHandle(Z3_mk_fpa_sort_32(ctx), ctx);
+    break;
+  case 64:
+    sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
+    break;
+  case 80:
+    sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+    break;
+  case 128:
+    sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
+    break;
+  }
+  return Z3ASTHandle(Z3_mk_fpa_to_fp_bv(ctx, expr, sort), ctx);
+}
+
+Z3ASTHandle Z3Builder::float_to_bv(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, (Z3_ast)expr), ctx);
+}
+
+Z3ASTHandle Z3Builder::isNanExpr(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, expr), ctx);
 }
 
 Z3ASTHandle Z3Builder::writeExpr(Z3ASTHandle array, Z3ASTHandle index,
@@ -545,6 +581,108 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
   }
 
+  case Expr::FExt: {
+    int srcWidth;
+    CastExpr *ce = cast<CastExpr>(e);
+    Z3ASTHandle src = bv_to_float(construct(ce->src, &srcWidth));
+    *width_out = ce->getWidth();
+
+    Z3SortHandle sort;
+    switch (*width_out) {
+    case 16:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_16(ctx), ctx);
+      break;
+    case 32:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_32(ctx), ctx);
+      break;
+    case 64:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
+      break;
+    case 80:
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+      break;
+    case 128:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
+      break;
+    }
+
+    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_float(ctx, Z3_mk_fpa_rtz(ctx), src, sort), ctx));
+  }
+
+  case Expr::FToU: {
+    int srcWidth;
+    CastExpr *ce = cast<CastExpr>(e);
+    Z3ASTHandle src = bv_to_float(construct(ce->src, &srcWidth));
+    *width_out = ce->getWidth();
+
+    return Z3ASTHandle(Z3_mk_fpa_to_ubv(ctx, Z3_mk_fpa_rtz(ctx), src, *width_out), ctx);
+  }
+
+  case Expr::FToS: {
+    int srcWidth;
+    CastExpr *ce = cast<CastExpr>(e);
+    Z3ASTHandle src = bv_to_float(construct(ce->src, &srcWidth));
+    *width_out = ce->getWidth();
+
+    return Z3ASTHandle(Z3_mk_fpa_to_sbv(ctx, Z3_mk_fpa_rtz(ctx), src, *width_out), ctx);
+  }
+
+  case Expr::UToF:{
+    int srcWidth;
+    CastExpr *ce = cast<CastExpr>(e);
+    Z3ASTHandle src = construct(ce->src, &srcWidth);
+    *width_out = ce->getWidth();
+
+    Z3SortHandle sort;
+    switch (*width_out) {
+    case 16:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_16(ctx), ctx);
+      break;
+    case 32:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_32(ctx), ctx);
+      break;
+    case 64:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
+      break;
+    case 80:
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+      break;
+    case 128:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
+      break;
+    }
+
+    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_unsigned(ctx, Z3_mk_fpa_rtz(ctx), src, sort), ctx));
+  }
+
+  case Expr::SToF: {
+    int srcWidth;
+    CastExpr *ce = cast<CastExpr>(e);
+    Z3ASTHandle src = construct(ce->src, &srcWidth);
+    *width_out = ce->getWidth();
+
+    Z3SortHandle sort;
+    switch (*width_out) {
+    case 16:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_16(ctx), ctx);
+      break;
+    case 32:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_32(ctx), ctx);
+      break;
+    case 64:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
+      break;
+    case 80:
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+      break;
+    case 128:
+      sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
+      break;
+    }
+
+    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_signed(ctx, Z3_mk_fpa_rtz(ctx), src, sort), ctx));
+  }
+
   // Arithmetic
   case Expr::Add: {
     AddExpr *ae = cast<AddExpr>(e);
@@ -745,6 +883,63 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
   }
 
+  // Floating-point
+
+  case Expr::FAdd: {
+    FAddExpr *fe = cast<FAddExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FAdd");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_add(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FSub: {
+    FSubExpr *fe = cast<FSubExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FSub");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_sub(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FMul: {
+    FMulExpr *fe = cast<FMulExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FMul");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_mul(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FDiv: {
+    FDivExpr *fe = cast<FDivExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FDiv");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_div(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FRem: {
+    FRemExpr *fe = cast<FRemExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FRem");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_rem(ctx, left, right), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
   // Comparison
 
   case Expr::Eq: {
@@ -799,6 +994,148 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     assert(*width_out != 1 && "uncanonicalized sle");
     *width_out = 1;
     return sbvLeExpr(left, right);
+  }
+
+  // Floating-point comparison
+
+  case Expr::FOrd: {
+    FOrdExpr *fe = cast<FOrdExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOrd");
+    *width_out = 1;
+    Z3ASTHandle result = andExpr(notExpr(isNanExpr(left)), notExpr(isNanExpr(right)));
+    return result;
+  }
+
+  case Expr::FUno: {
+    FUnoExpr *fe = cast<FUnoExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUno");
+    *width_out = 1;
+    Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right));
+    return result;
+  }
+
+  case Expr::FUeq: {
+    FUeqExpr *fe = cast<FUeqExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUeq");
+    *width_out = 1;
+    Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx));
+    return result;
+  }
+
+  case Expr::FOeq: {
+    FOeqExpr *fe = cast<FOeqExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOeq");
+    *width_out = 1;
+    Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx);
+    return result;
+  }
+
+  case Expr::FUgt: {
+    FUgtExpr *fe = cast<FUgtExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUgt");
+    *width_out = 1;
+    Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx));
+    return result;
+  }
+
+  case Expr::FOgt: {
+    FOgtExpr *fe = cast<FOgtExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOgt");
+    *width_out = 1;
+    Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx);
+    return result;
+  }
+
+  case Expr::FUge: {
+    FUgeExpr *fe = cast<FUgeExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUge");
+    *width_out = 1;
+    Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx));
+    return result;
+  }
+
+  case Expr::FOge: {
+    FOgeExpr *fe = cast<FOgeExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOge");
+    *width_out = 1;
+    Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx);
+    return result;
+  }
+
+  case Expr::FUlt: {
+    FUltExpr *fe = cast<FUltExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUlt");
+    *width_out = 1;
+    Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx));
+    return result;
+  }
+
+  case Expr::FOlt: {
+    FOltExpr *fe = cast<FOltExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOlt");
+    *width_out = 1;
+    Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx);
+    return result;
+  }
+
+  case Expr::FUle: {
+    FUleExpr *fe = cast<FUleExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUle");
+    *width_out = 1;
+    Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx));
+    return result;
+  }
+
+  case Expr::FOle: {
+    FOleExpr *fe = cast<FOleExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOle");
+    *width_out = 1;
+    Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx);
+    return result;
+  }
+
+  case Expr::FUne: {
+    FUneExpr *fe = cast<FUneExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FUne");
+    *width_out = 1;
+    Z3ASTHandle result = notExpr(Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx));
+    return result;
+  }
+
+  case Expr::FOne: {
+    FOneExpr *fe = cast<FOneExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FOne");
+    *width_out = 1;
+    Z3ASTHandle result = notExpr(orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx)));
+    return result;
   }
 
 // unused due to canonicalization

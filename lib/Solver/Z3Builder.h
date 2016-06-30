@@ -133,10 +133,16 @@ private:
   Z3ASTHandle andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
+  Z3ASTHandle orExpr(Z3ASTHandle first, Z3ASTHandle second, Z3ASTHandle third);
   Z3ASTHandle bvOrExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvSignExtend(Z3ASTHandle src, unsigned width);
+
+  // Floating-point operations
+  Z3ASTHandle bv_to_float(Z3ASTHandle expr);
+  Z3ASTHandle float_to_bv(Z3ASTHandle expr);
+  Z3ASTHandle isNanExpr(Z3ASTHandle expr);
 
   // Array operations
   Z3ASTHandle writeExpr(Z3ASTHandle array, Z3ASTHandle index,
