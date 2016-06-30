@@ -221,6 +221,11 @@ namespace {
   Watchdog("watchdog",
            cl::desc("Use a watchdog process to enforce --max-time."),
            cl::init(0));
+
+  cl::opt<bool>
+  SoftFloat("softfloat",
+            cl::desc("Use the Berkeley SoftFloat software floating point implementation."),
+            cl::init(false));
 }
 
 extern cl::opt<double> MaxTime;
@@ -1334,6 +1339,592 @@ int main(int argc, char **argv, char **envp) {
     klee_message("Linking in library: %s.\n", libFilename);
     mainModule = klee::linkWithLibrary(mainModule, libFilename);
   }
+
+  if (SoftFloat) {
+    SmallString<128> Path(Opts.LibraryDir);
+    llvm::sys::path::append(Path, "softfloat.bca");
+    klee_message("NOTE: Using softfloat library: %s", Path.c_str());
+    mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
+    assert(mainModule && "unable to link with softfloat library");
+
+    for (Module::iterator f = mainModule->begin(); f != mainModule->end(); ++f) { // Functions
+      for (Function::iterator bb = f->begin(); bb != f->end(); ++bb) { // BasicBlocks
+        for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) { // Instructions
+          switch (i->getOpcode()) {
+          case Instruction::FAdd: {
+            std::string f_name;
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_add";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_add";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_add";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FAdd instruction.");
+            }
+
+            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FSub: {
+            std::string f_name;
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_sub";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_sub";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_sub";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FSub instruction.");
+            }
+
+            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FMul: {
+            std::string f_name;
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_mul";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_mul";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_mul";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FMul instruction.");
+            }
+
+            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FDiv: {
+            std::string f_name;
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_div";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_div";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_div";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FDiv instruction.");
+            }
+
+            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FRem: {
+            std::string f_name;
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_rem";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_rem";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_rem";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FRem instruction.");
+            }
+
+            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FPTrunc:
+          case Instruction::FPExt: {
+            Type* op_type = i->getOperand(0)->getType();
+            Type* target_type = i->getType();
+
+            // Executor skips this case, no action required
+            if (op_type->getTypeID() == target_type->getTypeID())
+            {
+              break;
+            }
+
+            std::string f_name;
+
+            switch (op_type->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_to_";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_to_";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_to_";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to floating-point cast instruction.");
+            }
+
+            switch (target_type->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name += "float";
+              break;
+            case Type::DoubleTyID:
+              f_name += "double";
+              break;
+            case Type::X86_FP80TyID:
+              f_name += "float80";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Expected non-float result of floating-point cast instruction.");
+            }
+
+            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FPToUI: {
+            std::string f_name;
+
+            switch (i->getOperand(0)->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_to_";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_to_";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_to_";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FPToUI instruction.");
+            }
+
+            if (i->getType()->isIntegerTy(32))
+            {
+              f_name += "ui32";
+            }
+            else if (i->getType()->isIntegerTy(64))
+            {
+              f_name += "ui64";
+            }
+            else
+            {
+              assert(i->getType()->isIntegerTy() && "Expected non-int result of FPToUI instruction.");
+              klee_error("Only 32- and 64-bit integers are supported.");
+            }
+
+            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FPToSI: {
+            std::string f_name;
+
+            switch (i->getOperand(0)->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_to_";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_to_";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_to_";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FPToSI instruction.");
+            }
+
+            if (i->getType()->isIntegerTy(32))
+            {
+              f_name += "i32";
+            }
+            else if (i->getType()->isIntegerTy(64))
+            {
+              f_name += "i64";
+            }
+            else
+            {
+              assert(i->getType()->isIntegerTy() && "Expected non-int result of FPToSI instruction.");
+              klee_error("Only 32- and 64-bit integers are supported.");
+            }
+
+            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::UIToFP: {
+            std::string f_name;
+
+            if (i->getOperand(0)->getType()->isIntegerTy(32))
+            {
+              f_name = "ui32_to_";
+            }
+            else if (i->getOperand(0)->getType()->isIntegerTy(64))
+            {
+              f_name = "ui64_to_";
+            }
+            else
+            {
+              assert(i->getOperand(0)->getType()->isIntegerTy() && "Non-int argument to UIToFP instruction.");
+              klee_error("Only 32- and 64-bit integers are supported.");
+            }
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name += "float";
+              break;
+            case Type::DoubleTyID:
+              f_name += "double";
+              break;
+            case Type::X86_FP80TyID:
+              f_name += "float80";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to UIToFP instruction.");
+            }
+
+            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::SIToFP: {
+            std::string f_name;
+
+            if (i->getOperand(0)->getType()->isIntegerTy(32))
+            {
+              f_name = "i32_to_";
+            }
+            else if (i->getOperand(0)->getType()->isIntegerTy(64))
+            {
+              f_name = "i64_to_";
+            }
+            else
+            {
+              assert(i->getOperand(0)->getType()->isIntegerTy() && "Non-int argument to SIToFP instruction.");
+              klee_error("Only 32- and 64-bit integers are supported.");
+            }
+
+            switch (i->getType()->getTypeID())
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name += "float";
+              break;
+            case Type::DoubleTyID:
+              f_name += "double";
+              break;
+            case Type::X86_FP80TyID:
+              f_name += "float80";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to SIToFP instruction.");
+            }
+
+            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+
+          case Instruction::FCmp: {
+            FCmpInst *fi = cast<FCmpInst>(i);
+            std::string f_name;
+
+            switch (fi->getOperand(0)->getType()->getTypeID()) // llvm casts before comparing
+            {
+            case Type::HalfTyID:
+              klee_error("Half-precision floating-point numbers are not yet supported.");
+              break;
+            case Type::FloatTyID:
+              f_name = "float_";
+              break;
+            case Type::DoubleTyID:
+              f_name = "double_";
+              break;
+            case Type::X86_FP80TyID:
+              f_name = "float80_";
+              break;
+            case Type::FP128TyID:
+              klee_error("Quadruple-precision floating-point numbers are not supported.");
+              break;
+            case Type::PPC_FP128TyID:
+              klee_error("Double-double floating-point numbers are not supported.");
+              break;
+            default:
+              assert(0 && "Non-float argument to FCmp instruction.");
+            }
+
+            switch (fi->getPredicate()) {
+            case FCmpInst::FCMP_ORD:
+              f_name += "ord";
+              break;
+
+            case FCmpInst::FCMP_UNO:
+              f_name += "uno";
+              break;
+
+            case FCmpInst::FCMP_UEQ:
+              f_name += "ueq";
+              break;
+
+            case FCmpInst::FCMP_OEQ:
+              f_name += "oeq";
+              break;
+
+            case FCmpInst::FCMP_UGT:
+              f_name += "ugt";
+              break;
+
+            case FCmpInst::FCMP_OGT:
+              f_name += "ogt";
+              break;
+
+            case FCmpInst::FCMP_UGE:
+              f_name += "uge";
+              break;
+
+            case FCmpInst::FCMP_OGE:
+              f_name += "oge";
+              break;
+
+            case FCmpInst::FCMP_ULT:
+              f_name += "ult";
+              break;
+
+            case FCmpInst::FCMP_OLT:
+              f_name += "olt";
+              break;
+
+            case FCmpInst::FCMP_ULE:
+              f_name += "ule";
+              break;
+
+            case FCmpInst::FCMP_OLE:
+              f_name += "ole";
+              break;
+
+            case FCmpInst::FCMP_UNE:
+              f_name += "une";
+              break;
+
+            case FCmpInst::FCMP_ONE:
+              f_name += "one";
+              break;
+
+            default:
+              assert(0 && "Invalid FCMP predicate!");
+
+            case FCmpInst::FCMP_FALSE:
+              f_name += "false";
+              break;
+
+            case FCmpInst::FCMP_TRUE:
+              f_name += "true";
+              break;
+            }
+
+            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+            i->replaceAllUsesWith(ci);
+            i->dropAllReferences();
+            i = --(bb->getInstList().erase(i));
+            break;
+          }
+          default:
+            // All other instructions are fine
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction(EntryPoint);
