@@ -55,6 +55,11 @@ namespace klee {
     virtual Action visitExtract(const ExtractExpr&);
     virtual Action visitZExt(const ZExtExpr&);
     virtual Action visitSExt(const SExtExpr&);
+    virtual Action visitFExt(const FExtExpr&);
+    virtual Action visitFToU(const FToUExpr&);
+    virtual Action visitFToS(const FToSExpr&);
+    virtual Action visitUToF(const UToFExpr&);
+    virtual Action visitSToF(const SToFExpr&);
     virtual Action visitAdd(const AddExpr&);
     virtual Action visitSub(const SubExpr&);
     virtual Action visitMul(const MulExpr&);
@@ -69,6 +74,11 @@ namespace klee {
     virtual Action visitShl(const ShlExpr&);
     virtual Action visitLShr(const LShrExpr&);
     virtual Action visitAShr(const AShrExpr&);
+    virtual Action visitFAdd(const FAddExpr&);
+    virtual Action visitFSub(const FSubExpr&);
+    virtual Action visitFMul(const FMulExpr&);
+    virtual Action visitFDiv(const FDivExpr&);
+    virtual Action visitFRem(const FRemExpr&);
     virtual Action visitEq(const EqExpr&);
     virtual Action visitNe(const NeExpr&);
     virtual Action visitUlt(const UltExpr&);
@@ -79,6 +89,20 @@ namespace klee {
     virtual Action visitSle(const SleExpr&);
     virtual Action visitSgt(const SgtExpr&);
     virtual Action visitSge(const SgeExpr&);
+    virtual Action visitFOrd(const FOrdExpr&);
+    virtual Action visitFUno(const FUnoExpr&);
+    virtual Action visitFUeq(const FUeqExpr&);
+    virtual Action visitFOeq(const FOeqExpr&);
+    virtual Action visitFUgt(const FUgtExpr&);
+    virtual Action visitFOgt(const FOgtExpr&);
+    virtual Action visitFUge(const FUgeExpr&);
+    virtual Action visitFOge(const FOgeExpr&);
+    virtual Action visitFUlt(const FUltExpr&);
+    virtual Action visitFOlt(const FOltExpr&);
+    virtual Action visitFUle(const FUleExpr&);
+    virtual Action visitFOle(const FOleExpr&);
+    virtual Action visitFUne(const FUneExpr&);
+    virtual Action visitFOne(const FOneExpr&);
 
   private:
     typedef ExprHashMap< ref<Expr> > visited_ty;
