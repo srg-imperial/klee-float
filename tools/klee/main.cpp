@@ -222,6 +222,11 @@ namespace {
            cl::init(0));
 
   cl::opt<bool>
+  ReplaceFMod("replace-fmod",
+              cl::desc("Replace all function calls to fmod() with the FRem LLVM instruction"),
+              cl::init(false));
+
+  cl::opt<bool>
   SoftFloat("softfloat",
             cl::desc("Use the Berkeley SoftFloat software floating point implementation."),
             cl::init(false));
@@ -1320,6 +1325,23 @@ int main(int argc, char **argv, char **envp) {
     klee_message("NOTE: Using model: %s", Path.c_str());
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with simple model");
+  }
+
+  if (ReplaceFMod) {
+    for (Module::iterator f = mainModule->begin(); f != mainModule->end(); ++f) { // Functions
+      for (Function::iterator bb = f->begin(); bb != f->end(); ++bb) { // BasicBlocks
+        for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) { // Instructions
+          if (const CallInst *ci = dyn_cast<CallInst>(i)) {
+            if (ci->getCalledValue()->getName() == "fmod") {
+              Value* fremInst = BinaryOperator::Create(Instruction::FRem, i->getOperand(0), i->getOperand(1), "", i);
+              i->replaceAllUsesWith(fremInst);
+              i->dropAllReferences();
+              i = --(bb->getInstList().erase(i));
+            }
+          }
+        }
+      }
+    }
   }
 
   std::vector<std::string>::iterator libs_it;
