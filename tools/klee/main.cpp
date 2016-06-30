@@ -1365,6 +1365,12 @@ int main(int argc, char **argv, char **envp) {
   if (SoftFloat) {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path, "softfloat.bca");
+
+    bool softfloatExists=false;
+    llvm::sys::fs::exists(Path.c_str(), softfloatExists);
+    if (!softfloatExists)
+      klee_error("Cannot find softfloat library : %s", Path.c_str());
+
     klee_message("NOTE: Using softfloat library: %s", Path.c_str());
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with softfloat library");
