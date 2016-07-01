@@ -1376,6 +1376,23 @@ int main(int argc, char **argv, char **envp) {
     for (Module::iterator f = mainModule->begin(); f != mainModule->end(); ++f) { // Functions
       for (Function::iterator bb = f->begin(); bb != f->end(); ++bb) { // BasicBlocks
         for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) { // Instructions
+          // take care of rounding mode calls
+          if (const CallInst *ci = dyn_cast<CallInst>(i)) {
+            std::string f_name = ci->getCalledValue()->getName();
+            if (f_name == "fesetround") {
+              Value* softcall = CallInst::Create(mainModule->getFunction("klee_softfloat_fesetround"), ArrayRef<Value*>(i->getOperand(0)), "", i);
+              i->replaceAllUsesWith(softcall);
+              i->dropAllReferences();
+              i = --(bb->getInstList().erase(i));
+            }
+            else if (f_name == "fegetround") {
+              Value* softcall = CallInst::Create(mainModule->getFunction("klee_softfloat_fegetround"), ArrayRef<Value*>(), "", i);
+              i->replaceAllUsesWith(softcall);
+              i->dropAllReferences();
+              i = --(bb->getInstList().erase(i));
+            }
+          }
+
           switch (i->getOpcode()) {
           case Instruction::FAdd: {
             std::string f_name;
