@@ -1364,15 +1364,22 @@ int main(int argc, char **argv, char **envp) {
 
   if (SoftFloat) {
     SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "softfloat.bca");
+    llvm::sys::path::append(Path, "softfloat/");
+	llvm::sys::fs::directory_iterator end_it;
+	for (llvm::sys::fs::directory_iterator it(Twine(Path), ec); it != end_it;
+		  it = it.increment(ec)) {
+		if (llvm::sys::path::extension(it->path()).str() == ".bc") {
+			mainModule = klee::linkWithLibrary(mainModule, it->path().c_str());
+		}
+	}
 
-    bool softfloatExists=false;
-    llvm::sys::fs::exists(Path.c_str(), softfloatExists);
-    if (!softfloatExists)
-      klee_error("Cannot find softfloat library : %s", Path.c_str());
+    //bool softfloatExists=false;
+    //llvm::sys::fs::exists(Path.c_str(), softfloatExists);
+    //if (!softfloatExists)
+    //  klee_error("Cannot find softfloat library : %s", Path.c_str());
 
-    klee_message("NOTE: Using softfloat library: %s", Path.c_str());
-    mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
+    //klee_message("NOTE: Using softfloat library: %s", Path.c_str());
+    //mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
     assert(mainModule && "unable to link with softfloat library");
 
     for (Module::iterator f = mainModule->begin(); f != mainModule->end(); ++f) { // Functions
@@ -1406,7 +1413,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to FAdd instruction.");
             }
 
-            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+            Value* args[2] = { i->getOperand(0), i->getOperand(1) };
 
             Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
 
@@ -1443,7 +1450,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to FSub instruction.");
             }
 
-            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+            Value* args[2] = { i->getOperand(0), i->getOperand(1) };
 
             Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
 
@@ -1480,7 +1487,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to FMul instruction.");
             }
 
-            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+            Value* args[2] = { i->getOperand(0), i->getOperand(1) };
 
             Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
 
@@ -1517,7 +1524,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to FDiv instruction.");
             }
 
-            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+            Value* args[2] = { i->getOperand(0), i->getOperand(1) };
 
             Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
 
@@ -1554,7 +1561,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to FRem instruction.");
             }
 
-            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+            Value* args[2] = { i->getOperand(0), i->getOperand(1) };
 
             Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
 
@@ -1625,9 +1632,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Expected non-float result of floating-point cast instruction.");
             }
 
-            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
-
-            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(i->getOperand(0)), "", i);
 
             i->replaceAllUsesWith(ci);
             i->dropAllReferences();
@@ -1676,9 +1681,7 @@ int main(int argc, char **argv, char **envp) {
               klee_error("Only 32- and 64-bit integers are supported.");
             }
 
-            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
-
-            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(i->getOperand(0)), "", i);
 
             i->replaceAllUsesWith(ci);
             i->dropAllReferences();
@@ -1727,9 +1730,7 @@ int main(int argc, char **argv, char **envp) {
               klee_error("Only 32- and 64-bit integers are supported.");
             }
 
-            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
-
-            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(i->getOperand(0)), "", i);
 
             i->replaceAllUsesWith(ci);
             i->dropAllReferences();
@@ -1778,9 +1779,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to UIToFP instruction.");
             }
 
-            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
-
-            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(i->getOperand(0)), "", i);
 
             i->replaceAllUsesWith(ci);
             i->dropAllReferences();
@@ -1829,9 +1828,7 @@ int main(int argc, char **argv, char **envp) {
               assert(0 && "Non-float argument to SIToFP instruction.");
             }
 
-            Value* args[2] = { i->getOperand(0), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
-
-            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
+            Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(i->getOperand(0)), "", i);
 
             i->replaceAllUsesWith(ci);
             i->dropAllReferences();
@@ -1936,7 +1933,7 @@ int main(int argc, char **argv, char **envp) {
               break;
             }
 
-            Value* args[3] = { i->getOperand(0), i->getOperand(1), ConstantInt::get(mainModule->getContext(), APInt(1, 1)) };
+            Value* args[2] = { i->getOperand(0), i->getOperand(1) };
 
             Value* ci = CallInst::Create(mainModule->getFunction(f_name), ArrayRef<Value*>(args), "", i);
             i->replaceAllUsesWith(ci);
