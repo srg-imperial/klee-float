@@ -54,24 +54,24 @@ namespace {
       return SExtExpr::alloc(LHS, W);
     }
 
-    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) {
-      return FExtExpr::alloc(LHS, W);
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return FExtExpr::alloc(LHS, W, RM);
     }
 
-    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) {
-      return FToUExpr::alloc(LHS, W);
+    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return FToUExpr::alloc(LHS, W, RM);
     }
 
-    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) {
-      return FToSExpr::alloc(LHS, W);
+    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return FToSExpr::alloc(LHS, W, RM);
     }
 
-    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) {
-      return UToFExpr::alloc(LHS, W);
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return UToFExpr::alloc(LHS, W, RM);
     }
 
-    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) {
-      return SToFExpr::alloc(LHS, W);
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return SToFExpr::alloc(LHS, W, RM);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -130,24 +130,24 @@ namespace {
       return AShrExpr::alloc(LHS, RHS);
     }
 
-    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FAddExpr::alloc(LHS, RHS);
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FAddExpr::alloc(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FSubExpr::alloc(LHS, RHS);
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FSubExpr::alloc(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FMulExpr::alloc(LHS, RHS);
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FMulExpr::alloc(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FDivExpr::alloc(LHS, RHS);
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FDivExpr::alloc(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FRemExpr::alloc(LHS, RHS);
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FRemExpr::alloc(LHS, RHS, RM);
     }
 
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -299,24 +299,24 @@ namespace {
       return Base->SExt(LHS, W);
     }
 
-    ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->FExt(LHS, W);
+    ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->FExt(LHS, W, RM);
     }
 
-    ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->FToU(LHS, W);
+    ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->FToU(LHS, W, RM);
     }
 
-    ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->FToS(LHS, W);
+    ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->FToS(LHS, W, RM);
     }
 
-    ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->UToF(LHS, W);
+    ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->UToF(LHS, W, RM);
     }
 
-    ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) {
-      return Base->SToF(LHS, W);
+    ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->SToF(LHS, W, RM);
     }
 
     ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -375,24 +375,24 @@ namespace {
       return Base->AShr(LHS, RHS);
     }
 
-    ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FAdd(LHS, RHS);
+    ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FAdd(LHS, RHS, RM);
     }
 
-    ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FSub(LHS, RHS);
+    ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FSub(LHS, RHS, RM);
     }
 
-    ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FMul(LHS, RHS);
+    ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FMul(LHS, RHS, RM);
     }
 
-    ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FDiv(LHS, RHS);
+    ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FDiv(LHS, RHS, RM);
     }
 
-    ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FRem(LHS, RHS);
+    ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FRem(LHS, RHS, RM);
     }
 
     ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -571,24 +571,24 @@ namespace {
       return Builder.SExt(cast<NonConstantExpr>(LHS), W);
     }
 
-    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W) {
-      return Builder.FExt(LHS, W);
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Builder.FExt(LHS, W, RM);
     }
 
-    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W) {
-      return Builder.FToU(LHS, W);
+    virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Builder.FToU(LHS, W, RM);
     }
 
-    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W) {
-      return Builder.FToS(LHS, W);
+    virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Builder.FToS(LHS, W, RM);
     }
 
-    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W) {
-      return Builder.UToF(LHS, W);
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Builder.UToF(LHS, W, RM);
     }
 
-    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W) {
-      return Builder.SToF(LHS, W);
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Builder.SToF(LHS, W, RM);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -771,24 +771,24 @@ namespace {
                           cast<NonConstantExpr>(RHS));
     }
 
-    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FAdd(LHS, RHS);
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Builder.FAdd(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FSub(LHS, RHS);
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Builder.FSub(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FMul(LHS, RHS);
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Builder.FMul(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FDiv(LHS, RHS);
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Builder.FDiv(LHS, RHS, RM);
     }
 
-    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FRem(LHS, RHS);
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Builder.FRem(LHS, RHS, RM);
     }
 
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {

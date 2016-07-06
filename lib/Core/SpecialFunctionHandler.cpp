@@ -132,6 +132,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
   add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
+  add("fegetround", handleFeGetRound, true),
+  add("fesetround", handleFeSetRound, true),
 #undef addDNR
 #undef add  
 };
@@ -773,4 +775,59 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
   executor.terminateStateOnError(state,
                                  "overflow on division or remainder",
                                  "overflow.err");
+}
+
+void SpecialFunctionHandler::handleFeGetRound(ExecutionState &state,
+                                              KInstruction *target,
+                                              std::vector<ref<Expr> > &arguments) {
+  switch (state.roundingMode)
+  {
+  //TODO: using gclibc's magic numbers for now, find a way to check for the correct values
+  case APFloat::rmNearestTiesToEven:
+    executor.bindLocal(target, state, ConstantExpr::alloc(0x000, Expr::Int32));
+    break;
+  case APFloat::rmTowardNegative:
+    executor.bindLocal(target, state, ConstantExpr::alloc(0x400, Expr::Int32));
+    break;
+  case APFloat::rmTowardPositive:
+    executor.bindLocal(target, state, ConstantExpr::alloc(0x800, Expr::Int32));
+    break;
+  case APFloat::rmTowardZero:
+    executor.bindLocal(target, state, ConstantExpr::alloc(0xC00, Expr::Int32));
+    break;
+  case APFloat::rmNearestTiesToAway:
+    // gclibc doesn't know about rmNearestTiesToAway and really, this should never happen
+    // since handeFeSetRound is the only way to set roundingMode
+    klee_error("Invalid rounding mode");
+    executor.terminateState(state);
+  }
+}
+
+void SpecialFunctionHandler::handleFeSetRound(ExecutionState &state,
+                                              KInstruction *target,
+                                              std::vector<ref<Expr> > &arguments) {
+  ref<ConstantExpr> mode = executor.toConstant(state, arguments[0], "rounding mode");
+  switch (mode->getAPValue().getSExtValue())
+  {
+  //TODO: using gclibc's magic numbers for now, find a way to check for the correct values
+  case 0x000:
+    state.roundingMode = ::APFloat::rmNearestTiesToEven;
+    executor.bindLocal(target, state, ConstantExpr::alloc(1, Expr::Int32));
+    break;
+  case 0x400:
+    state.roundingMode = APFloat::rmTowardNegative;
+    executor.bindLocal(target, state, ConstantExpr::alloc(1, Expr::Int32));
+    break;
+  case 0x800:
+    state.roundingMode = APFloat::rmTowardPositive;
+    executor.bindLocal(target, state, ConstantExpr::alloc(1, Expr::Int32));
+    break;
+  case 0xC00:
+    state.roundingMode = APFloat::rmTowardZero;
+    executor.bindLocal(target, state, ConstantExpr::alloc(1, Expr::Int32));
+    break;
+  default:
+    // fesetround returns 0 when an unsupported mode is passed
+    executor.bindLocal(target, state, ConstantExpr::alloc(0, Expr::Int32));
+  }
 }

@@ -2021,17 +2021,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
-    Res.add(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.add(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()), state.roundingMode);
 #else
     llvm::APFloat Res(left->getAPValue());
-    Res.add(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.add(APFloat(right->getAPValue()), state.roundingMode);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FAddExpr::create(left, right));
+    bindLocal(ki, state, FAddExpr::create(left, right, state.roundingMode));
     break;
   }
 
@@ -2045,17 +2045,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return terminateStateOnExecError(state, "Unsupported FSub operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
-    Res.subtract(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.subtract(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), state.roundingMode);
 #else
     llvm::APFloat Res(left->getAPValue());
-    Res.subtract(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.subtract(APFloat(right->getAPValue()), state.roundingMode);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FSubExpr::create(left, right));
+    bindLocal(ki, state, FSubExpr::create(left, right, state.roundingMode));
     break;
   }
  
@@ -2070,17 +2070,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
-    Res.multiply(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.multiply(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), state.roundingMode);
 #else
     llvm::APFloat Res(left->getAPValue());
-    Res.multiply(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.multiply(APFloat(right->getAPValue()), state.roundingMode);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FMulExpr::create(left, right));
+    bindLocal(ki, state, FMulExpr::create(left, right, state.roundingMode));
     break;
   }
 
@@ -2095,17 +2095,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
-    Res.divide(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.divide(APFloat(*fpWidthToSemantics(right->getWidth()), right->getAPValue()), state.roundingMode);
 #else
     llvm::APFloat Res(left->getAPValue());
-    Res.divide(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.divide(APFloat(right->getAPValue()), state.roundingMode);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FDivExpr::create(left, right));
+    bindLocal(ki, state, FDivExpr::create(left, right, state.roundingMode));
     break;
   }
 
@@ -2120,17 +2120,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
     llvm::APFloat Res(*fpWidthToSemantics(left->getWidth()), left->getAPValue());
     Res.mod(APFloat(*fpWidthToSemantics(right->getWidth()),right->getAPValue()),
-            APFloat::rmNearestTiesToEven);
+            state.roundingMode);
 #else
     llvm::APFloat Res(left->getAPValue());
-    Res.mod(APFloat(right->getAPValue()), APFloat::rmNearestTiesToEven);
+    Res.mod(APFloat(right->getAPValue()), state.roundingMode);
 #endif
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FRemExpr::create(left, right));
+    bindLocal(ki, state, FRemExpr::create(left, right, state.roundingMode));
     break;
   }
 
@@ -2149,7 +2149,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bool losesInfo = false;
     Res.convert(*fpWidthToSemantics(resultType),
-                llvm::APFloat::rmNearestTiesToEven,
+                state.roundingMode,
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
@@ -2169,14 +2169,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     bool losesInfo = false;
     Res.convert(*fpWidthToSemantics(resultType),
-                llvm::APFloat::rmNearestTiesToEven,
+                state.roundingMode,
                 &losesInfo);
     bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = FExtExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+                                        getWidthForLLVMType(ci->getType()),
+                                        state.roundingMode);
     bindLocal(ki, state, result);
     break;
   }
@@ -2196,14 +2197,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     uint64_t value = 0;
     bool isExact = true;
+  // TODO: should this observe rounding mode?
     Arg.convertToInteger(&value, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
+  // TODO: should this observe rounding mode?
     ref<Expr> result = FToUExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+                                        getWidthForLLVMType(ci->getType()),
+                                        llvm::APFloat::rmTowardZero);
     bindLocal(ki, state, result);
     break;
   }
@@ -2223,14 +2227,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
     uint64_t value = 0;
     bool isExact = true;
+  // TODO: should this observe rounding mode?
     Arg.convertToInteger(&value, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
+  // TODO: should this observe rounding mode?
     ref<Expr> result = FToSExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+                                        getWidthForLLVMType(ci->getType()),
+                                        llvm::APFloat::rmTowardZero);
     bindLocal(ki, state, result);
     break;
   }
@@ -2244,15 +2251,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!semantics)
       return terminateStateOnExecError(state, "Unsupported UIToFP operation");
     llvm::APFloat f(*semantics, 0);
-    f.convertFromAPInt(arg->getAPValue(), false,
-                       llvm::APFloat::rmNearestTiesToEven);
+    f.convertFromAPInt(arg->getAPValue(), false, state.roundingMode);
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = UToFExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+                                        getWidthForLLVMType(ci->getType()),
+                                        state.roundingMode);
     bindLocal(ki, state, result);
     break;
   }
@@ -2266,15 +2273,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!semantics)
       return terminateStateOnExecError(state, "Unsupported SIToFP operation");
     llvm::APFloat f(*semantics, 0);
-    f.convertFromAPInt(arg->getAPValue(), true,
-                       llvm::APFloat::rmNearestTiesToEven);
+    f.convertFromAPInt(arg->getAPValue(), true, state.roundingMode);
 
     bindLocal(ki, state, ConstantExpr::alloc(f));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = SToFExpr::create(eval(ki, 0, state).value,
-                                        getWidthForLLVMType(ci->getType()));
+                                        getWidthForLLVMType(ci->getType()), 
+                                        state.roundingMode);
     bindLocal(ki, state, result);
     break;
   }
