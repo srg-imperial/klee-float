@@ -572,23 +572,38 @@ namespace {
     }
 
     virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Builder.FExt(LHS, W, RM);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FExt(W, RM);
+
+      return Builder.FExt(cast<NonConstantExpr>(LHS), W, RM);
     }
 
     virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Builder.FToU(LHS, W, RM);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FToU(W, RM);
+
+      return Builder.FToU(cast<NonConstantExpr>(LHS), W, RM);
     }
 
     virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Builder.FToS(LHS, W, RM);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FToS(W, RM);
+
+      return Builder.FToS(cast<NonConstantExpr>(LHS), W, RM);
     }
 
     virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Builder.UToF(LHS, W, RM);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->UToF(W, RM);
+
+      return Builder.UToF(cast<NonConstantExpr>(LHS), W, RM);
     }
 
     virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Builder.SToF(LHS, W, RM);
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->SToF(W, RM);
+
+      return Builder.SToF(cast<NonConstantExpr>(LHS), W, RM);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -772,23 +787,73 @@ namespace {
     }
 
     virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Builder.FAdd(LHS, RHS, RM);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FAdd(RCE, RM);
+        return Builder.FAdd(LCE, cast<NonConstantExpr>(RHS), RM);
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FAdd(cast<NonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FAdd(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS), RM);
     }
 
     virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Builder.FSub(LHS, RHS, RM);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FSub(RCE, RM);
+        return Builder.FSub(LCE, cast<NonConstantExpr>(RHS), RM);
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FSub(cast<NonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FSub(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS), RM);
     }
 
     virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Builder.FMul(LHS, RHS, RM);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FMul(RCE, RM);
+        return Builder.FMul(LCE, cast<NonConstantExpr>(RHS), RM);
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FMul(cast<NonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FMul(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS), RM);
     }
 
     virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Builder.FDiv(LHS, RHS, RM);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FDiv(RCE, RM);
+        return Builder.FDiv(LCE, cast<NonConstantExpr>(RHS), RM);
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FDiv(cast<NonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FDiv(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS), RM);
     }
 
     virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Builder.FRem(LHS, RHS, RM);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FRem(RCE, RM);
+        return Builder.FRem(LCE, cast<NonConstantExpr>(RHS), RM);
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FRem(cast<NonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FRem(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS), RM);
     }
 
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -922,59 +987,199 @@ namespace {
     }
 
     virtual ref<Expr> FOrd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOrd(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOrd(RCE);
+        return Builder.FOrd(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOrd(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOrd(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUno(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUno(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUno(RCE);
+        return Builder.FUno(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUno(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUno(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUeq(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUeq(RCE);
+        return Builder.FUeq(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUeq(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUeq(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOeq(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOeq(RCE);
+        return Builder.FOeq(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOeq(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOeq(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUgt(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUgt(RCE);
+        return Builder.FUgt(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUgt(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUgt(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOgt(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOgt(RCE);
+        return Builder.FOgt(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOgt(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOgt(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUge(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUge(RCE);
+        return Builder.FUge(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUge(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUge(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOge(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOge(RCE);
+        return Builder.FOge(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOge(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOge(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUlt(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUlt(RCE);
+        return Builder.FUlt(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUlt(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUlt(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOlt(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOlt(RCE);
+        return Builder.FOlt(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOlt(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOlt(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUle(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUle(RCE);
+        return Builder.FUle(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUle(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUle(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOle(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOle(RCE);
+        return Builder.FOle(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOle(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOle(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FUne(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FUne(RCE);
+        return Builder.FUne(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FUne(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FUne(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Builder.FOne(LHS, RHS);
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FOne(RCE);
+        return Builder.FOne(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FOne(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FOne(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
   };
 
