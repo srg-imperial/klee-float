@@ -77,12 +77,15 @@ ExecutionState::ExecutionState(KFunction *kf) :
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false),
-    ptreeNode(0) {
+    ptreeNode(0),
+
+    roundingMode(llvm::APFloat::rmNearestTiesToEven) {
   pushFrame(0, kf);
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), queryCost(0.), ptreeNode(0) {}
+    : constraints(assumptions), queryCost(0.), 
+      ptreeNode(0), roundingMode(llvm::APFloat::rmNearestTiesToEven) {}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -120,7 +123,9 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     coveredLines(state.coveredLines),
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
-    arrayNames(state.arrayNames)
+    arrayNames(state.arrayNames),
+
+    roundingMode(llvm::APFloat::rmNearestTiesToEven)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
