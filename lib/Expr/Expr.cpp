@@ -287,13 +287,27 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
                "invalid args array for given opcode");      \
       return T ## Expr::create(args[0].expr, args[1].expr); \
 
+#define CAST_RM_EXPR_CASE(T)                                                        \
+      case T:                                                                       \
+        assert(numArgs == 3 &&				                                              \
+               args[0].isExpr() && args[1].isWidth() && args[2].isRoundingMode() && \
+               "invalid args array for given opcode");                              \
+      return T ## Expr::create(args[0].expr, args[1].width, args[2].rm);            \
+
+#define BINARY_RM_EXPR_CASE(T)                                                     \
+      case T:                                                                      \
+        assert(numArgs == 3 &&                                                     \
+               args[0].isExpr() && args[1].isExpr() && args[2].isRoundingMode() && \
+               "invalid args array for given opcode");                             \
+      return T ## Expr::create(args[0].expr, args[1].expr, args[2].rm);            \
+
       CAST_EXPR_CASE(ZExt);
       CAST_EXPR_CASE(SExt);
-      CAST_EXPR_CASE(FExt);
-      CAST_EXPR_CASE(FToU);
-      CAST_EXPR_CASE(FToS);
-      CAST_EXPR_CASE(UToF);
-      CAST_EXPR_CASE(SToF);
+      CAST_RM_EXPR_CASE(FExt);
+      CAST_RM_EXPR_CASE(FToU);
+      CAST_RM_EXPR_CASE(FToS);
+      CAST_RM_EXPR_CASE(UToF);
+      CAST_RM_EXPR_CASE(SToF);
       
       BINARY_EXPR_CASE(Add);
       BINARY_EXPR_CASE(Sub);
@@ -308,11 +322,11 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       BINARY_EXPR_CASE(Shl);
       BINARY_EXPR_CASE(LShr);
       BINARY_EXPR_CASE(AShr);
-      BINARY_EXPR_CASE(FAdd);
-      BINARY_EXPR_CASE(FSub);
-      BINARY_EXPR_CASE(FMul);
-      BINARY_EXPR_CASE(FDiv);
-      BINARY_EXPR_CASE(FRem);
+      BINARY_RM_EXPR_CASE(FAdd);
+      BINARY_RM_EXPR_CASE(FSub);
+      BINARY_RM_EXPR_CASE(FMul);
+      BINARY_RM_EXPR_CASE(FDiv);
+      BINARY_RM_EXPR_CASE(FRem);
       
       BINARY_EXPR_CASE(Eq);
       BINARY_EXPR_CASE(Ne);
@@ -443,7 +457,7 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
   }
 }
 
-ref<ConstantExpr> ConstantExpr::FExt(Width W) {
+ref<ConstantExpr> ConstantExpr::FExt(Width W, llvm::APFloat::roundingMode rm) {
   if (!fpWidthToSemantics(W))
       klee_error("Unsupported FExt operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -453,12 +467,12 @@ ref<ConstantExpr> ConstantExpr::FExt(Width W) {
 #endif
   bool losesInfo = false;
   Res.convert(*fpWidthToSemantics(W),
-              llvm::APFloat::rmNearestTiesToEven,
+              rm,
               &losesInfo);
   return ConstantExpr::alloc(Res);
 }
 
-ref<ConstantExpr> ConstantExpr::FToU(Width W) {
+ref<ConstantExpr> ConstantExpr::FToU(Width W, llvm::APFloat::roundingMode rm) {
   if (!fpWidthToSemantics(getWidth()) || W > 64)
     klee_error("Unsupported FToU operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -468,12 +482,13 @@ ref<ConstantExpr> ConstantExpr::FToU(Width W) {
 #endif
   uint64_t new_value = 0;
   bool isExact = true;
+  // TODO: should this observe rounding mode?
   Arg.convertToInteger(&new_value, W, false,
                        llvm::APFloat::rmTowardZero, &isExact);
   return ConstantExpr::alloc(new_value, W);
 }
 
-ref<ConstantExpr> ConstantExpr::FToS(Width W) {
+ref<ConstantExpr> ConstantExpr::FToS(Width W, llvm::APFloat::roundingMode rm) {
   if (!fpWidthToSemantics(getWidth()) || W > 64)
     klee_error("Unsupported FToS operation");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
@@ -483,29 +498,30 @@ ref<ConstantExpr> ConstantExpr::FToS(Width W) {
 #endif
   uint64_t new_value = 0;
   bool isExact = true;
+  // TODO: should this observe rounding mode?
   Arg.convertToInteger(&new_value, W, true,
                        llvm::APFloat::rmTowardZero, &isExact);
   return ConstantExpr::alloc(new_value, W);
 }
 
-ref<ConstantExpr> ConstantExpr::UToF(Width W) {
+ref<ConstantExpr> ConstantExpr::UToF(Width W, llvm::APFloat::roundingMode rm) {
   const llvm::fltSemantics *semantics = fpWidthToSemantics(W);
   if (!semantics)
     klee_error("Unsupported UToF operation");
   llvm::APFloat f(*semantics, 0);
   f.convertFromAPInt(value, false,
-                     llvm::APFloat::rmNearestTiesToEven);
+                     rm);
 
   return ConstantExpr::alloc(f);
 }
 
-ref<ConstantExpr> ConstantExpr::SToF(Width W) {
+ref<ConstantExpr> ConstantExpr::SToF(Width W, llvm::APFloat::roundingMode rm) {
   const llvm::fltSemantics *semantics = fpWidthToSemantics(W);
   if (!semantics)
     klee_error("Unsupported SIToFP operation");
   llvm::APFloat f(*semantics, 0);
   f.convertFromAPInt(value, true,
-                     llvm::APFloat::rmNearestTiesToEven);
+                     rm);
 
   return ConstantExpr::alloc(f);
 }
@@ -566,77 +582,77 @@ ref<ConstantExpr> ConstantExpr::AShr(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value.ashr(RHS->value));
 }
 
-ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS) {
+ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!fpWidthToSemantics(getWidth()) ||
       !fpWidthToSemantics(RHS->getWidth()))
     klee_error("Unsupported FAdd operation");
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
-  Res.add(APFloat(*fpWidthToSemantics(RHS->getWidth()),RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.add(APFloat(*fpWidthToSemantics(RHS->getWidth()),RHS->getAPValue()), RM);
 #else
   llvm::APFloat Res(value);
-  Res.add(APFloat(RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.add(APFloat(RHS->getAPValue()), RM);
 #endif
   return ConstantExpr::alloc(Res.bitcastToAPInt());
 }
 
-ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS) {
+ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!fpWidthToSemantics(getWidth()) ||
       !fpWidthToSemantics(RHS->getWidth()))
     klee_error("Unsupported FSub operation");
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
-  Res.subtract(APFloat(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.subtract(APFloat(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue()), RM);
 #else
   llvm::APFloat Res(value);
-  Res.subtract(APFloat(RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.subtract(APFloat(RHS->getAPValue()), RM);
 #endif
   return ConstantExpr::alloc(Res.bitcastToAPInt());
 }
 
-ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS) {
+ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!fpWidthToSemantics(getWidth()) ||
       !fpWidthToSemantics(RHS->getWidth()))
     klee_error("Unsupported FMul operation");
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
-  Res.multiply(APFloat(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.multiply(APFloat(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue()), RM);
 #else
   llvm::APFloat Res(value);
-  Res.multiply(APFloat(RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.multiply(APFloat(RHS->getAPValue()), RM);
 #endif
   return ConstantExpr::alloc(Res.bitcastToAPInt());
 }
 
-ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS) {
+ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!fpWidthToSemantics(getWidth()) ||
       !fpWidthToSemantics(RHS->getWidth()))
     klee_error("Unsupported FDiv operation");
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
-  Res.divide(APFloat(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.divide(APFloat(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue()), RM);
 #else
   llvm::APFloat Res(value);
-  Res.divide(APFloat(RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.divide(APFloat(RHS->getAPValue()), RM);
 #endif
   return ConstantExpr::alloc(Res.bitcastToAPInt());
 }
 
-ref<ConstantExpr> ConstantExpr::FRem(const ref<ConstantExpr> &RHS) {
+ref<ConstantExpr> ConstantExpr::FRem(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!fpWidthToSemantics(getWidth()) ||
       !fpWidthToSemantics(RHS->getWidth()))
     klee_error("Unsupported FRem operation");
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
   llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
-  Res.mod(APFloat(*fpWidthToSemantics(RHS->getWidth()),RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.mod(APFloat(*fpWidthToSemantics(RHS->getWidth()),RHS->getAPValue()), RM);
 #else
   llvm::APFloat Res(value);
-  Res.mod(APFloat(RHS->getAPValue()), APFloat::rmNearestTiesToEven);
+  Res.mod(APFloat(RHS->getAPValue()), RM);
 #endif
   return ConstantExpr::alloc(Res.bitcastToAPInt());
 }
@@ -1644,36 +1660,45 @@ CMPCREATE(UleExpr, Ule)
 CMPCREATE(SltExpr, Slt)
 CMPCREATE(SleExpr, Sle)
 
-#define CASTCREATE(_e_op, _op) \
-ref<Expr>  _e_op ::create(const ref<Expr> &e, Width w) { \
-  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e))                 \
-    return ce->_op(w);                                              \
-  return _e_op ## _create(e, w);                                    \
+#define CAST_RM_CREATE(_e_op, _op) \
+ref<Expr>  _e_op ::create(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm) { \
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e))                             \
+    return ce->_op(w, rm);                                                      \
+  return _e_op ## _create(e, w, rm);                                            \
 }
 
-static ref<Expr> FExtExpr_create(const ref<Expr> &e, Expr::Width w) { return FExtExpr::alloc(e,w); }
-static ref<Expr> FToUExpr_create(const ref<Expr> &e, Expr::Width w) { return FToUExpr::alloc(e,w); }
-static ref<Expr> FToSExpr_create(const ref<Expr> &e, Expr::Width w) { return FToSExpr::alloc(e,w); }
-static ref<Expr> UToFExpr_create(const ref<Expr> &e, Expr::Width w) { return UToFExpr::alloc(e,w); }
-static ref<Expr> SToFExpr_create(const ref<Expr> &e, Expr::Width w) { return SToFExpr::alloc(e,w); }
+static ref<Expr> FExtExpr_create(const ref<Expr> &e, Expr::Width w, llvm::APFloat::roundingMode rm) { return FExtExpr::alloc(e,w, rm); }
+static ref<Expr> FToUExpr_create(const ref<Expr> &e, Expr::Width w, llvm::APFloat::roundingMode rm) { return FToUExpr::alloc(e,w, rm); }
+static ref<Expr> FToSExpr_create(const ref<Expr> &e, Expr::Width w, llvm::APFloat::roundingMode rm) { return FToSExpr::alloc(e,w, rm); }
+static ref<Expr> UToFExpr_create(const ref<Expr> &e, Expr::Width w, llvm::APFloat::roundingMode rm) { return UToFExpr::alloc(e,w, rm); }
+static ref<Expr> SToFExpr_create(const ref<Expr> &e, Expr::Width w, llvm::APFloat::roundingMode rm) { return SToFExpr::alloc(e,w, rm); }
 
-CASTCREATE(FExtExpr, FExt)
-CASTCREATE(FToUExpr, FToU)
-CASTCREATE(FToSExpr, FToS)
-CASTCREATE(UToFExpr, UToF)
-CASTCREATE(SToFExpr, SToF)
+CAST_RM_CREATE(FExtExpr, FExt)
+CAST_RM_CREATE(FToUExpr, FToU)
+CAST_RM_CREATE(FToSExpr, FToS)
+CAST_RM_CREATE(UToFExpr, UToF)
+CAST_RM_CREATE(SToFExpr, SToF)
 
-static ref<Expr> FAddExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FAddExpr::alloc(l,r); }
-static ref<Expr> FSubExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FSubExpr::alloc(l,r); }
-static ref<Expr> FMulExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FMulExpr::alloc(l,r); }
-static ref<Expr> FDivExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FDivExpr::alloc(l,r); }
-static ref<Expr> FRemExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FRemExpr::alloc(l,r); }
+#define B_RM_CREATE(_e_op, _op) \
+ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { \
+  assert(l->getWidth()==r->getWidth() && "type mismatch");                                 \
+  if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                                        \
+    if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                                      \
+      return cl->_op(cr, rm);                                                              \
+  return _e_op ## _create(l, r, rm);                                                       \
+}
 
-BCREATE(FAddExpr, FAdd)
-BCREATE(FSubExpr, FSub)
-BCREATE(FMulExpr, FMul)
-BCREATE(FDivExpr, FDiv)
-BCREATE(FRemExpr, FRem)
+static ref<Expr> FAddExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FAddExpr::alloc(l,r, rm); }
+static ref<Expr> FSubExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FSubExpr::alloc(l,r, rm); }
+static ref<Expr> FMulExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FMulExpr::alloc(l,r, rm); }
+static ref<Expr> FDivExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FDivExpr::alloc(l,r, rm); }
+static ref<Expr> FRemExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FRemExpr::alloc(l,r, rm); }
+
+B_RM_CREATE(FAddExpr, FAdd)
+B_RM_CREATE(FSubExpr, FSub)
+B_RM_CREATE(FMulExpr, FMul)
+B_RM_CREATE(FDivExpr, FDiv)
+B_RM_CREATE(FRemExpr, FRem)
 
 static ref<Expr> FOrdExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FOrdExpr::alloc(l,r); }
 static ref<Expr> FUnoExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FUnoExpr::alloc(l,r); }

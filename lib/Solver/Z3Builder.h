@@ -143,6 +143,7 @@ private:
   Z3ASTHandle bv_to_float(Z3ASTHandle expr);
   Z3ASTHandle float_to_bv(Z3ASTHandle expr);
   Z3ASTHandle isNanExpr(Z3ASTHandle expr);
+  Z3_ast getRoundingModeAST(llvm::APFloat::roundingMode rm);
 
   // Array operations
   Z3ASTHandle writeExpr(Z3ASTHandle array, Z3ASTHandle index,

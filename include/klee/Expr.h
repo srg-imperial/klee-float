@@ -194,8 +194,12 @@ public:
 
     CastKindFirst=ZExt,
     CastKindLast=SToF,
+    CastRoundKindFirst=FExt,
+    CastRoundKindLast=SToF,
     BinaryKindFirst=Add,
     BinaryKindLast=FOne,
+    BinaryRoundKindFirst=FAdd,
+    BinaryRoundKindLast=FRem,
     CmpKindFirst=Eq,
     CmpKindLast=FOne
   };
@@ -319,12 +323,18 @@ private:
 struct Expr::CreateArg {
   ref<Expr> expr;
   Width width;
+  llvm::APFloat::roundingMode rm;
   
-  CreateArg(Width w = Bool) : expr(0), width(w) {}
-  CreateArg(ref<Expr> e) : expr(e), width(Expr::InvalidWidth) {}
+  CreateArg(Width w = Bool) : expr(0), width(w), rm(llvm::APFloat::rmNearestTiesToEven), isRM(false) {}
+  CreateArg(ref<Expr> e) : expr(e), width(Expr::InvalidWidth), rm(llvm::APFloat::rmNearestTiesToEven), isRM(false) {}
+  CreateArg(llvm::APFloat::roundingMode r) : expr(0), width(Expr::InvalidWidth), rm(r), isRM(true) {}
   
-  bool isExpr() { return !isWidth(); }
   bool isWidth() { return width != Expr::InvalidWidth; }
+  bool isRoundingMode() { return isRM; }
+  bool isExpr() { return !isWidth() && !isRoundingMode(); }
+
+private:
+  bool isRM;
 };
 
 // Comparison operators
@@ -927,11 +937,63 @@ public:                                                          \
 
 CAST_EXPR_CLASS(SExt)
 CAST_EXPR_CLASS(ZExt)
-CAST_EXPR_CLASS(FExt)
-CAST_EXPR_CLASS(FToU)
-CAST_EXPR_CLASS(FToS)
-CAST_EXPR_CLASS(UToF)
-CAST_EXPR_CLASS(SToF)
+
+// Casting with roundingMode
+
+class CastRoundExpr : public CastExpr {
+public:
+  llvm::APFloat::roundingMode round;
+
+public:
+  CastRoundExpr(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm) : CastExpr(e,w), round(rm) {}
+
+  llvm::APFloat::roundingMode getRoundingMode() const { return round; }
+
+  int compareContents(const Expr &b) const {
+    const CastRoundExpr &eb = static_cast<const CastRoundExpr&>(b);
+    if (width != eb.width) return width < eb.width ? -1 : 1;
+    return 0;
+  }
+
+  static bool classof(const Expr *E) {
+    Expr::Kind k = E->getKind();
+    return Expr::CastRoundKindFirst <= k && k <= Expr::CastRoundKindLast;
+  }
+  static bool classof(const CastRoundExpr *) { return true; }
+};
+
+#define CAST_RM_EXPR_CLASS(_class_kind)                                           \
+class _class_kind ## Expr : public CastRoundExpr {                                     \
+public:                                                                           \
+  static const Kind kind = _class_kind;                                           \
+  static const unsigned numKids = 1;                                              \
+  static const llvm::APFloat::roundingMode round = llvm::APFloat::rmNearestTiesToEven;                          \
+public:                                                                           \
+    _class_kind ## Expr(ref<Expr> e, Width w, llvm::APFloat::roundingMode rm) : CastRoundExpr(e,w,rm) {} \
+    static ref<Expr> alloc(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm) {        \
+      ref<Expr> r(new _class_kind ## Expr(e, w, rm));                             \
+      r->computeHash();                                                           \
+      return r;                                                                   \
+    }                                                                             \
+    static ref<Expr> create(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm);        \
+    Kind getKind() const { return _class_kind; }                                  \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                           \
+      return create(kids[0], width, round);                                       \
+    }                                                                             \
+                                                                                  \
+    static bool classof(const Expr *E) {                                          \
+      return E->getKind() == Expr::_class_kind;                                   \
+    }                                                                             \
+    static bool classof(const  _class_kind ## Expr *) {                           \
+      return true;                                                                \
+    }                                                                             \
+};                                                                                \
+
+CAST_RM_EXPR_CLASS(FExt)
+CAST_RM_EXPR_CLASS(FToU)
+CAST_RM_EXPR_CLASS(FToS)
+CAST_RM_EXPR_CLASS(UToF)
+CAST_RM_EXPR_CLASS(SToF)
 
 // Arithmetic/Bit Exprs
 
@@ -981,11 +1043,60 @@ ARITHMETIC_EXPR_CLASS(Xor)
 ARITHMETIC_EXPR_CLASS(Shl)
 ARITHMETIC_EXPR_CLASS(LShr)
 ARITHMETIC_EXPR_CLASS(AShr)
-ARITHMETIC_EXPR_CLASS(FAdd)
-ARITHMETIC_EXPR_CLASS(FSub)
-ARITHMETIC_EXPR_CLASS(FMul)
-ARITHMETIC_EXPR_CLASS(FDiv)
-ARITHMETIC_EXPR_CLASS(FRem)
+
+class BinaryRoundExpr : public BinaryExpr {
+public:
+  llvm::APFloat::roundingMode round;
+
+protected:
+  BinaryRoundExpr(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) : BinaryExpr(l,r), round(rm) {}
+
+public:
+  llvm::APFloat::roundingMode getRoundingMode() const { return round; }
+
+  static bool classof(const Expr *E) {
+    Kind k = E->getKind();
+    return Expr::BinaryRoundKindFirst <= k && k <= Expr::BinaryRoundKindLast;
+  }
+  static bool classof(const BinaryRoundExpr *) { return true; }
+};
+
+
+#define ARITHMETIC_RM_EXPR_CLASS(_class_kind)                                         \
+class _class_kind ## Expr : public BinaryRoundExpr {                                       \
+public:                                                                               \
+  static const Kind kind = _class_kind;                                               \
+  static const unsigned numKids = 2;                                                  \
+  static const llvm::APFloat::roundingMode round = llvm::APFloat::rmNearestTiesToEven;                              \
+public:                                                                               \
+    _class_kind ## Expr(const ref<Expr> &l,                                           \
+                        const ref<Expr> &r,                                           \
+                        llvm::APFloat::roundingMode rm) : BinaryRoundExpr(l,r,rm) {}                         \
+    static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { \
+      ref<Expr> res(new _class_kind ## Expr (l, r, rm));                              \
+      res->computeHash();                                                             \
+      return res;                                                                     \
+    }                                                                                 \
+    static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm); \
+    Width getWidth() const { return left->getWidth(); }                               \
+    Kind getKind() const { return _class_kind; }                                      \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                               \
+      return create(kids[0], kids[1], round);                                         \
+    }                                                                                 \
+                                                                                      \
+    static bool classof(const Expr *E) {                                              \
+      return E->getKind() == Expr::_class_kind;                                       \
+    }                                                                                 \
+    static bool classof(const  _class_kind ## Expr *) {                               \
+      return true;                                                                    \
+    }                                                                                 \
+};                                                                                    \
+
+ARITHMETIC_RM_EXPR_CLASS(FAdd)
+ARITHMETIC_RM_EXPR_CLASS(FSub)
+ARITHMETIC_RM_EXPR_CLASS(FMul)
+ARITHMETIC_RM_EXPR_CLASS(FDiv)
+ARITHMETIC_RM_EXPR_CLASS(FRem)
 
 // Comparison Exprs
 
@@ -1169,11 +1280,11 @@ public:
   ref<ConstantExpr> Extract(unsigned offset, Width W);
   ref<ConstantExpr> ZExt(Width W);
   ref<ConstantExpr> SExt(Width W);
-  ref<ConstantExpr> FExt(Width W);
-  ref<ConstantExpr> FToU(Width W);
-  ref<ConstantExpr> FToS(Width W);
-  ref<ConstantExpr> UToF(Width W);
-  ref<ConstantExpr> SToF(Width W);
+  ref<ConstantExpr> FExt(Width W, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FToU(Width W, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FToS(Width W, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> UToF(Width W, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> SToF(Width W, llvm::APFloat::roundingMode RM);
   ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
@@ -1187,11 +1298,11 @@ public:
   ref<ConstantExpr> Shl(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> LShr(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> AShr(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> FAdd(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> FSub(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> FMul(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> FDiv(const ref<ConstantExpr> &RHS);
-  ref<ConstantExpr> FRem(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FAdd(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FSub(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FMul(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FDiv(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FRem(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
 
   // Comparisons return a constant expression of width 1.
 

@@ -334,6 +334,22 @@ Z3ASTHandle Z3Builder::isNanExpr(Z3ASTHandle expr) {
   return Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, expr), ctx);
 }
 
+Z3_ast Z3Builder::getRoundingModeAST(llvm::APFloat::roundingMode rm) {
+  switch (rm) {
+  default:
+  case llvm::APFloat::rmNearestTiesToEven:
+    return Z3_mk_fpa_round_nearest_ties_to_even(ctx);
+  case llvm::APFloat::rmTowardPositive:
+    return Z3_mk_fpa_round_toward_positive(ctx);
+  case llvm::APFloat::rmTowardNegative:
+    return Z3_mk_fpa_round_toward_negative(ctx);
+  case llvm::APFloat::rmTowardZero:
+    return Z3_mk_fpa_round_toward_zero(ctx);
+  case llvm::APFloat::rmNearestTiesToAway:
+    return Z3_mk_fpa_round_nearest_ties_to_away(ctx);
+  }
+}
+
 Z3ASTHandle Z3Builder::writeExpr(Z3ASTHandle array, Z3ASTHandle index,
                                  Z3ASTHandle value) {
   return Z3ASTHandle(Z3_mk_store(ctx, array, index, value), ctx);
@@ -584,7 +600,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::FExt: {
     int srcWidth;
-    CastExpr *ce = cast<CastExpr>(e);
+    CastRoundExpr *ce = cast<CastRoundExpr>(e);
     Z3ASTHandle src = bv_to_float(construct(ce->src, &srcWidth));
     *width_out = ce->getWidth();
 
@@ -607,30 +623,30 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       break;
     }
 
-    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_float(ctx, Z3_mk_fpa_rtz(ctx), src, sort), ctx));
+    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_float(ctx, getRoundingModeAST(ce->getRoundingMode()), src, sort), ctx));
   }
 
   case Expr::FToU: {
     int srcWidth;
-    CastExpr *ce = cast<CastExpr>(e);
+    CastRoundExpr *ce = cast<CastRoundExpr>(e);
     Z3ASTHandle src = bv_to_float(construct(ce->src, &srcWidth));
     *width_out = ce->getWidth();
 
-    return Z3ASTHandle(Z3_mk_fpa_to_ubv(ctx, Z3_mk_fpa_rtz(ctx), src, *width_out), ctx);
+    return Z3ASTHandle(Z3_mk_fpa_to_ubv(ctx, getRoundingModeAST(ce->getRoundingMode()), src, *width_out), ctx);
   }
 
   case Expr::FToS: {
     int srcWidth;
-    CastExpr *ce = cast<CastExpr>(e);
+    CastRoundExpr *ce = cast<CastRoundExpr>(e);
     Z3ASTHandle src = bv_to_float(construct(ce->src, &srcWidth));
     *width_out = ce->getWidth();
 
-    return Z3ASTHandle(Z3_mk_fpa_to_sbv(ctx, Z3_mk_fpa_rtz(ctx), src, *width_out), ctx);
+    return Z3ASTHandle(Z3_mk_fpa_to_sbv(ctx, getRoundingModeAST(ce->getRoundingMode()), src, *width_out), ctx);
   }
 
   case Expr::UToF:{
     int srcWidth;
-    CastExpr *ce = cast<CastExpr>(e);
+    CastRoundExpr *ce = cast<CastRoundExpr>(e);
     Z3ASTHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
 
@@ -653,12 +669,12 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       break;
     }
 
-    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_unsigned(ctx, Z3_mk_fpa_rtz(ctx), src, sort), ctx));
+    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_unsigned(ctx, getRoundingModeAST(ce->getRoundingMode()), src, sort), ctx));
   }
 
   case Expr::SToF: {
     int srcWidth;
-    CastExpr *ce = cast<CastExpr>(e);
+    CastRoundExpr *ce = cast<CastRoundExpr>(e);
     Z3ASTHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
 
@@ -681,7 +697,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       break;
     }
 
-    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_signed(ctx, Z3_mk_fpa_rtz(ctx), src, sort), ctx));
+    return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_signed(ctx, getRoundingModeAST(ce->getRoundingMode()), src, sort), ctx));
   }
 
   // Arithmetic
@@ -891,7 +907,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
     assert(*width_out != 1 && "uncanonicalized FAdd");
-    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_add(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_add(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
     return result;
@@ -902,7 +918,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
     assert(*width_out != 1 && "uncanonicalized FSub");
-    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_sub(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_sub(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
     return result;
@@ -913,7 +929,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
     assert(*width_out != 1 && "uncanonicalized FMul");
-    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_mul(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_mul(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
     return result;
@@ -924,7 +940,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
     assert(*width_out != 1 && "uncanonicalized FDiv");
-    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_div(ctx, Z3_mk_fpa_rtz(ctx), left, right), ctx));
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_div(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
     return result;
@@ -935,7 +951,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
     assert(*width_out != 1 && "uncanonicalized FRem");
-    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_rem(ctx, left, right), ctx));
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_rem(ctx, left, right), ctx)); // Z3's frem doesn't ask for rounding mode
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
     return result;

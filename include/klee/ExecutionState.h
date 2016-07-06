@@ -145,8 +145,10 @@ public:
   void addFnAlias(std::string old_fn, std::string new_fn);
   void removeFnAlias(std::string fn);
 
+  llvm::APFloat::roundingMode roundingMode;
+
 private:
-  ExecutionState() : ptreeNode(0) {}
+  ExecutionState() : ptreeNode(0), roundingMode(llvm::APFloat::rmNearestTiesToEven) {}
 
 public:
   ExecutionState(KFunction *kf);
