@@ -137,8 +137,17 @@ namespace klee {
     HANDLER(handleMulOverflow);
     HANDLER(handleSubOverflow);
     HANDLER(handleDivRemOverflow);
+    HANDLER(handleFeClearExcept);
+    HANDLER(handleFeGetExceptFlag);
+    HANDLER(handleFeRaiseExcept);
+    HANDLER(handleFeSetExceptFlag);
+    HANDLER(handleFeTestExcept);
     HANDLER(handleFeGetRound);
     HANDLER(handleFeSetRound);
+    HANDLER(handleFeGetEnv);
+    HANDLER(handleFeHoldExcept);
+    HANDLER(handleFeSetEnv);
+    HANDLER(handleFeUpdateEnv);
 #undef HANDLER
   };
 } // End klee namespace

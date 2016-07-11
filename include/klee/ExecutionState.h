@@ -22,6 +22,8 @@
 #include <set>
 #include <vector>
 
+#include <fenv.h>
+
 namespace klee {
 class Array;
 class CallPathNode;
@@ -146,9 +148,12 @@ public:
   void removeFnAlias(std::string fn);
 
   llvm::APFloat::roundingMode roundingMode;
+  fenv_t fEnv;
 
 private:
-  ExecutionState() : ptreeNode(0), roundingMode(llvm::APFloat::rmNearestTiesToEven) {}
+  ExecutionState() : ptreeNode(0), roundingMode(llvm::APFloat::rmNearestTiesToEven) {
+    fegetenv(&fEnv);
+  }
 
 public:
   ExecutionState(KFunction *kf);
