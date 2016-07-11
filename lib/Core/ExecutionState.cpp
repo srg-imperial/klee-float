@@ -81,11 +81,14 @@ ExecutionState::ExecutionState(KFunction *kf) :
 
     roundingMode(llvm::APFloat::rmNearestTiesToEven) {
   pushFrame(0, kf);
+  fegetenv(&fEnv);
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     : constraints(assumptions), queryCost(0.), 
-      ptreeNode(0), roundingMode(llvm::APFloat::rmNearestTiesToEven) {}
+      ptreeNode(0), roundingMode(llvm::APFloat::rmNearestTiesToEven) {
+  fegetenv(&fEnv);
+}
 
 ExecutionState::~ExecutionState() {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -129,6 +132,8 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
+
+  fegetenv(&fEnv);
 }
 
 ExecutionState *ExecutionState::branch() {

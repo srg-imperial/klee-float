@@ -213,6 +213,11 @@ private:
                             llvm::Function *function,
                             std::vector< ref<Expr> > &arguments);
 
+  void callExternalFunctionHook(ExecutionState &state,
+                                KInstruction *target,
+                                llvm::Function *function,
+                                std::vector< ref<Expr> > &arguments);
+
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
                                  bool isLocal, const Array *array = 0);
 

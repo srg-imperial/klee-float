@@ -21,6 +21,7 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Internal/Support/PrintVersion.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/CommandLine.h"
 
 #if LLVM_VERSION_CODE > LLVM_VERSION(3, 2)
 #include "llvm/IR/Constants.h"
@@ -1956,6 +1957,14 @@ int main(int argc, char **argv, char **envp) {
         }
       }
     }
+  }
+
+  if (CoreSolverToUse == Z3_SOLVER)
+  {
+    // link in the declaration of fegetround
+    SmallString<128> Path(Opts.LibraryDir);
+    llvm::sys::path::append(Path, "getround.bc");
+    mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
   }
 
   // Get the desired main function.  klee_main initializes uClibc
