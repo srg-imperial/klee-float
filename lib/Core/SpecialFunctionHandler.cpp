@@ -786,189 +786,200 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
                                  "overflow.err");
 }
 
-void setRoundingMode(ExecutionState &state, ref<klee::ConstantExpr> mode) {
-  switch (mode->getAPValue().getZExtValue())
-  {
-  case FE_TONEAREST:
-    state.roundingMode = APFloat::rmNearestTiesToEven;
-    break;
-  case FE_DOWNWARD:
-    state.roundingMode = APFloat::rmTowardNegative;
-    break;
-  case FE_UPWARD:
-    state.roundingMode = APFloat::rmTowardPositive;
-    break;
-  case FE_TOWARDZERO:
-    state.roundingMode = APFloat::rmTowardZero;
-    break;
-  default:
-    outs() << "unknown mode: " << mode->getAPValue().getZExtValue() << "\n";
-  }
-}
-
 void SpecialFunctionHandler::handleFeClearExcept(ExecutionState &state,
                                                  KInstruction *target,
                                                  std::vector<ref<Expr> > &arguments) {
-  // call the function and back up the return value
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("feclearexcept"), arguments);
-  ref<ConstantExpr> ret = cast<ConstantExpr>(executor.getDestCell(state, target).value);
 
-  // update the state's floating-point environment
-  ref<ConstantExpr> env = Expr::createPointer((uint64_t) &(state.fEnv));
-  std::vector<ref<Expr> > getenvArgs(1, env);
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetenv"), getenvArgs);
-  state.fEnv = *(reinterpret_cast<fenv_t*>(env->getAPValue().getZExtValue()));
-
-  // update the state's rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
-  ref<ConstantExpr> mode = cast<ConstantExpr>(executor.getDestCell(state, target).value);
-  setRoundingMode(state, mode);
-
-  // restore the backed up value to target
-  executor.bindLocal(target, state, ret);
+  int excepts = executor.toConstant(state, arguments[0], "Argument to feclearexcept")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+  
+  int ret = feclearexcept(excepts);
+  
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeGetExceptFlag(ExecutionState &state,
                                                    KInstruction *target,
                                                    std::vector<ref<Expr> > &arguments) {
-  // fegetexceptflag doesn't modify the floating-point environment or the rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetexceptflag"), arguments);
+  fexcept_t flag;
+  fexcept_t* flagp = &flag;
+
+  int excepts = executor.toConstant(state, arguments[1], "Argument to fesetexceptflag")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+
+  int ret = fegetexceptflag(flagp, excepts);
+
+  uint8_t* flagArr = (uint8_t*) flagp;
+
+  MemoryObject* mo = executor.memory->allocate(sizeof(flag) * 8, true, false, state.prevPC->inst);
+  ObjectState* os = executor.bindObjectInState(state, mo, true);
+
+  for (size_t i = 0; i < sizeof(flag); ++i)
+  {
+    os->write8(i, flagArr[i]);
+  }
+
+  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+  
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeRaiseExcept(ExecutionState &state,
                                                  KInstruction *target,
                                                  std::vector<ref<Expr> > &arguments) {
-  // call the function and back up the return value
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("feraiseexcept"), arguments);
-  ref<ConstantExpr> ret = cast<ConstantExpr>(executor.getDestCell(state, target).value);
+  int excepts = executor.toConstant(state, arguments[0], "Argument to feraiseexcept")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
 
-  // update the state's floating-point environment
-  ref<ConstantExpr> env = Expr::createPointer((uint64_t) &(state.fEnv));
-  std::vector<ref<Expr> > getenvArgs(1, env);
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetenv"), getenvArgs);
-  state.fEnv = *(reinterpret_cast<fenv_t*>(env->getAPValue().getZExtValue()));
-
-  // update the state's rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
-  ref<ConstantExpr> mode = cast<ConstantExpr>(executor.getDestCell(state, target).value);
-  setRoundingMode(state, mode);
-
-  // restore the backed up value to target
-  executor.bindLocal(target, state, ret);
+  int ret = feraiseexcept(excepts);
+  
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeSetExceptFlag(ExecutionState &state,
                                                    KInstruction *target,
                                                    std::vector<ref<Expr> > &arguments) {
-  // call the function and back up the return value
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fesetexceptflag"), arguments);
-  ref<ConstantExpr> ret = cast<ConstantExpr>(executor.getDestCell(state, target).value);
+  fexcept_t flag;
+  fexcept_t* flagp = &flag;
 
-  // update the state's floating-point environment
-  ref<ConstantExpr> env = Expr::createPointer((uint64_t) &(state.fEnv));
-  std::vector<ref<Expr> > getenvArgs(1, env);
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetenv"), getenvArgs);
-  state.fEnv = *(reinterpret_cast<fenv_t*>(env->getAPValue().getZExtValue()));
+  int excepts = executor.toConstant(state, arguments[1], "Argument to fesetexceptflag")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+  
+  int ret = fesetexceptflag(flagp, excepts);
 
-  // update the state's rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
-  ref<ConstantExpr> mode = cast<ConstantExpr>(executor.getDestCell(state, target).value);
-  setRoundingMode(state, mode);
+  uint8_t* flagArr = (uint8_t*) flagp;
 
-  // restore the backed up value to target
-  executor.bindLocal(target, state, ret);
+  MemoryObject* mo = executor.memory->allocate(sizeof(flag) * 8, true, false, state.prevPC->inst);
+  ObjectState* os = executor.bindObjectInState(state, mo, true);
+
+  for (size_t i = 0; i < sizeof(flag); ++i)
+  {
+    os->write8(i, flagArr[i]);
+  }
+
+  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeTestExcept(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  // fegetexceptflag doesn't modify the floating-point environment or the rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fetestexcept"), arguments);
+  int excepts = executor.toConstant(state, arguments[0], "Argument to fetestexcept")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+  
+  int ret = fetestexcept(excepts);
+  
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeGetRound(ExecutionState &state,
                                               KInstruction *target,
                                               std::vector<ref<Expr> > &arguments) {
-  // fegetround doesn't modify the floating-point environment or the rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
+  int ret = state.getRoundingMode();
+ 
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeSetRound(ExecutionState &state,
                                               KInstruction *target,
                                               std::vector<ref<Expr> > &arguments) {
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fesetround"), arguments);
-
-  ref<ConstantExpr> mode = executor.toConstant(state, arguments[0], "rounding mode");
-  setRoundingMode(state, mode);
+  int rounding_mode = executor.toConstant(state, arguments[0], "Argument to fesetround")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+  
+  int ret = fesetround(rounding_mode);
+  
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeGetEnv(ExecutionState &state,
                                             KInstruction *target,
                                             std::vector<ref<Expr> > &arguments) {
-  // fegetenv doesn't modify the floating-point environment or the rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetenv"), arguments);
+  fenv_t env = state.fEnv;
+  uint8_t* envArr = (uint8_t*) &env;
+
+  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
+  ObjectState* os = executor.bindObjectInState(state, mo, true);
+
+  for (size_t i = 0; i < sizeof(env); ++i)
+  {
+    os->write8(i, envArr[i]);
+  }
+
+  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeHoldExcept(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  // call the function and back up the return value
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("feholdexcept"), arguments);
-  ref<ConstantExpr> ret = cast<ConstantExpr>(executor.getDestCell(state, target).value);
+  fenv_t env;
+  fenv_t* envp = &env;
 
-  // update the state's floating-point environment
-  ref<ConstantExpr> env = Expr::createPointer((uint64_t) &(state.fEnv));
-  std::vector<ref<Expr> > getenvArgs(1, env);
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetenv"), getenvArgs);
-  state.fEnv = *(reinterpret_cast<fenv_t*>(env->getAPValue().getZExtValue()));
+  int ret = feholdexcept(envp);
 
-  // update the state's rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
-  ref<ConstantExpr> mode = cast<ConstantExpr>(executor.getDestCell(state, target).value);
-  setRoundingMode(state, mode);
+  uint8_t* envArr = (uint8_t*) envp;
 
-  // restore the backed up value to target
-  executor.bindLocal(target, state, ret);
+  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
+  ObjectState* os = executor.bindObjectInState(state, mo, true);
+
+  for (size_t i = 0; i < sizeof(env); ++i)
+  {
+    os->write8(i, envArr[i]);
+  }
+
+  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
-
-#include <cstdio>
 
 void SpecialFunctionHandler::handleFeSetEnv(ExecutionState &state,
                                             KInstruction *target,
                                             std::vector<ref<Expr> > &arguments) {
-  // call the function and back up the return value
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fesetenv"), arguments);
-  ref<ConstantExpr> ret = cast<ConstantExpr>(executor.getDestCell(state, target).value);
+  fenv_t env;
+  fenv_t* envp = &env;
 
-  // update the state's floating-point environment
-  ref<ConstantExpr> env = executor.toConstant(state, arguments[0], "floating-point environment");
-  state.fEnv = *(reinterpret_cast<fenv_t*>(env->getAPValue().getZExtValue()));
+  int ret = fesetenv(envp);
 
-  // update the state's rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
-  ref<ConstantExpr> mode = cast<ConstantExpr>(executor.getDestCell(state, target).value);
-  setRoundingMode(state, mode);
+  uint8_t* envArr = (uint8_t*) envp;
 
-  // restore the backed up value to target
-  executor.bindLocal(target, state, ret);
+  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
+  ObjectState* os = executor.bindObjectInState(state, mo, true);
+
+  for (size_t i = 0; i < sizeof(env); ++i)
+  {
+    os->write8(i, envArr[i]);
+  }
+
+  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
 
 void SpecialFunctionHandler::handleFeUpdateEnv(ExecutionState &state,
                                                KInstruction *target,
                                                std::vector<ref<Expr> > &arguments) {
-  // call the function and back up the return value
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("feupdateenv"), arguments);
-  ref<ConstantExpr> ret = cast<ConstantExpr>(executor.getDestCell(state, target).value);
+  fenv_t env;
+  fenv_t* envp = &env;
 
-  // update the state's floating-point environment
-  ref<ConstantExpr> env = executor.toConstant(state, arguments[0], "floating-point environment");
-  state.fEnv = *(reinterpret_cast<fenv_t*>(env->getAPValue().getZExtValue()));
+  int ret = feupdateenv(envp);
 
-  // update the state's rounding mode
-  executor.callExternalFunctionHook(state, target, executor.kmodule->module->getFunction("fegetround"), arguments);
-  ref<ConstantExpr> mode = cast<ConstantExpr>(executor.getDestCell(state, target).value);
-  setRoundingMode(state, mode);
+  uint8_t* envArr = (uint8_t*) envp;
 
-  // restore the backed up value to target
-  executor.bindLocal(target, state, ret);
+  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
+  ObjectState* os = executor.bindObjectInState(state, mo, true);
+
+  for (size_t i = 0; i < sizeof(env); ++i)
+  {
+    os->write8(i, envArr[i]);
+  }
+
+  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  executor.bindLocal(target, state, retExpr);
 }
