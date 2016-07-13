@@ -3198,48 +3198,35 @@ static std::set<std::string> okExternals(okExternalsList,
                                          okExternalsList + 
                                          (sizeof(okExternalsList)/sizeof(okExternalsList[0])));
 
+struct SetStateEnv {
+  ExecutionState& state;
+
+  SetStateEnv(ExecutionState& state) :state(state) {
+    // set the CPU's fenv to the one saved in the state
+    if (fesetenv(&state.fEnv))
+      assert(0 && "Unable to set floating-point environment");
+  }
+
+  ~SetStateEnv() {
+    // save the CPU's fenv in the state, in case it changed
+    if (fegetenv(&state.fEnv))
+      assert(0 && "Unable to get floating-point environment");
+
+    // we can't extract the rounding mode from the fenv, so get it seperately
+    state.setRoundingMode(fegetround());
+  }
+};
+
 void Executor::callExternalFunction(ExecutionState &state,
                                     KInstruction *target,
                                     Function *function,
                                     std::vector< ref<Expr> > &arguments) {
-  // set floating point environment and rounding mode
-  /*ref<ConstantExpr> env = Expr::createPointer((uint64_t) &(state.fEnv));
-  std::vector<ref<Expr> > setenvArgs(1, env);
-  callExternalFunctionHook(state, target, kmodule->module->getFunction("fesetenv"), setenvArgs);*/
-
-/*  ref<ConstantExpr> mode;
-
-  switch (state.roundingMode)
-  {
-  case APFloat::rmNearestTiesToEven:
-    mode = ConstantExpr::alloc(FE_TONEAREST, Expr::Int32);
-    break;
-  case APFloat::rmTowardNegative:
-    mode = ConstantExpr::alloc(FE_DOWNWARD, Expr::Int32);
-    break;
-  case APFloat::rmTowardPositive:
-    mode = ConstantExpr::alloc(FE_UPWARD, Expr::Int32);
-    break;
-  case APFloat::rmTowardZero:
-    mode = ConstantExpr::alloc(FE_TOWARDZERO, Expr::Int32);
-    break;
-  case APFloat::rmNearestTiesToAway:
-  default:
-    assert(0 && "Invalid rounding mode");
-  }
-  std::vector<ref<Expr> > setroundArgs(1, mode);
-  callExternalFunctionHook(state, target, kmodule->module->getFunction("fesetround"), setroundArgs);*/
+  SetStateEnv stateEnv(state);
 
   // check if specialFunctionHandler wants it
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
-  callExternalFunctionHook(state, target, function, arguments);
-}
-
-void Executor::callExternalFunctionHook(ExecutionState &state,
-                                        KInstruction *target,
-                                        Function *function,
-                                        std::vector< ref<Expr> > &arguments) {
+  
   if (NoExternals && !okExternals.count(function->getName())) {
     klee_warning("Calling not-OK external function : %s\n",
                function->getName().str().c_str());

@@ -797,6 +797,15 @@ static const char *modelledExternals[] = {
   "__ubsan_handle_sub_overflow",
   "__ubsan_handle_mul_overflow",
   "__ubsan_handle_divrem_overflow",
+
+  "fesetexceptflag",
+  "fetestexcept",
+  "fegetround",
+  "fesetround",
+  "fegetenv",
+  "feholdexcept",
+  "fesetenv",
+  "feupdateenv",
 };
 // Symbols we aren't going to warn about
 static const char *dontCareExternals[] = {
@@ -1972,7 +1981,7 @@ int main(int argc, char **argv, char **envp) {
   {
     // link in the declaration of fegetround
     SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "getround.bc");
+    llvm::sys::path::append(Path, "fenv.bc");
     mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
   }
 

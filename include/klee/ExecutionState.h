@@ -176,6 +176,42 @@ public:
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
+
+  inline void setRoundingMode(int mode) {
+    switch (mode)
+    {
+    case FE_TONEAREST:
+      roundingMode = llvm::APFloat::rmNearestTiesToEven;
+      break;
+    case FE_DOWNWARD:
+      roundingMode = llvm::APFloat::rmTowardNegative;
+      break;
+    case FE_UPWARD:
+      roundingMode = llvm::APFloat::rmTowardPositive;
+      break;
+    case FE_TOWARDZERO:
+      roundingMode = llvm::APFloat::rmTowardZero;
+      break;
+    default:
+      assert(0 && "invalid mode");
+    }
+  }
+
+  inline int getRoundingMode() {
+    switch (roundingMode)
+    {
+    case llvm::APFloat::rmNearestTiesToEven:
+      return FE_TONEAREST;
+    case llvm::APFloat::rmTowardNegative:
+      return FE_DOWNWARD;
+    case llvm::APFloat::rmTowardPositive:
+      return FE_UPWARD;
+    case llvm::APFloat::rmTowardZero:
+      return FE_TOWARDZERO;
+    default:
+      assert(0 && "invalid mode");
+    }
+  }
 };
 }
 
