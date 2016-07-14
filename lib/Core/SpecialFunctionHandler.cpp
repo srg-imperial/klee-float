@@ -828,7 +828,7 @@ void SpecialFunctionHandler::handleFeGetExceptFlag(ExecutionState &state,
     os->write8(i, flagArr[i]);
   }
 
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
   executor.bindLocal(target, state, retExpr);
 }
 
@@ -872,7 +872,7 @@ void SpecialFunctionHandler::handleFeSetExceptFlag(ExecutionState &state,
     os->write8(i, flagArr[i]);
   }
 
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
   executor.bindLocal(target, state, retExpr);
 }
 
@@ -956,7 +956,7 @@ void SpecialFunctionHandler::handleFeHoldExcept(ExecutionState &state,
     os->write8(i, envArr[i]);
   }
 
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
   executor.bindLocal(target, state, retExpr);
 }
 
@@ -1012,6 +1012,6 @@ void SpecialFunctionHandler::handleFeUpdateEnv(ExecutionState &state,
     os->write8(i, envArr[i]);
   }
 
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
   executor.bindLocal(target, state, retExpr);
 }
