@@ -128,12 +128,11 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
 
-    roundingMode(llvm::APFloat::rmNearestTiesToEven)
+    roundingMode(state.roundingMode),
+    fEnv(state.fEnv)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
-
-  fegetenv(&fEnv);
 }
 
 ExecutionState *ExecutionState::branch() {
