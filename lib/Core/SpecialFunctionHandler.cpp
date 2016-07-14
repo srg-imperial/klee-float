@@ -808,26 +808,34 @@ void SpecialFunctionHandler::handleFeClearExcept(ExecutionState &state,
 void SpecialFunctionHandler::handleFeGetExceptFlag(ExecutionState &state,
                                                    KInstruction *target,
                                                    std::vector<ref<Expr> > &arguments) {
+  int excepts = executor.toConstant(state, arguments[1], "Argument to fegetexceptflag")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+
   fexcept_t flag;
   fexcept_t* flagp = &flag;
-
-  int excepts = executor.toConstant(state, arguments[1], "Argument to fesetexceptflag")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
-
-  int ret = fegetexceptflag(flagp, excepts);
-
   uint8_t* flagArr = (uint8_t*) flagp;
 
-  MemoryObject* mo = executor.memory->allocate(sizeof(flag) * 8, true, false, state.prevPC->inst);
-  ObjectState* os = executor.bindObjectInState(state, mo, true);
+  ref<ConstantExpr> addr = executor.toConstant(state, arguments[0], "Argument to fegetexceptflag");
+
+  ObjectPair op;
+  state.addressSpace.resolveOne(addr, op);
+  ObjectState* os = state.addressSpace.getWriteable(op.first, op.second);
+
+  // fegetexceptflag should not care what's inside *flagp
+  /*for (size_t i = 0; i < op.second->size; ++i)
+  {
+    ref<Expr> e = op.second->read8(i);
+    ref<ConstantExpr> ce = executor.toConstant(state, e, "fexcept_t");
+    flagArr[i] = static_cast<uint8_t>(ce->getZExtValue(8));
+  }*/
+
+  int ret = fegetexceptflag(flagp, excepts);
 
   for (size_t i = 0; i < sizeof(flag); ++i)
   {
     os->write8(i, flagArr[i]);
   }
 
-  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
-  
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
   executor.bindLocal(target, state, retExpr);
 }
 
@@ -845,26 +853,33 @@ void SpecialFunctionHandler::handleFeRaiseExcept(ExecutionState &state,
 void SpecialFunctionHandler::handleFeSetExceptFlag(ExecutionState &state,
                                                    KInstruction *target,
                                                    std::vector<ref<Expr> > &arguments) {
+  int excepts = executor.toConstant(state, arguments[1], "Argument to fesetexceptflag")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
+
   fexcept_t flag;
   fexcept_t* flagp = &flag;
-
-  int excepts = executor.toConstant(state, arguments[1], "Argument to fesetexceptflag")->getAPValue().getLimitedValue(std::numeric_limits<int>::max());
-  
-  int ret = fesetexceptflag(flagp, excepts);
-
   uint8_t* flagArr = (uint8_t*) flagp;
 
-  MemoryObject* mo = executor.memory->allocate(sizeof(flag) * 8, true, false, state.prevPC->inst);
-  ObjectState* os = executor.bindObjectInState(state, mo, true);
+  ref<ConstantExpr> addr = executor.toConstant(state, arguments[0], "Argument to fesetexceptflag");
+
+  ObjectPair op;
+  state.addressSpace.resolveOne(addr, op);
+  ObjectState* os = state.addressSpace.getWriteable(op.first, op.second);
+
+  for (size_t i = 0; i < op.second->size; ++i)
+  {
+    ref<Expr> e = op.second->read8(i);
+    ref<ConstantExpr> ce = executor.toConstant(state, e, "fexcept_t");
+    flagArr[i] = static_cast<uint8_t>(ce->getZExtValue(8));
+  }
+
+  int ret = fesetexceptflag(flagp, excepts);
 
   for (size_t i = 0; i < sizeof(flag); ++i)
   {
     os->write8(i, flagArr[i]);
   }
 
-  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
-
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
   executor.bindLocal(target, state, retExpr);
 }
 
@@ -905,16 +920,17 @@ void SpecialFunctionHandler::handleFeGetEnv(ExecutionState &state,
   fenv_t env = state.fEnv;
   uint8_t* envArr = (uint8_t*) &env;
 
-  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
-  ObjectState* os = executor.bindObjectInState(state, mo, true);
+  ref<ConstantExpr> addr = executor.toConstant(state, arguments[0], "Argument to fegetenv");
+
+  ObjectPair op;
+  state.addressSpace.resolveOne(addr, op);
+  ObjectState* os = state.addressSpace.getWriteable(op.first, op.second);
 
   for (size_t i = 0; i < sizeof(env); ++i)
   {
     os->write8(i, envArr[i]);
   }
-
-  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
-
+  
   ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
   executor.bindLocal(target, state, retExpr);
 }
@@ -924,22 +940,30 @@ void SpecialFunctionHandler::handleFeHoldExcept(ExecutionState &state,
                                                 std::vector<ref<Expr> > &arguments) {
   fenv_t env;
   fenv_t* envp = &env;
-
-  int ret = feholdexcept(envp);
-
   uint8_t* envArr = (uint8_t*) envp;
 
-  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
-  ObjectState* os = executor.bindObjectInState(state, mo, true);
+  ref<ConstantExpr> addr = executor.toConstant(state, arguments[0], "Argument to feholdexcept");
+
+  ObjectPair op;
+  state.addressSpace.resolveOne(addr, op);
+  ObjectState* os = state.addressSpace.getWriteable(op.first, op.second);
+
+  // feholdexcept should not care what's inside *envp
+  /*for (size_t i = 0; i < op.second->size; ++i)
+  {
+    ref<Expr> e = op.second->read8(i);
+    ref<ConstantExpr> ce = executor.toConstant(state, e, "fenv_t");
+    envArr[i] = static_cast<uint8_t>(ce->getZExtValue(8));
+  }*/
+
+  int ret = feholdexcept(envp);
 
   for (size_t i = 0; i < sizeof(env); ++i)
   {
     os->write8(i, envArr[i]);
   }
 
-  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
-
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
   executor.bindLocal(target, state, retExpr);
 }
 
@@ -948,20 +972,21 @@ void SpecialFunctionHandler::handleFeSetEnv(ExecutionState &state,
                                             std::vector<ref<Expr> > &arguments) {
   fenv_t env;
   fenv_t* envp = &env;
-
-  int ret = fesetenv(envp);
-
   uint8_t* envArr = (uint8_t*) envp;
 
-  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
-  ObjectState* os = executor.bindObjectInState(state, mo, true);
+  ref<ConstantExpr> addr = executor.toConstant(state, arguments[0], "Argument to fesetenv");
 
-  for (size_t i = 0; i < sizeof(env); ++i)
+  ObjectPair op;
+  state.addressSpace.resolveOne(addr, op);
+
+  for (size_t i = 0; i < op.second->size; ++i)
   {
-    os->write8(i, envArr[i]);
+    ref<Expr> e = op.second->read8(i);
+    ref<ConstantExpr> ce = executor.toConstant(state, e, "fenv_t");
+    envArr[i] = static_cast<uint8_t>(ce->getZExtValue(8));
   }
 
-  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
+  int ret = fesetenv(envp);
 
   ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
   executor.bindLocal(target, state, retExpr);
@@ -972,21 +997,28 @@ void SpecialFunctionHandler::handleFeUpdateEnv(ExecutionState &state,
                                                std::vector<ref<Expr> > &arguments) {
   fenv_t env;
   fenv_t* envp = &env;
-
-  int ret = feupdateenv(envp);
-
   uint8_t* envArr = (uint8_t*) envp;
 
-  MemoryObject* mo = executor.memory->allocate(sizeof(env) * 8, true, false, state.prevPC->inst);
-  ObjectState* os = executor.bindObjectInState(state, mo, true);
+  ref<ConstantExpr> addr = executor.toConstant(state, arguments[0], "Argument to feupdateenv");
+
+  ObjectPair op;
+  state.addressSpace.resolveOne(addr, op);
+  ObjectState* os = state.addressSpace.getWriteable(op.first, op.second);
+
+  for (size_t i = 0; i < op.second->size; ++i)
+  {
+    ref<Expr> e = op.second->read8(i);
+    ref<ConstantExpr> ce = executor.toConstant(state, e, "fenv_t");
+    envArr[i] = static_cast<uint8_t>(ce->getZExtValue(8));
+  }
+
+  int ret = feupdateenv(envp);
 
   for (size_t i = 0; i < sizeof(env); ++i)
   {
     os->write8(i, envArr[i]);
   }
 
-  executor.executeMemoryOperation(state, true, arguments[0], mo->getBaseExpr(), target);
-
-  ref<ConstantExpr> retExpr = ConstantExpr::alloc(ret, sizeof(ret) * 8);
+  ref<ConstantExpr> retExpr = ConstantExpr::alloc(0, sizeof(int) * 8);
   executor.bindLocal(target, state, retExpr);
 }
