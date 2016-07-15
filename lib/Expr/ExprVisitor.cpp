@@ -65,6 +65,13 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::FExt: res = visitFExt(static_cast<FExtExpr&>(ep)); break;
     case Expr::FToU: res = visitFToU(static_cast<FToUExpr&>(ep)); break;
     case Expr::FToS: res = visitFToS(static_cast<FToSExpr&>(ep)); break;
+    case Expr::FAbs: res = visitFAbs(static_cast<FAbsExpr&>(ep)); break;
+    case Expr::FpClassify: res = visitFpClassify(static_cast<FpClassifyExpr&>(ep)); break;
+    case Expr::FIsFinite: res = visitFIsFinite(static_cast<FIsFiniteExpr&>(ep)); break;
+    case Expr::FIsNan: res = visitFIsNan(static_cast<FIsNanExpr&>(ep)); break;
+    case Expr::FIsInf: res = visitFIsInf(static_cast<FIsInfExpr&>(ep)); break;
+    case Expr::FSqrt: res = visitFSqrt(static_cast<FSqrtExpr&>(ep)); break;
+    case Expr::FNearbyInt: res = visitFNearbyInt(static_cast<FNearbyIntExpr&>(ep)); break;
     case Expr::UToF: res = visitUToF(static_cast<UToFExpr&>(ep)); break;
     case Expr::SToF: res = visitSToF(static_cast<SToFExpr&>(ep)); break;
     case Expr::Add: res = visitAdd(static_cast<AddExpr&>(ep)); break;
@@ -86,6 +93,8 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::FMul: res = visitFMul(static_cast<FMulExpr&>(ep)); break;
     case Expr::FDiv: res = visitFDiv(static_cast<FDivExpr&>(ep)); break;
     case Expr::FRem: res = visitFRem(static_cast<FRemExpr&>(ep)); break;
+    case Expr::FMin: res = visitFMin(static_cast<FMinExpr&>(ep)); break;
+    case Expr::FMax: res = visitFMax(static_cast<FMaxExpr&>(ep)); break;
     case Expr::Eq: res = visitEq(static_cast<EqExpr&>(ep)); break;
     case Expr::Ne: res = visitNe(static_cast<NeExpr&>(ep)); break;
     case Expr::Ult: res = visitUlt(static_cast<UltExpr&>(ep)); break;
@@ -204,6 +213,34 @@ ExprVisitor::Action ExprVisitor::visitSToF(const SToFExpr&) {
   return Action::doChildren();
 }
 
+ExprVisitor::Action ExprVisitor::visitFAbs(const FAbsExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFpClassify(const FpClassifyExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFIsFinite(const FIsFiniteExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFIsNan(const FIsNanExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFIsInf(const FIsInfExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFSqrt(const FSqrtExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFNearbyInt(const FNearbyIntExpr&) {
+  return Action::doChildren();
+}
+
 ExprVisitor::Action ExprVisitor::visitAdd(const AddExpr&) {
   return Action::doChildren(); 
 }
@@ -277,6 +314,14 @@ ExprVisitor::Action ExprVisitor::visitFDiv(const FDivExpr&) {
 }
 
 ExprVisitor::Action ExprVisitor::visitFRem(const FRemExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFMin(const FMinExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFMax(const FMaxExpr&) {
   return Action::doChildren();
 }
 

@@ -23,6 +23,7 @@
 #include "klee/util/ExprPPrinter.h"
 
 #include <sstream>
+#include <fenv.h>
 
 using namespace klee;
 using namespace llvm;
@@ -140,6 +141,13 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FToS);
     X(UToF);
     X(SToF);
+    X(FAbs);
+    X(FpClassify);
+    X(FIsFinite);
+    X(FIsNan);
+    X(FIsInf);
+    X(FSqrt);
+    X(FNearbyInt);
     X(Add);
     X(Sub);
     X(Mul);
@@ -159,6 +167,8 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FMul);
     X(FDiv);
     X(FRem);
+    X(FMin);
+    X(FMax);
     X(Eq);
     X(Ne);
     X(Ult);
@@ -279,13 +289,6 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
                args[0].isExpr() && args[1].isWidth() &&      \
                "invalid args array for given opcode");       \
       return T ## Expr::create(args[0].expr, args[1].width); \
-      
-#define BINARY_EXPR_CASE(T)                                 \
-      case T:                                               \
-        assert(numArgs == 2 &&                              \
-               args[0].isExpr() && args[1].isExpr() &&      \
-               "invalid args array for given opcode");      \
-      return T ## Expr::create(args[0].expr, args[1].expr); \
 
 #define CAST_RM_EXPR_CASE(T)                                                        \
       case T:                                                                       \
@@ -294,12 +297,33 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
                "invalid args array for given opcode");                              \
       return T ## Expr::create(args[0].expr, args[1].width, args[2].rm);            \
 
+#define BINARY_EXPR_CASE(T)                                 \
+      case T:                                               \
+        assert(numArgs == 2 &&                              \
+               args[0].isExpr() && args[1].isExpr() &&      \
+               "invalid args array for given opcode");      \
+      return T ## Expr::create(args[0].expr, args[1].expr); \
+
 #define BINARY_RM_EXPR_CASE(T)                                                     \
       case T:                                                                      \
         assert(numArgs == 3 &&                                                     \
                args[0].isExpr() && args[1].isExpr() && args[2].isRoundingMode() && \
                "invalid args array for given opcode");                             \
       return T ## Expr::create(args[0].expr, args[1].expr, args[2].rm);            \
+
+#define UNARY_EXPR_CASE(T)                             \
+      case T:                                          \
+        assert(numArgs == 1 &&                         \
+               args[0].isExpr() &&                     \
+               "invalid args array for given opcode"); \
+      return T ## Expr::create(args[0].expr);          \
+
+#define UNARY_RM_EXPR_CASE(T)                                  \
+      case T:                                                  \
+        assert(numArgs == 2 &&                                 \
+               args[0].isExpr() && args[1].isRoundingMode() && \
+               "invalid args array for given opcode");         \
+      return T ## Expr::create(args[0].expr, args[1].rm);      \
 
       CAST_EXPR_CASE(ZExt);
       CAST_EXPR_CASE(SExt);
@@ -308,6 +332,15 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       CAST_RM_EXPR_CASE(FToS);
       CAST_RM_EXPR_CASE(UToF);
       CAST_RM_EXPR_CASE(SToF);
+      
+      UNARY_EXPR_CASE(FAbs);
+      UNARY_EXPR_CASE(FpClassify);
+      UNARY_EXPR_CASE(FIsFinite);
+      UNARY_EXPR_CASE(FIsNan);
+      UNARY_EXPR_CASE(FIsInf);
+      
+      UNARY_RM_EXPR_CASE(FSqrt);
+      UNARY_RM_EXPR_CASE(FNearbyInt);
       
       BINARY_EXPR_CASE(Add);
       BINARY_EXPR_CASE(Sub);
@@ -327,6 +360,8 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       BINARY_RM_EXPR_CASE(FMul);
       BINARY_RM_EXPR_CASE(FDiv);
       BINARY_RM_EXPR_CASE(FRem);
+      BINARY_EXPR_CASE(FMin);
+      BINARY_EXPR_CASE(FMax);
       
       BINARY_EXPR_CASE(Eq);
       BINARY_EXPR_CASE(Ne);
@@ -353,6 +388,13 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       BINARY_EXPR_CASE(FOle);
       BINARY_EXPR_CASE(FUne);
       BINARY_EXPR_CASE(FOne);
+
+#undef UNARY_RM_EXPR_CASE
+#undef UNARY_EXPR_CASE
+#undef BINARY_RM_EXPR_CASE
+#undef BINARY_EXPR_CASE
+#undef CAST_RM_EXPR_CASE
+#undef CAST_EXPR_CASE
   }
 }
 
@@ -526,6 +568,156 @@ ref<ConstantExpr> ConstantExpr::SToF(Width W, llvm::APFloat::roundingMode rm) {
   return ConstantExpr::alloc(f);
 }
 
+ref<ConstantExpr> ConstantExpr::FAbs() {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
+#else
+  llvm::APFloat Res(value);
+#endif
+  Res.clearSign();
+  return ConstantExpr::alloc(Res);
+}
+
+ref<ConstantExpr> ConstantExpr::FpClassify() {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  llvm::APFloat AsFloat(*fpWidthToSemantics(getWidth()), value);
+#else
+  llvm::APFloat AsFloat(value);
+#endif
+
+  int res;
+  if (AsFloat.isNaN())
+    res = FP_NAN;
+  else if (AsFloat.isInfinity())
+    res = FP_INFINITE;
+  else if (AsFloat.isZero())
+    res = FP_ZERO;
+  else if (AsFloat.isDenormal())
+    res = FP_SUBNORMAL;
+  else
+    res = FP_NORMAL;
+
+  return ConstantExpr::alloc(res, sizeof(int) * 8);
+}
+
+ref<ConstantExpr> ConstantExpr::FIsFinite() {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  llvm::APFloat AsFloat(*fpWidthToSemantics(getWidth()), value);
+#else
+  llvm::APFloat AsFloat(value);
+#endif
+
+  int res = (!AsFloat.isNaN() && !AsFloat.isInfinity());
+
+  return ConstantExpr::alloc(res, sizeof(int) * 8);
+}
+
+ref<ConstantExpr> ConstantExpr::FIsNan() {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  llvm::APFloat AsFloat(*fpWidthToSemantics(getWidth()), value);
+#else
+  llvm::APFloat AsFloat(value);
+#endif
+
+  int res = AsFloat.isNaN();
+
+  return ConstantExpr::alloc(res, sizeof(int) * 8);
+}
+
+ref<ConstantExpr> ConstantExpr::FIsInf() {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  llvm::APFloat AsFloat(*fpWidthToSemantics(getWidth()), value);
+#else
+  llvm::APFloat AsFloat(value);
+#endif
+
+  int res = 0;
+  if (AsFloat.isInfinity())
+  {
+    if (AsFloat.isNegative())
+    {
+      res = -1;
+    }
+    else
+    {
+      res = 1;
+    }
+  }
+
+  return ConstantExpr::alloc(res, sizeof(int) * 8);
+}
+
+ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
+  // XXX hack, change this when LLVM implements native APFloat sqrt
+  int rounding_mode;
+  switch (rm)
+  {
+  case llvm::APFloat::rmNearestTiesToEven:
+    rounding_mode = FE_TONEAREST;
+    break;
+  case llvm::APFloat::rmTowardNegative:
+    rounding_mode = FE_DOWNWARD;
+    break;
+  case llvm::APFloat::rmTowardPositive:
+    rounding_mode = FE_UPWARD;
+    break;
+  case llvm::APFloat::rmTowardZero:
+    rounding_mode = FE_TOWARDZERO;
+    break;
+  default:
+    assert(0 && "invalid mode");
+  }
+
+  switch (getWidth()) {
+  case Int32: {
+    float f = value.bitsToFloat();
+    fenv_t env;
+    fegetenv(&env);
+    fesetround(rounding_mode);
+    f = sqrtf(f);
+    fesetenv(&env);
+    llvm::APFloat Res(f);
+    return ConstantExpr::alloc(Res);
+  }
+  case Int64: {
+    double d = value.bitsToDouble();
+    fenv_t env;
+    fegetenv(&env);
+    fesetround(rounding_mode);
+    d = sqrt(d);
+    fesetenv(&env);
+    llvm::APFloat Res(d);
+    return ConstantExpr::alloc(Res);
+  }
+  case Fl80: {
+    long double ld;
+    uint64_t* arr = (uint64_t*) &ld;
+    arr[0] = value.getRawData()[0];
+    arr[1] = value.getRawData()[1];
+    fenv_t env;
+    fegetenv(&env);
+    fesetround(rounding_mode);
+    ld = sqrtl(ld);
+    fesetenv(&env);
+    llvm::APInt Res(Fl80, ArrayRef<uint64_t>(arr, arr + 2));
+    // alloc(APFloat) just does a bitcast to APInt, might as well pass the APInt directly
+    return ConstantExpr::alloc(Res);
+  }
+  default:
+    assert(0 && "Unsupported width");
+  }
+}
+
+ref<ConstantExpr> ConstantExpr::FNearbyInt(llvm::APFloat::roundingMode rm) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
+#else
+  llvm::APFloat Res(value);
+#endif
+  Res.roundToIntegral(rm);
+  return ConstantExpr::alloc(Res);
+}
+
 ref<ConstantExpr> ConstantExpr::Add(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value + RHS->value);
 }
@@ -655,6 +847,54 @@ ref<ConstantExpr> ConstantExpr::FRem(const ref<ConstantExpr> &RHS, llvm::APFloat
   Res.mod(APFloat(RHS->getAPValue()), RM);
 #endif
   return ConstantExpr::alloc(Res.bitcastToAPInt());
+}
+
+ref<ConstantExpr> ConstantExpr::FMin(const ref<ConstantExpr> &RHS) {
+  if (!fpWidthToSemantics(getWidth()) ||
+      !fpWidthToSemantics(RHS->getWidth()))
+    klee_error("Unsupported FMin operation");
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  APFloat left(*fpWidthToSemantics(getWidth()), value);
+  APFloat right(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue());
+#else
+  APFloat left(value);
+  APFloat right(RHS->getAPValue());
+#endif
+  APFloat::cmpResult CmpRes = left.compare(right);
+
+  if (CmpRes == APFloat::cmpLessThan || right.isNaN())
+  {
+    return ConstantExpr::alloc(left);
+  }
+  else
+  {
+    return ConstantExpr::alloc(right);
+  }
+}
+
+ref<ConstantExpr> ConstantExpr::FMax(const ref<ConstantExpr> &RHS) {
+  if (!fpWidthToSemantics(getWidth()) ||
+      !fpWidthToSemantics(RHS->getWidth()))
+    klee_error("Unsupported FMax operation");
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
+  APFloat left(*fpWidthToSemantics(getWidth()), value);
+  APFloat right(*fpWidthToSemantics(RHS->getWidth()), RHS->getAPValue());
+#else
+  APFloat left(value);
+  APFloat right(RHS->getAPValue());
+#endif
+  APFloat::cmpResult CmpRes = left.compare(right);
+
+  if (CmpRes == APFloat::cmpLessThan || left.isNaN())
+  {
+    return ConstantExpr::alloc(right);
+  }
+  else
+  {
+    return ConstantExpr::alloc(left);
+  }
 }
 
 ref<ConstantExpr> ConstantExpr::Not() {
@@ -1457,6 +1697,38 @@ BCREATE(ShlExpr, Shl)
 BCREATE(LShrExpr, LShr)
 BCREATE(AShrExpr, AShr)
 
+#define UCREATE(_e_op, _op) \
+ref<Expr>  _e_op ::create(const ref<Expr> &e) {     \
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) \
+      return ce->_op();                             \
+  return _e_op ## _create(e);                       \
+}
+
+static ref<Expr> FAbsExpr_create(const ref<Expr> &e) { return FAbsExpr::alloc(e); }
+static ref<Expr> FpClassifyExpr_create(const ref<Expr> &e) { return FpClassifyExpr::alloc(e); }
+static ref<Expr> FIsFiniteExpr_create(const ref<Expr> &e) { return FIsFiniteExpr::alloc(e); }
+static ref<Expr> FIsNanExpr_create(const ref<Expr> &e) { return FIsNanExpr::alloc(e); }
+static ref<Expr> FIsInfExpr_create(const ref<Expr> &e) { return FIsInfExpr::alloc(e); }
+
+UCREATE(FAbsExpr, FAbs)
+UCREATE(FpClassifyExpr, FpClassify)
+UCREATE(FIsFiniteExpr, FIsFinite)
+UCREATE(FIsNanExpr, FIsNan)
+UCREATE(FIsInfExpr, FIsInf)
+
+#define U_RM_CREATE(_e_op, _op) \
+ref<Expr>  _e_op ::create(const ref<Expr> &e, llvm::APFloat::roundingMode rm) { \
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e))                             \
+      return ce->_op(rm);                                                       \
+  return _e_op ## _create(e, rm);                                               \
+}
+
+static ref<Expr> FSqrtExpr_create(const ref<Expr> &e, llvm::APFloat::roundingMode rm) { return FSqrtExpr::alloc(e, rm); }
+static ref<Expr> FNearbyIntExpr_create(const ref<Expr> &e, llvm::APFloat::roundingMode rm) { return FNearbyIntExpr::alloc(e, rm); }
+
+U_RM_CREATE(FSqrtExpr, FSqrt)
+U_RM_CREATE(FNearbyIntExpr, FNearbyInt)
+
 #define CMPCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
@@ -1693,12 +1965,16 @@ static ref<Expr> FSubExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::A
 static ref<Expr> FMulExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FMulExpr::alloc(l,r, rm); }
 static ref<Expr> FDivExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FDivExpr::alloc(l,r, rm); }
 static ref<Expr> FRemExpr_create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { return FRemExpr::alloc(l,r, rm); }
+static ref<Expr> FMinExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FMinExpr::alloc(l, r); }
+static ref<Expr> FMaxExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FMaxExpr::alloc(l, r); }
 
 B_RM_CREATE(FAddExpr, FAdd)
 B_RM_CREATE(FSubExpr, FSub)
 B_RM_CREATE(FMulExpr, FMul)
 B_RM_CREATE(FDivExpr, FDiv)
 B_RM_CREATE(FRemExpr, FRem)
+BCREATE(FMinExpr, FMin)
+BCREATE(FMaxExpr, FMax)
 
 static ref<Expr> FOrdExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FOrdExpr::alloc(l,r); }
 static ref<Expr> FUnoExpr_create(const ref<Expr> &l, const ref<Expr> &r) { return FUnoExpr::alloc(l,r); }

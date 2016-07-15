@@ -136,6 +136,15 @@ public:
     // Bit
     Not,
 
+    // Floating-point special functions
+    FAbs,
+    FpClassify,
+    FIsFinite,
+    FIsNan,
+    FIsInf,
+    FSqrt,
+    FNearbyInt,
+
     // All subsequent kinds are binary.
 
     // Arithmetic
@@ -160,7 +169,11 @@ public:
     FSub,
     FMul,
     FDiv,
+    
+    // Floating-point special functions
     FRem,
+    FMin,
+    FMax,
 
     // Compare
     Eq,
@@ -196,6 +209,10 @@ public:
     CastKindLast=SToF,
     CastRoundKindFirst=FExt,
     CastRoundKindLast=SToF,
+    FPUnaryKindFirst=FAbs,
+    FPUnaryKindLast=FNearbyInt,
+    FPUnaryRoundKindFirst=FSqrt,
+    FPUnaryRoundKindLast=FNearbyInt,
     BinaryKindFirst=Add,
     BinaryKindLast=FOne,
     BinaryRoundKindFirst=FAdd,
@@ -995,6 +1012,104 @@ CAST_RM_EXPR_CLASS(FToS)
 CAST_RM_EXPR_CLASS(UToF)
 CAST_RM_EXPR_CLASS(SToF)
 
+// Floating-Point unary special functions
+class UnaryExpr : public NonConstantExpr {
+public:
+  ref<Expr> expr;
+
+public:
+  UnaryExpr(const ref<Expr> &e) : expr(e) {}
+
+  unsigned getNumKids() const { return 1; }
+  ref<Expr> getKid(unsigned i) const { return (i == 0) ? expr : 0; }
+
+  static bool classof(const Expr *E) {
+    Kind k = E->getKind();
+    return Expr::FPUnaryKindFirst <= k && k <= Expr::FPUnaryKindLast;
+  }
+  static bool classof(const UnaryExpr *) { return true; }
+};
+
+#define UNARY_EXPR_CLASS(_class_kind)                   \
+class _class_kind ## Expr : public UnaryExpr {          \
+public:                                                 \
+  static const Kind kind = _class_kind;                 \
+  static const unsigned numKids = 1;                    \
+public:                                                 \
+    _class_kind ## Expr(ref<Expr> e) : UnaryExpr(e) {}  \
+    static ref<Expr> alloc(const ref<Expr> &e) {        \
+      ref<Expr> r(new _class_kind ## Expr(e));          \
+      r->computeHash();                                 \
+      return r;                                         \
+    }                                                   \
+    static ref<Expr> create(const ref<Expr> &e);        \
+    Width getWidth() const { return expr->getWidth(); } \
+    Kind getKind() const { return _class_kind; }        \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const { \
+      return create(kids[0]);                           \
+    }                                                   \
+                                                        \
+    static bool classof(const Expr *E) {                \
+      return E->getKind() == Expr::_class_kind;         \
+    }                                                   \
+    static bool classof(const  _class_kind ## Expr *) { \
+      return true;                                      \
+    }                                                   \
+};
+
+UNARY_EXPR_CLASS(FAbs)
+UNARY_EXPR_CLASS(FpClassify)
+UNARY_EXPR_CLASS(FIsFinite)
+UNARY_EXPR_CLASS(FIsNan)
+UNARY_EXPR_CLASS(FIsInf)
+
+class UnaryRoundExpr : public UnaryExpr {
+public:
+  llvm::APFloat::roundingMode round;
+
+public:
+  UnaryRoundExpr(const ref<Expr> &e, llvm::APFloat::roundingMode rm) : UnaryExpr(e), round(rm) {}
+
+  llvm::APFloat::roundingMode getRoundingMode() const { return round; }
+
+  static bool classof(const Expr *E) {
+    Kind k = E->getKind();
+    return Expr::FPUnaryRoundKindFirst <= k && k <= Expr::FPUnaryRoundKindLast;
+  }
+  static bool classof(const UnaryRoundExpr *) { return true; }
+};
+
+#define UNARY_ROUND_EXPR_CLASS(_class_kind)                                                    \
+class _class_kind ## Expr : public UnaryRoundExpr {                                            \
+public:                                                                                        \
+  static const Kind kind = _class_kind;                                                        \
+  static const unsigned numKids = 1;                                                           \
+  static const llvm::APFloat::roundingMode round = llvm::APFloat::rmNearestTiesToEven;         \
+public:                                                                                        \
+    _class_kind ## Expr(ref<Expr> e, llvm::APFloat::roundingMode rm) : UnaryRoundExpr(e,rm) {} \
+    static ref<Expr> alloc(const ref<Expr> &e, llvm::APFloat::roundingMode rm) {               \
+      ref<Expr> r(new _class_kind ## Expr(e, rm));                                             \
+      r->computeHash();                                                                        \
+      return r;                                                                                \
+    }                                                                                          \
+    static ref<Expr> create(const ref<Expr> &e, llvm::APFloat::roundingMode rm);               \
+    Width getWidth() const { return expr->getWidth(); }                                        \
+    Kind getKind() const { return _class_kind; }                                               \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                                        \
+      return create(kids[0], round);                                                           \
+    }                                                                                          \
+                                                                                               \
+    static bool classof(const Expr *E) {                                                       \
+      return E->getKind() == Expr::_class_kind;                                                \
+    }                                                                                          \
+    static bool classof(const  _class_kind ## Expr *) {                                        \
+      return true;                                                                             \
+    }                                                                                          \
+};
+
+UNARY_ROUND_EXPR_CLASS(FSqrt)
+UNARY_ROUND_EXPR_CLASS(FNearbyInt)
+
 // Arithmetic/Bit Exprs
 
 #define ARITHMETIC_EXPR_CLASS(_class_kind)                                     \
@@ -1097,6 +1212,8 @@ ARITHMETIC_RM_EXPR_CLASS(FSub)
 ARITHMETIC_RM_EXPR_CLASS(FMul)
 ARITHMETIC_RM_EXPR_CLASS(FDiv)
 ARITHMETIC_RM_EXPR_CLASS(FRem)
+ARITHMETIC_EXPR_CLASS(FMin)
+ARITHMETIC_EXPR_CLASS(FMax)
 
 // Comparison Exprs
 
@@ -1285,6 +1402,13 @@ public:
   ref<ConstantExpr> FToS(Width W, llvm::APFloat::roundingMode RM);
   ref<ConstantExpr> UToF(Width W, llvm::APFloat::roundingMode RM);
   ref<ConstantExpr> SToF(Width W, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FAbs();
+  ref<ConstantExpr> FpClassify();
+  ref<ConstantExpr> FIsFinite();
+  ref<ConstantExpr> FIsNan();
+  ref<ConstantExpr> FIsInf();
+  ref<ConstantExpr> FSqrt(llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FNearbyInt(llvm::APFloat::roundingMode RM);
   ref<ConstantExpr> Add(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Sub(const ref<ConstantExpr> &RHS);
   ref<ConstantExpr> Mul(const ref<ConstantExpr> &RHS);
@@ -1303,6 +1427,8 @@ public:
   ref<ConstantExpr> FMul(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
   ref<ConstantExpr> FDiv(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
   ref<ConstantExpr> FRem(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM);
+  ref<ConstantExpr> FMin(const ref<ConstantExpr> &RHS);
+  ref<ConstantExpr> FMax(const ref<ConstantExpr> &RHS);
 
   // Comparisons return a constant expression of width 1.
 

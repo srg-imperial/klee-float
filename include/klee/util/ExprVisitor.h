@@ -60,6 +60,13 @@ namespace klee {
     virtual Action visitFToS(const FToSExpr&);
     virtual Action visitUToF(const UToFExpr&);
     virtual Action visitSToF(const SToFExpr&);
+    virtual Action visitFNearbyInt(const FNearbyIntExpr&);
+    virtual Action visitFAbs(const FAbsExpr&);
+    virtual Action visitFpClassify(const FpClassifyExpr&);
+    virtual Action visitFIsFinite(const FIsFiniteExpr&);
+    virtual Action visitFIsNan(const FIsNanExpr&);
+    virtual Action visitFIsInf(const FIsInfExpr&);
+    virtual Action visitFSqrt(const FSqrtExpr&);
     virtual Action visitAdd(const AddExpr&);
     virtual Action visitSub(const SubExpr&);
     virtual Action visitMul(const MulExpr&);
@@ -79,6 +86,8 @@ namespace klee {
     virtual Action visitFMul(const FMulExpr&);
     virtual Action visitFDiv(const FDivExpr&);
     virtual Action visitFRem(const FRemExpr&);
+    virtual Action visitFMin(const FMinExpr&);
+    virtual Action visitFMax(const FMaxExpr&);
     virtual Action visitEq(const EqExpr&);
     virtual Action visitNe(const NeExpr&);
     virtual Action visitUlt(const UltExpr&);

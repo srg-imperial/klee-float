@@ -148,6 +148,17 @@ namespace klee {
     HANDLER(handleFeHoldExcept);
     HANDLER(handleFeSetEnv);
     HANDLER(handleFeUpdateEnv);
+    HANDLER(handleFAbs);
+    HANDLER(handleFpClassify);
+    HANDLER(handleIsFinite);
+    HANDLER(handleIsNaN);
+    HANDLER(handleIsInf);
+    HANDLER(handleSqrt);
+    HANDLER(handleNearbyInt);
+    HANDLER(handleFMod);
+    HANDLER(handleFMin);
+    HANDLER(handleFMax);
+
 #undef HANDLER
   };
 } // End klee namespace
