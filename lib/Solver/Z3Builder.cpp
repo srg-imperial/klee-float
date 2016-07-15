@@ -332,6 +332,23 @@ Z3ASTHandle Z3Builder::isNanExpr(Z3ASTHandle expr) {
   return Z3ASTHandle(Z3_mk_fpa_is_nan(ctx, expr), ctx);
 }
 
+
+Z3ASTHandle Z3Builder::isInfinityExpr(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_fpa_is_infinite(ctx, expr), ctx);
+}
+
+Z3ASTHandle Z3Builder::isFPZeroExpr(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_fpa_is_zero(ctx, expr), ctx);
+}
+
+Z3ASTHandle Z3Builder::isSubnormalExpr(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_fpa_is_subnormal(ctx, expr), ctx);
+}
+
+Z3ASTHandle Z3Builder::isFPNegativeExpr(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_fpa_is_negative(ctx, expr), ctx);
+}
+
 Z3_ast Z3Builder::getRoundingModeAST(llvm::APFloat::roundingMode rm) {
   switch (rm) {
   default:
@@ -699,6 +716,118 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return float_to_bv(Z3ASTHandle(Z3_mk_fpa_to_fp_signed(ctx, getRoundingModeAST(ce->getRoundingMode()), src, sort), ctx));
   }
 
+  // Floating-point special functions
+  case Expr::FAbs: {
+    FAbsExpr *fe = cast<FAbsExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FAbs");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_abs(ctx, expr), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FpClassify: {
+    FpClassifyExpr *fe = cast<FpClassifyExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FpClassify");
+    
+    // this is the same if-then-else chain as in ConstantExpr::FpClassify()
+    Z3ASTHandle result = iteExpr(isNanExpr(expr), 
+                           bvSExtConst(sizeof(int), FP_NAN)
+                         ,//else
+                           iteExpr(isInfinityExpr(expr), 
+                             bvSExtConst(sizeof(int), FP_INFINITE)
+                           ,//else
+                             iteExpr(isFPZeroExpr(expr),
+                               bvSExtConst(sizeof(int), FP_ZERO)
+                             ,//else
+                               iteExpr(isSubnormalExpr(expr),
+                                 bvSExtConst(sizeof(int), FP_SUBNORMAL)
+                               ,//else
+                                 bvSExtConst(sizeof(int), FP_NORMAL)
+                               )
+                             )
+                           )
+                         );
+
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FIsFinite: {
+    FIsFiniteExpr *fe = cast<FIsFiniteExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FIsFinite");
+
+    Z3ASTHandle result = iteExpr(orExpr(isNanExpr(expr), isInfinityExpr(expr)),
+                           bvZero(sizeof(int))
+                         ,//else
+                           bvOne(sizeof(int))
+                         );
+
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FIsNan: {
+    FIsNanExpr *fe = cast<FIsNanExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FIsNan");
+
+    Z3ASTHandle result = iteExpr(isNanExpr(expr),
+                           bvOne(sizeof(int))
+                         ,//else
+                           bvZero(sizeof(int))
+                         );
+
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FIsInf: {
+    FIsInfExpr *fe = cast<FIsInfExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FIsInf");
+
+    Z3ASTHandle result = iteExpr(isInfinityExpr(expr),
+                           iteExpr(isFPNegativeExpr(expr),
+                             bvMinusOne(sizeof(int))
+                           ,//else
+                             bvOne(sizeof(int))
+                           )
+                         ,//else
+                           bvZero(sizeof(int))
+                         );
+
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FSqrt: {
+    FSqrtExpr *fe = cast<FSqrtExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FSqrt");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_sqrt(ctx, getRoundingModeAST(fe->getRoundingMode()), expr), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FNearbyInt: {
+    FNearbyIntExpr *fe = cast<FNearbyIntExpr>(e);
+    Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FNearbyInt");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_round_to_integral(ctx, getRoundingModeAST(fe->getRoundingMode()), expr), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
   // Arithmetic
   case Expr::Add: {
     AddExpr *ae = cast<AddExpr>(e);
@@ -951,6 +1080,28 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
     assert(*width_out != 1 && "uncanonicalized FRem");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_rem(ctx, left, right), ctx)); // Z3's frem doesn't ask for rounding mode
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FMin: {
+    FMinExpr *fe = cast<FMinExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FMin");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_min(ctx, left, right), ctx));
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
+           "width mismatch");
+    return result;
+  }
+
+  case Expr::FMax: {
+    FMaxExpr *fe = cast<FMaxExpr>(e);
+    Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
+    Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
+    assert(*width_out != 1 && "uncanonicalized FMax");
+    Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_max(ctx, left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
     return result;

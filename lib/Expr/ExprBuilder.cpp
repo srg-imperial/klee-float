@@ -74,6 +74,34 @@ namespace {
       return SToFExpr::alloc(LHS, W, RM);
     }
 
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
+      return FAbsExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FpClassify(const ref<Expr> &LHS) {
+      return FpClassifyExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FIsFinite(const ref<Expr> &LHS) {
+      return FIsFiniteExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FIsNan(const ref<Expr> &LHS) {
+      return FIsNanExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FIsInf(const ref<Expr> &LHS) {
+      return FIsInfExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return FSqrtExpr::alloc(LHS, RM);
+    }
+
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return FNearbyIntExpr::alloc(LHS, RM);
+    }
+
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return AddExpr::alloc(LHS, RHS);
     }
@@ -148,6 +176,14 @@ namespace {
 
     virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
       return FRemExpr::alloc(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FMinExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FMaxExpr::alloc(LHS, RHS);
     }
 
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -319,6 +355,34 @@ namespace {
       return Base->SToF(LHS, W, RM);
     }
 
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
+      return Base->FAbs(LHS);
+    }
+
+    virtual ref<Expr> FpClassify(const ref<Expr> &LHS) {
+      return Base->FpClassify(LHS);
+    }
+
+    virtual ref<Expr> FIsFinite(const ref<Expr> &LHS) {
+      return Base->FIsFinite(LHS);
+    }
+
+    virtual ref<Expr> FIsNan(const ref<Expr> &LHS) {
+      return Base->FIsNan(LHS);
+    }
+
+    virtual ref<Expr> FIsInf(const ref<Expr> &LHS) {
+      return Base->FIsInf(LHS);
+    }
+
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return Base->FSqrt(LHS, RM);
+    }
+
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return Base->FNearbyInt(LHS, RM);
+    }
+
     ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->Add(LHS, RHS);
     }
@@ -393,6 +457,14 @@ namespace {
 
     ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
       return Base->FRem(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FMin(LHS, RHS);
+    }
+
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FMax(LHS, RHS);
     }
 
     ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -604,6 +676,55 @@ namespace {
         return CE->SToF(W, RM);
 
       return Builder.SToF(cast<NonConstantExpr>(LHS), W, RM);
+    }
+
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FAbs();
+
+      return Builder.FAbs(cast<NonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FpClassify(const ref<Expr> &LHS) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FpClassify();
+
+      return Builder.FpClassify(cast<NonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FIsFinite(const ref<Expr> &LHS) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FIsFinite();
+
+      return Builder.FIsFinite(cast<NonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FIsNan(const ref<Expr> &LHS) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FIsNan();
+
+      return Builder.FIsNan(cast<NonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FIsInf(const ref<Expr> &LHS) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FIsInf();
+
+      return Builder.FIsInf(cast<NonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FSqrt(RM);
+
+      return Builder.FSqrt(cast<NonConstantExpr>(LHS), RM);
+    }
+
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->FNearbyInt(RM);
+
+      return Builder.FNearbyInt(cast<NonConstantExpr>(LHS), RM);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -854,6 +975,34 @@ namespace {
 
       return Builder.FRem(cast<NonConstantExpr>(LHS),
                           cast<NonConstantExpr>(RHS), RM);
+    }
+
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FMin(RCE);
+        return Builder.FMin(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FMin(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FMin(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
+    }
+
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
+        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+          return LCE->FMax(RCE);
+        return Builder.FMax(LCE, cast<NonConstantExpr>(RHS));
+      }
+      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
+        return Builder.FMax(cast<NonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FMax(cast<NonConstantExpr>(LHS),
+                          cast<NonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
