@@ -2983,6 +2983,10 @@ struct SetStateEnv {
     // we can't extract the rounding mode from the fenv, so get it seperately
     state.setRoundingMode(fegetround());
   }
+
+private:
+  SetStateEnv& operator=(const SetStateEnv&); // = delete;
+  SetStateEnv(const SetStateEnv&); // = delete;
 };
 
 void Executor::callExternalFunction(ExecutionState &state,
