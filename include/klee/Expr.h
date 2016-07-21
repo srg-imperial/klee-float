@@ -1008,10 +1008,38 @@ public:                                                 \
 };
 
 UNARY_EXPR_CLASS(FAbs)
-UNARY_EXPR_CLASS(FpClassify)
-UNARY_EXPR_CLASS(FIsFinite)
-UNARY_EXPR_CLASS(FIsNan)
-UNARY_EXPR_CLASS(FIsInf)
+
+#define UNARY_INT_EXPR_CLASS(_class_kind)               \
+class _class_kind ## Expr : public UnaryExpr {          \
+public:                                                 \
+  static const Kind kind = _class_kind;                 \
+  static const unsigned numKids = 1;                    \
+public:                                                 \
+    _class_kind ## Expr(ref<Expr> e) : UnaryExpr(e) {}  \
+    static ref<Expr> alloc(const ref<Expr> &e) {        \
+      ref<Expr> r(new _class_kind ## Expr(e));          \
+      r->computeHash();                                 \
+      return r;                                         \
+    }                                                   \
+    static ref<Expr> create(const ref<Expr> &e);        \
+    Width getWidth() const { return sizeof(int) * 8; }  \
+    Kind getKind() const { return _class_kind; }        \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const { \
+      return create(kids[0]);                           \
+    }                                                   \
+                                                        \
+    static bool classof(const Expr *E) {                \
+      return E->getKind() == Expr::_class_kind;         \
+    }                                                   \
+    static bool classof(const  _class_kind ## Expr *) { \
+      return true;                                      \
+    }                                                   \
+};
+
+UNARY_INT_EXPR_CLASS(FpClassify)
+UNARY_INT_EXPR_CLASS(FIsFinite)
+UNARY_INT_EXPR_CLASS(FIsNan)
+UNARY_INT_EXPR_CLASS(FIsInf)
 
 class UnaryRoundExpr : public UnaryExpr {
 public:

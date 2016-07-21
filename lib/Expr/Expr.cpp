@@ -684,7 +684,7 @@ ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
   }
   case Fl80: {
     long double ld;
-    uint64_t* arr = (uint64_t*) &ld;
+    uint64_t* arr = (uint64_t*) &ld; // on x86_64, long doubles are 80 bits, but the actual variable is 128 bits for alignment purposes
     arr[0] = value.getRawData()[0];
     arr[1] = value.getRawData()[1];
     fenv_t env;

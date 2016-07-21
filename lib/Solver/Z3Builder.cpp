@@ -720,111 +720,100 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::FAbs: {
     FAbsExpr *fe = cast<FAbsExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FAbs");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FAbs");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_abs(ctx, expr), ctx));
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
     return result;
   }
 
   case Expr::FpClassify: {
     FpClassifyExpr *fe = cast<FpClassifyExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FpClassify");
-    
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FpClassify");
+    *width_out = sizeof(int) * 8;
+
     // this is the same if-then-else chain as in ConstantExpr::FpClassify()
     Z3ASTHandle result = iteExpr(isNanExpr(expr), 
-                           bvSExtConst(sizeof(int), FP_NAN)
+                           bvSExtConst(*width_out, FP_NAN)
                          ,//else
                            iteExpr(isInfinityExpr(expr), 
-                             bvSExtConst(sizeof(int), FP_INFINITE)
+                             bvSExtConst(*width_out, FP_INFINITE)
                            ,//else
                              iteExpr(isFPZeroExpr(expr),
-                               bvSExtConst(sizeof(int), FP_ZERO)
+                               bvSExtConst(*width_out, FP_ZERO)
                              ,//else
                                iteExpr(isSubnormalExpr(expr),
-                                 bvSExtConst(sizeof(int), FP_SUBNORMAL)
+                                 bvSExtConst(*width_out, FP_SUBNORMAL)
                                ,//else
-                                 bvSExtConst(sizeof(int), FP_NORMAL)
+                                 bvSExtConst(*width_out, FP_NORMAL)
                                )
                              )
                            )
                          );
-
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
   case Expr::FIsFinite: {
     FIsFiniteExpr *fe = cast<FIsFiniteExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FIsFinite");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FIsFinite");
+    *width_out = sizeof(int) * 8;
 
     Z3ASTHandle result = iteExpr(orExpr(isNanExpr(expr), isInfinityExpr(expr)),
-                           bvZero(sizeof(int))
+                           bvZero(*width_out)
                          ,//else
-                           bvOne(sizeof(int))
+                           bvOne(*width_out)
                          );
-
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
   case Expr::FIsNan: {
     FIsNanExpr *fe = cast<FIsNanExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FIsNan");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FIsNan");
+    *width_out = sizeof(int) * 8;
 
     Z3ASTHandle result = iteExpr(isNanExpr(expr),
-                           bvOne(sizeof(int))
+                           bvOne(*width_out)
                          ,//else
-                           bvZero(sizeof(int))
+                           bvZero(*width_out)
                          );
-
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
   case Expr::FIsInf: {
     FIsInfExpr *fe = cast<FIsInfExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FIsInf");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FIsInf");
+    *width_out = sizeof(int) * 8;
 
     Z3ASTHandle result = iteExpr(isInfinityExpr(expr),
                            iteExpr(isFPNegativeExpr(expr),
-                             bvMinusOne(sizeof(int))
+                             bvMinusOne(*width_out)
                            ,//else
-                             bvOne(sizeof(int))
+                             bvOne(*width_out)
                            )
                          ,//else
-                           bvZero(sizeof(int))
+                           bvZero(*width_out)
                          );
-
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
   case Expr::FSqrt: {
     FSqrtExpr *fe = cast<FSqrtExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FSqrt");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FSqrt");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_sqrt(ctx, getRoundingModeAST(fe->getRoundingMode()), expr), ctx));
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
     return result;
   }
 
   case Expr::FNearbyInt: {
     FNearbyIntExpr *fe = cast<FNearbyIntExpr>(e);
     Z3ASTHandle expr = bv_to_float(construct(fe->expr, width_out));
-    assert(*width_out != 1 && "uncanonicalized FNearbyInt");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FNearbyInt");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_round_to_integral(ctx, getRoundingModeAST(fe->getRoundingMode()), expr), ctx));
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
+    assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
     return result;
   }
 
@@ -1034,7 +1023,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FAddExpr *fe = cast<FAddExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FAdd");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FAdd");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_add(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1045,7 +1034,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FSubExpr *fe = cast<FSubExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FSub");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FSub");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_sub(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1056,7 +1045,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FMulExpr *fe = cast<FMulExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FMul");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FMul");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_mul(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1067,7 +1056,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FDivExpr *fe = cast<FDivExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FDiv");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FDiv");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_div(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1078,7 +1067,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FRemExpr *fe = cast<FRemExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FRem");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FRem");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_rem(ctx, left, right), ctx)); // Z3's frem doesn't ask for rounding mode
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1089,7 +1078,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FMinExpr *fe = cast<FMinExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FMin");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FMin");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_min(ctx, left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1100,7 +1089,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FMaxExpr *fe = cast<FMaxExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FMax");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FMax");
     Z3ASTHandle result = float_to_bv(Z3ASTHandle(Z3_mk_fpa_max(ctx, left, right), ctx));
     assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
            "width mismatch");
@@ -1169,7 +1158,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOrdExpr *fe = cast<FOrdExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOrd");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOrd");
     *width_out = 1;
     Z3ASTHandle result = andExpr(notExpr(isNanExpr(left)), notExpr(isNanExpr(right)));
     return result;
@@ -1179,7 +1168,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUnoExpr *fe = cast<FUnoExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUno");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUno");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right));
     return result;
@@ -1189,7 +1178,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUeqExpr *fe = cast<FUeqExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUeq");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUeq");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx));
     return result;
@@ -1199,7 +1188,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOeqExpr *fe = cast<FOeqExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOeq");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOeq");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx);
     return result;
@@ -1209,7 +1198,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUgtExpr *fe = cast<FUgtExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUgt");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUgt");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx));
     return result;
@@ -1219,7 +1208,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOgtExpr *fe = cast<FOgtExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOgt");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOgt");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx);
     return result;
@@ -1229,7 +1218,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUgeExpr *fe = cast<FUgeExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUge");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUge");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx));
     return result;
@@ -1239,7 +1228,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOgeExpr *fe = cast<FOgeExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOge");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOge");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx);
     return result;
@@ -1249,7 +1238,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUltExpr *fe = cast<FUltExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUlt");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUlt");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx));
     return result;
@@ -1259,7 +1248,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOltExpr *fe = cast<FOltExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOlt");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOlt");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx);
     return result;
@@ -1269,7 +1258,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUleExpr *fe = cast<FUleExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUle");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUle");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx));
     return result;
@@ -1279,7 +1268,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOleExpr *fe = cast<FOleExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOle");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOle");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx);
     return result;
@@ -1289,7 +1278,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FUneExpr *fe = cast<FUneExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FUne");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUne");
     *width_out = 1;
     Z3ASTHandle result = notExpr(Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx));
     return result;
@@ -1299,7 +1288,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     FOneExpr *fe = cast<FOneExpr>(e);
     Z3ASTHandle left = bv_to_float(construct(fe->left, width_out));
     Z3ASTHandle right = bv_to_float(construct(fe->right, width_out));
-    assert(*width_out != 1 && "uncanonicalized FOne");
+    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOne");
     *width_out = 1;
     Z3ASTHandle result = notExpr(orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx)));
     return result;

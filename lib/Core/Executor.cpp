@@ -1030,10 +1030,19 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
     bool isTrue = false;
 
     solver->setTimeout(coreSolverTimeout);      
-    if (solver->getValue(state, e, value) &&
-        solver->mustBeTrue(state, EqExpr::create(e, value), isTrue) &&
-        isTrue)
-      result = value;
+    if (solver->getValue(state, e, value))
+    {
+      bool success;
+
+      // need to consider NaNs as equal
+      if (value->FpClassify()->getAPValue().getZExtValue() == FP_NAN)
+        success = solver->mustBeTrue(state, EqExpr::create(FIsNanExpr::create(e), ConstantExpr::create(1, sizeof(int) * 8)), isTrue);
+      else
+        success = solver->mustBeTrue(state, EqExpr::create(e, value), isTrue);
+
+      if (success && isTrue)
+        result = value;
+    }
     solver->setTimeout(0);
   }
   
