@@ -153,33 +153,45 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("feupdateenv"    , handleFeUpdateEnv    , true),
 
   add("fabs"           , handleFAbs           , true),
+  add("fabsf"          , handleFAbs           , true),
+  add("fabsl"          , handleFAbs           , true),
+
   add("__fpclassify"   , handleFpClassify     , true),
   add("__fpclassifyf"  , handleFpClassify     , true),
   add("__fpclassifyl"  , handleFpClassify     , true),
+
   add("__finite"       , handleIsFinite       , true),
   add("__finitef"      , handleIsFinite       , true),
   add("__finitel"      , handleIsFinite       , true),
+
   add("__isnan"        , handleIsNaN          , true),
   add("__isnanf"       , handleIsNaN          , true),
   add("__isnanl"       , handleIsNaN          , true),
+
   add("__isinf"        , handleIsInf          , true),
   add("__isinff"       , handleIsInf          , true),
   add("__isinfl"       , handleIsInf          , true),
+
   add("sqrt"           , handleSqrt           , true),
   add("sqrtf"          , handleSqrt           , true),
   add("sqrtl"          , handleSqrt           , true),
+
   add("nearbyint"      , handleNearbyInt      , true),
   add("nearbyintf"     , handleNearbyInt      , true),
   add("nearbyintl"     , handleNearbyInt      , true),
+
   add("fmod"           , handleFMod           , true),
   add("fmodf"          , handleFMod           , true),
   add("fmodl"          , handleFMod           , true),
+
   add("fmin"           , handleFMin           , true),
   add("fminf"          , handleFMin           , true),
   add("fminl"          , handleFMin           , true),
+
   add("fmax"           , handleFMax           , true),
   add("fmaxf"          , handleFMax           , true),
   add("fmaxl"          , handleFMax           , true),
+
 #undef addDNR
 #undef add  
 };
@@ -1055,58 +1067,58 @@ void SpecialFunctionHandler::handleFeUpdateEnv(ExecutionState &state,
 void SpecialFunctionHandler::handleFAbs(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FAbsExpr(arguments[0]));
+  executor.bindLocal(target, state, FAbsExpr::alloc(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleFpClassify(ExecutionState &state,
                                               KInstruction *target,
                                               std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FpClassifyExpr(arguments[0]));
+  executor.bindLocal(target, state, FpClassifyExpr::alloc(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleIsFinite(ExecutionState &state,
                                             KInstruction *target,
                                             std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FIsFiniteExpr(arguments[0]));
+  executor.bindLocal(target, state, FIsFiniteExpr::alloc(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleIsNaN(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FIsNanExpr(arguments[0]));
+  executor.bindLocal(target, state, FIsNanExpr::alloc(arguments[0]));
 }
 void SpecialFunctionHandler::handleIsInf(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FIsInfExpr(arguments[0]));
+  executor.bindLocal(target, state, FIsInfExpr::alloc(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleSqrt(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FSqrtExpr(arguments[0], state.roundingMode));
+  executor.bindLocal(target, state, FSqrtExpr::alloc(arguments[0], state.roundingMode));
 }
 
 void SpecialFunctionHandler::handleNearbyInt(ExecutionState &state,
                                              KInstruction *target,
                                              std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FNearbyIntExpr(arguments[0], state.roundingMode));
+  executor.bindLocal(target, state, FNearbyIntExpr::alloc(arguments[0], state.roundingMode));
 }
 
 void SpecialFunctionHandler::handleFMod(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FRemExpr(arguments[0], arguments[1], state.roundingMode));
+  executor.bindLocal(target, state, FRemExpr::alloc(arguments[0], arguments[1], state.roundingMode));
 }
 
 void SpecialFunctionHandler::handleFMin(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FMinExpr(arguments[0], arguments[1]));
+  executor.bindLocal(target, state, FMinExpr::alloc(arguments[0], arguments[1]));
 }
 
 void SpecialFunctionHandler::handleFMax(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, new FMaxExpr(arguments[0], arguments[1]));
+  executor.bindLocal(target, state, FMaxExpr::alloc(arguments[0], arguments[1]));
 }
