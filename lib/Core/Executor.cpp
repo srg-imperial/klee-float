@@ -1035,8 +1035,13 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
       bool success;
 
       // need to consider NaNs as equal
-      if (value->getType() == Expr::FloatingPoint && value->FpClassify()->getAPValue().getZExtValue() == FP_NAN)
-        success = solver->mustBeTrue(state, EqExpr::create(FIsNanExpr::create(e), ConstantExpr::create(1, sizeof(int) * 8)), isTrue);
+      if (value->getType() == Expr::FloatingPoint)
+      {
+        if (value->FpClassify()->getAPValue().getZExtValue() == FP_NAN)
+          success = solver->mustBeTrue(state, EqExpr::create(FIsNanExpr::create(e), ConstantExpr::create(1, sizeof(int) * 8)), isTrue);
+        else
+          success = solver->mustBeTrue(state, FOeqExpr::create(e, value), isTrue);
+      }
       else
         success = solver->mustBeTrue(state, EqExpr::create(e, value), isTrue);
 
