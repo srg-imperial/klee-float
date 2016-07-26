@@ -101,8 +101,16 @@ public:
   static const Width Int16 = 16;
   static const Width Int32 = 32;
   static const Width Int64 = 64;
+  static const Width Fl32 = 32;
+  static const Width Fl64 = 64;
   static const Width Fl80 = 80;
   
+
+  enum Type {
+    Integer,
+    FloatingPoint,
+    RawBits
+  };
 
   enum Kind {
     InvalidKind = -1,
@@ -232,6 +240,7 @@ public:
 
   virtual Kind getKind() const = 0;
   virtual Width getWidth() const = 0;
+  virtual Type getType() const = 0;
   
   virtual unsigned getNumKids() const = 0;
   virtual ref<Expr> getKid(unsigned i) const = 0;
@@ -278,6 +287,7 @@ public:
 
   static void printKind(llvm::raw_ostream &os, Kind k);
   static void printWidth(llvm::raw_ostream &os, Expr::Width w);
+  static void printType(llvm::raw_ostream & os, Expr::Type t);
 
   /// returns the smallest number of bytes in which the given width fits
   static inline unsigned getMinBytesForWidth(Width w) {
@@ -424,6 +434,7 @@ protected:
   
 public:                                                       
   Width getWidth() const { return Bool; }
+  Type getType() const { return Expr::Integer; }
 
   static bool classof(const Expr *E) {
     Kind k = E->getKind();
@@ -449,6 +460,7 @@ public:
   static ref<Expr> create(ref<Expr> src);
   
   Width getWidth() const { return src->getWidth(); }
+  Type getType() const { return src->getType(); }
   Kind getKind() const { return NotOptimized; }
 
   unsigned getNumKids() const { return 1; }
@@ -603,6 +615,7 @@ public:
   static ref<Expr> create(const UpdateList &updates, ref<Expr> i);
   
   Width getWidth() const { assert(updates.root); return updates.root->getRange(); }
+  Type getType() const { return RawBits; }
   Kind getKind() const { return Read; }
   
   unsigned getNumKids() const { return numKids; }
@@ -648,6 +661,7 @@ public:
   static ref<Expr> create(ref<Expr> c, ref<Expr> t, ref<Expr> f);
 
   Width getWidth() const { return trueExpr->getWidth(); }
+  Type getType() const { assert(trueExpr->getType() == falseExpr->getType()); return trueExpr->getType(); }
   Kind getKind() const { return Select; }
 
   unsigned getNumKids() const { return numKids; }
@@ -705,6 +719,8 @@ public:
   static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);
 
   Width getWidth() const { return width; }
+  // TODO: look into setting this to float or int in the constructor
+  Type getType() const { return RawBits; }
   Kind getKind() const { return kind; }
   ref<Expr> getLeft() const { return left; }
   ref<Expr> getRight() const { return right; }
@@ -765,6 +781,7 @@ public:
   static ref<Expr> create(ref<Expr> e, unsigned bitOff, Width w);
 
   Width getWidth() const { return width; }
+  Type getType() const { return expr->getType(); }
   Kind getKind() const { return Extract; }
 
   unsigned getNumKids() const { return numKids; }
@@ -815,6 +832,7 @@ public:
   static ref<Expr> create(const ref<Expr> &e);
 
   Width getWidth() const { return expr->getWidth(); }
+  Type getType() const { return expr->getType(); }
   Kind getKind() const { return Not; }
 
   unsigned getNumKids() const { return numKids; }
@@ -894,6 +912,8 @@ public:                                                          \
       return create(kids[0], width);                             \
     }                                                            \
                                                                  \
+    Type getType() const { return Expr::Integer; }               \
+                                                                 \
     static bool classof(const Expr *E) {                         \
       return E->getKind() == Expr::_class_kind;                  \
     }                                                            \
@@ -929,8 +949,8 @@ public:
   static bool classof(const CastRoundExpr *) { return true; }
 };
 
-#define CAST_RM_EXPR_CLASS(_class_kind)                                           \
-class _class_kind ## Expr : public CastRoundExpr {                                     \
+#define CAST_RM_EXPR_CLASS(_class_kind, _out_type)                                \
+class _class_kind ## Expr : public CastRoundExpr {                                \
 public:                                                                           \
   static const Kind kind = _class_kind;                                           \
   static const unsigned numKids = 1;                                              \
@@ -948,6 +968,8 @@ public:                                                                         
       return create(kids[0], width, round);                                       \
     }                                                                             \
                                                                                   \
+    Type getType() const { return _out_type; }                                    \
+                                                                                  \
     static bool classof(const Expr *E) {                                          \
       return E->getKind() == Expr::_class_kind;                                   \
     }                                                                             \
@@ -956,11 +978,11 @@ public:                                                                         
     }                                                                             \
 };                                                                                \
 
-CAST_RM_EXPR_CLASS(FExt)
-CAST_RM_EXPR_CLASS(FToU)
-CAST_RM_EXPR_CLASS(FToS)
-CAST_RM_EXPR_CLASS(UToF)
-CAST_RM_EXPR_CLASS(SToF)
+CAST_RM_EXPR_CLASS(FExt, Expr::FloatingPoint)
+CAST_RM_EXPR_CLASS(FToU, Expr::Integer)
+CAST_RM_EXPR_CLASS(FToS, Expr::Integer)
+CAST_RM_EXPR_CLASS(UToF, Expr::FloatingPoint)
+CAST_RM_EXPR_CLASS(SToF, Expr::FloatingPoint)
 
 // Floating-Point unary special functions
 class UnaryExpr : public NonConstantExpr {
@@ -999,6 +1021,8 @@ public:                                                 \
       return create(kids[0]);                           \
     }                                                   \
                                                         \
+    Type getType() const { return Expr::FloatingPoint; }\
+                                                        \
     static bool classof(const Expr *E) {                \
       return E->getKind() == Expr::_class_kind;         \
     }                                                   \
@@ -1028,6 +1052,8 @@ public:                                                 \
       return create(kids[0]);                           \
     }                                                   \
                                                         \
+    Type getType() const { return Expr::Integer; }      \
+                                                        \
     static bool classof(const Expr *E) {                \
       return E->getKind() == Expr::_class_kind;         \
     }                                                   \
@@ -1049,6 +1075,8 @@ public:
   UnaryRoundExpr(const ref<Expr> &e, llvm::APFloat::roundingMode rm) : UnaryExpr(e), round(rm) {}
 
   llvm::APFloat::roundingMode getRoundingMode() const { return round; }
+  
+  Type getType() const { return Expr::FloatingPoint; }
 
   static bool classof(const Expr *E) {
     Kind k = E->getKind();
@@ -1109,6 +1137,8 @@ public:                                                              \
     virtual ref<Expr> rebuild(ref<Expr> kids[]) const {              \
       return create(kids[0], kids[1]);                               \
     }                                                                \
+                                                                     \
+    Type getType() const { return Expr::Integer; }                   \
                                                                      \
     static bool classof(const Expr *E) {                             \
       return E->getKind() == Expr::_class_kind;                      \
@@ -1172,6 +1202,8 @@ public:                                                                         
       return create(kids[0], kids[1], round);                                         \
     }                                                                                 \
                                                                                       \
+    Type getType() const { return Expr::FloatingPoint; }                              \
+                                                                                      \
     static bool classof(const Expr *E) {                                              \
       return E->getKind() == Expr::_class_kind;                                       \
     }                                                                                 \
@@ -1208,6 +1240,8 @@ public:                                                              \
     virtual ref<Expr> rebuild(ref<Expr> kids[]) const {              \
       return create(kids[0], kids[1]);                               \
     }                                                                \
+                                                                     \
+    Type getType() const { return Expr::Integer; }                   \
                                                                      \
     static bool classof(const Expr *E) {                             \
       return E->getKind() == Expr::_class_kind;                      \
@@ -1252,12 +1286,15 @@ public:
 private:
   llvm::APInt value;
 
-  ConstantExpr(const llvm::APInt &v) : value(v) {}
+  Type type;
+
+  ConstantExpr(const llvm::APInt &v, Expr::Type t) : value(v), type(t) {}
 
 public:
   ~ConstantExpr() {}
 
   Width getWidth() const { return value.getBitWidth(); }
+  Type getType() const { return type; }
   Kind getKind() const { return Constant; }
 
   unsigned getNumKids() const { return 0; }
@@ -1313,14 +1350,18 @@ public:
   static ref<Expr> fromMemory(void *address, Width w);
   void toMemory(void *address);
 
-  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
-    ref<ConstantExpr> r(new ConstantExpr(v));
+  static ref<ConstantExpr> alloc(const llvm::APInt &v, Expr::Type t) {
+    ref<ConstantExpr> r(new ConstantExpr(v, t));
     r->computeHash();
     return r;
   }
 
+  static ref<ConstantExpr> alloc(const llvm::APInt &v) {
+    return alloc(v, Integer);
+  }
+
   static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
-    return alloc(f.bitcastToAPInt());
+    return alloc(f.bitcastToAPInt(), FloatingPoint);
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {
@@ -1338,23 +1379,25 @@ public:
   /* Utility Functions */
 
   /// isZero - Is this a constant zero.
-  bool isZero() const { return getAPValue().isMinValue(); }
+  bool isZero() const { assert(type == Integer); return getAPValue().isMinValue(); }
 
   /// isOne - Is this a constant one.
-  bool isOne() const { return getLimitedValue() == 1; }
+  bool isOne() const { assert(type == Integer); return getLimitedValue() == 1; }
 
   /// isTrue - Is this the true expression.
   bool isTrue() const {
+    assert(type == Integer);
     return (getWidth() == Expr::Bool && value.getBoolValue() == true);
   }
 
   /// isFalse - Is this the false expression.
   bool isFalse() const {
+    assert(type == Integer);
     return (getWidth() == Expr::Bool && value.getBoolValue() == false);
   }
 
   /// isAllOnes - Is this constant all ones.
-  bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
+  bool isAllOnes() const { assert(type == Integer); return getAPValue().isAllOnesValue(); }
 
   /* Constant Operations */
 

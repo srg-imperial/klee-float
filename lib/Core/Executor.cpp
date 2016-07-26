@@ -938,7 +938,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
     } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
-      return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
+      return ConstantExpr::alloc(cf->getValueAPF());
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
       return globalAddresses.find(gv)->second;
     } else if (isa<ConstantPointerNull>(c)) {
@@ -1035,7 +1035,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
       bool success;
 
       // need to consider NaNs as equal
-      if (value->FpClassify()->getAPValue().getZExtValue() == FP_NAN)
+      if (value->getType() == Expr::FloatingPoint && value->FpClassify()->getAPValue().getZExtValue() == FP_NAN)
         success = solver->mustBeTrue(state, EqExpr::create(FIsNanExpr::create(e), ConstantExpr::create(1, sizeof(int) * 8)), isTrue);
       else
         success = solver->mustBeTrue(state, EqExpr::create(e, value), isTrue);
@@ -1383,9 +1383,9 @@ static bool isDebugIntrinsic(const Function *f, KModule *KM) {
 
 static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
   switch(width) {
-  case Expr::Int32:
+  case Expr::Fl32:
     return &llvm::APFloat::IEEEsingle;
-  case Expr::Int64:
+  case Expr::Fl64:
     return &llvm::APFloat::IEEEdouble;
   case Expr::Fl80:
     return &llvm::APFloat::x87DoubleExtended;
@@ -2035,7 +2035,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2059,7 +2059,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2084,7 +2084,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2109,7 +2109,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2134,7 +2134,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    bindLocal(ki, state, ConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;

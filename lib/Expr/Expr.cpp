@@ -481,9 +481,9 @@ ref<ConstantExpr> ConstantExpr::SExt(Width W) {
 
 static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
   switch(width) {
-  case Expr::Int32:
+  case Expr::Fl32:
     return &llvm::APFloat::IEEEsingle;
-  case Expr::Int64:
+  case Expr::Fl64:
     return &llvm::APFloat::IEEEdouble;
   case Expr::Fl80:
     return &llvm::APFloat::x87DoubleExtended;
@@ -662,7 +662,7 @@ ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
   }
 
   switch (getWidth()) {
-  case Int32: {
+  case Fl32: {
     float f = value.bitsToFloat();
     fenv_t env;
     fegetenv(&env);
@@ -672,7 +672,7 @@ ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
     llvm::APFloat Res(f);
     return ConstantExpr::alloc(Res);
   }
-  case Int64: {
+  case Fl64: {
     double d = value.bitsToDouble();
     fenv_t env;
     fegetenv(&env);
@@ -779,7 +779,7 @@ ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS, llvm::APFloat
   llvm::APFloat Res(value);
   Res.add(APFloat(RHS->getAPValue()), RM);
 #endif
-  return ConstantExpr::alloc(Res.bitcastToAPInt());
+  return ConstantExpr::alloc(Res);
 }
 
 ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
@@ -794,7 +794,7 @@ ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS, llvm::APFloat
   llvm::APFloat Res(value);
   Res.subtract(APFloat(RHS->getAPValue()), RM);
 #endif
-  return ConstantExpr::alloc(Res.bitcastToAPInt());
+  return ConstantExpr::alloc(Res);
 }
 
 ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
@@ -809,7 +809,7 @@ ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS, llvm::APFloat
   llvm::APFloat Res(value);
   Res.multiply(APFloat(RHS->getAPValue()), RM);
 #endif
-  return ConstantExpr::alloc(Res.bitcastToAPInt());
+  return ConstantExpr::alloc(Res);
 }
 
 ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
@@ -824,7 +824,7 @@ ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS, llvm::APFloat
   llvm::APFloat Res(value);
   Res.divide(APFloat(RHS->getAPValue()), RM);
 #endif
-  return ConstantExpr::alloc(Res.bitcastToAPInt());
+  return ConstantExpr::alloc(Res);
 }
 
 ref<ConstantExpr> ConstantExpr::FRem(const ref<ConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
@@ -839,7 +839,7 @@ ref<ConstantExpr> ConstantExpr::FRem(const ref<ConstantExpr> &RHS, llvm::APFloat
   llvm::APFloat Res(value);
   Res.mod(APFloat(RHS->getAPValue()), RM);
 #endif
-  return ConstantExpr::alloc(Res.bitcastToAPInt());
+  return ConstantExpr::alloc(Res);
 }
 
 ref<ConstantExpr> ConstantExpr::FMin(const ref<ConstantExpr> &RHS) {

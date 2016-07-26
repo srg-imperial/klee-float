@@ -1060,58 +1060,58 @@ void SpecialFunctionHandler::handleFeUpdateEnv(ExecutionState &state,
 void SpecialFunctionHandler::handleFAbs(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FAbsExpr::alloc(arguments[0]));
+  executor.bindLocal(target, state, FAbsExpr::create(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleFpClassify(ExecutionState &state,
                                               KInstruction *target,
                                               std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FpClassifyExpr::alloc(arguments[0]));
+  executor.bindLocal(target, state, FpClassifyExpr::create(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleIsFinite(ExecutionState &state,
                                             KInstruction *target,
                                             std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FIsFiniteExpr::alloc(arguments[0]));
+  executor.bindLocal(target, state, FIsFiniteExpr::create(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleIsNaN(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FIsNanExpr::alloc(arguments[0]));
+  executor.bindLocal(target, state, FIsNanExpr::create(arguments[0]));
 }
 void SpecialFunctionHandler::handleIsInf(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FIsInfExpr::alloc(arguments[0]));
+  executor.bindLocal(target, state, FIsInfExpr::create(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleSqrt(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FSqrtExpr::alloc(arguments[0], state.roundingMode));
+  executor.bindLocal(target, state, FSqrtExpr::create(arguments[0], state.roundingMode));
 }
 
 void SpecialFunctionHandler::handleNearbyInt(ExecutionState &state,
                                              KInstruction *target,
                                              std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FNearbyIntExpr::alloc(arguments[0], state.roundingMode));
+  executor.bindLocal(target, state, FNearbyIntExpr::create(arguments[0], state.roundingMode));
 }
 
 void SpecialFunctionHandler::handleFMod(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FRemExpr::alloc(arguments[0], arguments[1], state.roundingMode));
+  executor.bindLocal(target, state, FRemExpr::create(arguments[0], arguments[1], state.roundingMode));
 }
 
 void SpecialFunctionHandler::handleFMin(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FMinExpr::alloc(arguments[0], arguments[1]));
+  executor.bindLocal(target, state, FMinExpr::create(arguments[0], arguments[1]));
 }
 
 void SpecialFunctionHandler::handleFMax(ExecutionState &state,
                                         KInstruction *target,
                                         std::vector<ref<Expr> > &arguments) {
-  executor.bindLocal(target, state, FMaxExpr::alloc(arguments[0], arguments[1]));
+  executor.bindLocal(target, state, FMaxExpr::create(arguments[0], arguments[1]));
 }
