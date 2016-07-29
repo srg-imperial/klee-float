@@ -54,10 +54,6 @@ namespace {
       return SExtExpr::alloc(LHS, W);
     }
 
-    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return FExtExpr::alloc(LHS, W, RM);
-    }
-
     virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
       return FToUExpr::alloc(LHS, W, RM);
     }
@@ -66,16 +62,8 @@ namespace {
       return FToSExpr::alloc(LHS, W, RM);
     }
 
-    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return UToFExpr::alloc(LHS, W, RM);
-    }
-
-    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return SToFExpr::alloc(LHS, W, RM);
-    }
-
-    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
-      return FAbsExpr::alloc(LHS);
+    virtual ref<Expr> Not(const ref<Expr> &LHS) {
+      return NotExpr::alloc(LHS);
     }
 
     virtual ref<Expr> FpClassify(const ref<Expr> &LHS) {
@@ -92,14 +80,6 @@ namespace {
 
     virtual ref<Expr> FIsInf(const ref<Expr> &LHS) {
       return FIsInfExpr::alloc(LHS);
-    }
-
-    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
-      return FSqrtExpr::alloc(LHS, RM);
-    }
-
-    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
-      return FNearbyIntExpr::alloc(LHS, RM);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -130,10 +110,6 @@ namespace {
       return SRemExpr::alloc(LHS, RHS);
     }
 
-    virtual ref<Expr> Not(const ref<Expr> &LHS) {
-      return NotExpr::alloc(LHS);
-    }
-
     virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return AndExpr::alloc(LHS, RHS);
     }
@@ -156,34 +132,6 @@ namespace {
 
     virtual ref<Expr> AShr(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return AShrExpr::alloc(LHS, RHS);
-    }
-
-    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return FAddExpr::alloc(LHS, RHS, RM);
-    }
-
-    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return FSubExpr::alloc(LHS, RHS, RM);
-    }
-
-    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return FMulExpr::alloc(LHS, RHS, RM);
-    }
-
-    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return FDivExpr::alloc(LHS, RHS, RM);
-    }
-
-    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return FRemExpr::alloc(LHS, RHS, RM);
-    }
-
-    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FMinExpr::alloc(LHS, RHS);
-    }
-
-    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return FMaxExpr::alloc(LHS, RHS);
     }
 
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -281,6 +229,66 @@ namespace {
     virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return FOneExpr::alloc(LHS, RHS);
     }
+
+    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS) {
+      return ExplicitFloatExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FSelectExpr::alloc(Cond, LHS, RHS);
+    }
+
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return FExtExpr::alloc(LHS, W, RM);
+    }
+
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return UToFExpr::alloc(LHS, W, RM);
+    }
+
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return SToFExpr::alloc(LHS, W, RM);
+    }
+
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
+      return FAbsExpr::alloc(LHS);
+    }
+
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return FSqrtExpr::alloc(LHS, RM);
+    }
+
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return FNearbyIntExpr::alloc(LHS, RM);
+    }
+
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FAddExpr::alloc(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FSubExpr::alloc(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FMulExpr::alloc(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FDivExpr::alloc(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return FRemExpr::alloc(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FMinExpr::alloc(LHS, RHS);
+    }
+
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return FMaxExpr::alloc(LHS, RHS);
+    }
   };
 
   /// ChainedBuilder - Helper class for construct specialized expression
@@ -335,10 +343,6 @@ namespace {
       return Base->SExt(LHS, W);
     }
 
-    ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Base->FExt(LHS, W, RM);
-    }
-
     ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
       return Base->FToU(LHS, W, RM);
     }
@@ -347,16 +351,8 @@ namespace {
       return Base->FToS(LHS, W, RM);
     }
 
-    ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Base->UToF(LHS, W, RM);
-    }
-
-    ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      return Base->SToF(LHS, W, RM);
-    }
-
-    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
-      return Base->FAbs(LHS);
+    ref<Expr> Not(const ref<Expr> &LHS) {
+      return Base->Not(LHS);
     }
 
     virtual ref<Expr> FpClassify(const ref<Expr> &LHS) {
@@ -373,14 +369,6 @@ namespace {
 
     virtual ref<Expr> FIsInf(const ref<Expr> &LHS) {
       return Base->FIsInf(LHS);
-    }
-
-    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
-      return Base->FSqrt(LHS, RM);
-    }
-
-    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
-      return Base->FNearbyInt(LHS, RM);
     }
 
     ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -411,10 +399,6 @@ namespace {
       return Base->SRem(LHS, RHS);
     }
 
-    ref<Expr> Not(const ref<Expr> &LHS) {
-      return Base->Not(LHS);
-    }
-
     ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->And(LHS, RHS);
     }
@@ -437,34 +421,6 @@ namespace {
 
     ref<Expr> AShr(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->AShr(LHS, RHS);
-    }
-
-    ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Base->FAdd(LHS, RHS, RM);
-    }
-
-    ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Base->FSub(LHS, RHS, RM);
-    }
-
-    ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Base->FMul(LHS, RHS, RM);
-    }
-
-    ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Base->FDiv(LHS, RHS, RM);
-    }
-
-    ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      return Base->FRem(LHS, RHS, RM);
-    }
-
-    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FMin(LHS, RHS);
-    }
-
-    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      return Base->FMax(LHS, RHS);
     }
 
     ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -562,6 +518,66 @@ namespace {
     ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       return Base->FOne(LHS, RHS);
     }
+
+    ref<Expr> ExplicitFloat(const ref<Expr> &LHS) {
+      return Base->ExplicitFloat(LHS);
+    }
+
+    ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FSelect(Cond, LHS, RHS);
+    }
+
+    ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->FExt(LHS, W, RM);
+    }
+
+    ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->UToF(LHS, W, RM);
+    }
+
+    ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      return Base->SToF(LHS, W, RM);
+    }
+
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
+      return Base->FAbs(LHS);
+    }
+
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return Base->FSqrt(LHS, RM);
+    }
+
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      return Base->FNearbyInt(LHS, RM);
+    }
+
+    ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FAdd(LHS, RHS, RM);
+    }
+
+    ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FSub(LHS, RHS, RM);
+    }
+
+    ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FMul(LHS, RHS, RM);
+    }
+
+    ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FDiv(LHS, RHS, RM);
+    }
+
+    ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      return Base->FRem(LHS, RHS, RM);
+    }
+
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FMin(LHS, RHS);
+    }
+
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      return Base->FMax(LHS, RHS);
+    }
   };
 
   /// ConstantSpecializedExprBuilder - A base expression builder class which
@@ -643,88 +659,57 @@ namespace {
       return Builder.SExt(cast<NonConstantExpr>(LHS), W);
     }
 
-    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->FExt(W, RM);
-
-      return Builder.FExt(cast<NonConstantExpr>(LHS), W, RM);
-    }
-
     virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
         return CE->FToU(W, RM);
 
       return Builder.FToU(cast<NonConstantExpr>(LHS), W, RM);
     }
 
     virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
         return CE->FToS(W, RM);
 
       return Builder.FToS(cast<NonConstantExpr>(LHS), W, RM);
     }
 
-    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+    virtual ref<Expr> Not(const ref<Expr> &LHS) {
+      // !!X ==> X
+      if (NotExpr *DblNot = dyn_cast<NotExpr>(LHS))
+        return DblNot->getKid(0);
+
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->UToF(W, RM);
+        return CE->Not();
 
-      return Builder.UToF(cast<NonConstantExpr>(LHS), W, RM);
-    }
-
-    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->SToF(W, RM);
-
-      return Builder.SToF(cast<NonConstantExpr>(LHS), W, RM);
-    }
-
-    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->FAbs();
-
-      return Builder.FAbs(cast<NonConstantExpr>(LHS));
+      return Builder.Not(cast<NonConstantExpr>(LHS));
     }
 
     virtual ref<Expr> FpClassify(const ref<Expr> &LHS) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
         return CE->FpClassify();
 
       return Builder.FpClassify(cast<NonConstantExpr>(LHS));
     }
 
     virtual ref<Expr> FIsFinite(const ref<Expr> &LHS) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
         return CE->FIsFinite();
 
       return Builder.FIsFinite(cast<NonConstantExpr>(LHS));
     }
 
     virtual ref<Expr> FIsNan(const ref<Expr> &LHS) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
         return CE->FIsNan();
 
       return Builder.FIsNan(cast<NonConstantExpr>(LHS));
     }
 
     virtual ref<Expr> FIsInf(const ref<Expr> &LHS) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
         return CE->FIsInf();
 
       return Builder.FIsInf(cast<NonConstantExpr>(LHS));
-    }
-
-    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->FSqrt(RM);
-
-      return Builder.FSqrt(cast<NonConstantExpr>(LHS), RM);
-    }
-
-    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->FNearbyInt(RM);
-
-      return Builder.FNearbyInt(cast<NonConstantExpr>(LHS), RM);
     }
 
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -818,17 +803,6 @@ namespace {
                           cast<NonConstantExpr>(RHS));
     }
 
-    virtual ref<Expr> Not(const ref<Expr> &LHS) {
-      // !!X ==> X
-      if (NotExpr *DblNot = dyn_cast<NotExpr>(LHS))
-        return DblNot->getKid(0);
-
-      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
-        return CE->Not();
-
-      return Builder.Not(cast<NonConstantExpr>(LHS));
-    }
-
     virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) {
       if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
         if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
@@ -904,104 +878,6 @@ namespace {
       }
 
       return Builder.AShr(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
-    }
-
-    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FAdd(RCE, RM);
-        return Builder.FAdd(LCE, cast<NonConstantExpr>(RHS), RM);
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FAdd(cast<NonConstantExpr>(LHS), RCE, RM);
-      }
-
-      return Builder.FAdd(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS), RM);
-    }
-
-    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FSub(RCE, RM);
-        return Builder.FSub(LCE, cast<NonConstantExpr>(RHS), RM);
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FSub(cast<NonConstantExpr>(LHS), RCE, RM);
-      }
-
-      return Builder.FSub(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS), RM);
-    }
-
-    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FMul(RCE, RM);
-        return Builder.FMul(LCE, cast<NonConstantExpr>(RHS), RM);
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FMul(cast<NonConstantExpr>(LHS), RCE, RM);
-      }
-
-      return Builder.FMul(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS), RM);
-    }
-
-    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FDiv(RCE, RM);
-        return Builder.FDiv(LCE, cast<NonConstantExpr>(RHS), RM);
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FDiv(cast<NonConstantExpr>(LHS), RCE, RM);
-      }
-
-      return Builder.FDiv(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS), RM);
-    }
-
-    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FRem(RCE, RM);
-        return Builder.FRem(LCE, cast<NonConstantExpr>(RHS), RM);
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FRem(cast<NonConstantExpr>(LHS), RCE, RM);
-      }
-
-      return Builder.FRem(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS), RM);
-    }
-
-    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FMin(RCE);
-        return Builder.FMin(LCE, cast<NonConstantExpr>(RHS));
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FMin(cast<NonConstantExpr>(LHS), RCE);
-      }
-
-      return Builder.FMin(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
-    }
-
-    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
-          return LCE->FMax(RCE);
-        return Builder.FMax(LCE, cast<NonConstantExpr>(RHS));
-      }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FMax(cast<NonConstantExpr>(LHS), RCE);
-      }
-
-      return Builder.FMax(cast<NonConstantExpr>(LHS),
                           cast<NonConstantExpr>(RHS));
     }
 
@@ -1136,199 +1012,361 @@ namespace {
     }
 
     virtual ref<Expr> FOrd(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOrd(RCE);
-        return Builder.FOrd(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOrd(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOrd(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOrd(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOrd(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOrd(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUno(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUno(RCE);
-        return Builder.FUno(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUno(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUno(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUno(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUno(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUno(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUeq(RCE);
-        return Builder.FUeq(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUeq(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUeq(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUeq(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUeq(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUeq(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOeq(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOeq(RCE);
-        return Builder.FOeq(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOeq(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOeq(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOeq(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOeq(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOeq(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUgt(RCE);
-        return Builder.FUgt(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUgt(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUgt(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUgt(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUgt(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUgt(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOgt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOgt(RCE);
-        return Builder.FOgt(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOgt(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOgt(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOgt(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOgt(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOgt(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUge(RCE);
-        return Builder.FUge(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUge(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUge(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUge(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUge(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUge(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOge(RCE);
-        return Builder.FOge(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOge(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOge(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOge(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOge(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOge(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUlt(RCE);
-        return Builder.FUlt(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUlt(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUlt(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUlt(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUlt(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUlt(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOlt(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOlt(RCE);
-        return Builder.FOlt(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOlt(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOlt(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOlt(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOlt(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOlt(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUle(RCE);
-        return Builder.FUle(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUle(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUle(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUle(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUle(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUle(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOle(RCE);
-        return Builder.FOle(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOle(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOle(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOle(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOle(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOle(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FUne(RCE);
-        return Builder.FUne(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FUne(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FUne(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FUne(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FUne(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FUne(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
 
     virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-      if (ConstantExpr *LCE = dyn_cast<ConstantExpr>(LHS)) {
-        if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS))
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
           return LCE->FOne(RCE);
-        return Builder.FOne(LCE, cast<NonConstantExpr>(RHS));
+        return Builder.FOne(LCE, cast<FNonConstantExpr>(RHS));
       }
-      else if (ConstantExpr *RCE = dyn_cast<ConstantExpr>(RHS)) {
-        return Builder.FOne(cast<NonConstantExpr>(LHS), RCE);
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FOne(cast<FNonConstantExpr>(LHS), RCE);
       }
 
-      return Builder.FOne(cast<NonConstantExpr>(LHS),
-                          cast<NonConstantExpr>(RHS));
+      return Builder.FOne(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
+    }
+
+    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS) {
+      if (ConstantExpr *ce = dyn_cast<ConstantExpr>(LHS))
+      {
+        return ce->ExplicitFloat();
+      }
+      if (SelectExpr *se = dyn_cast<SelectExpr>(LHS))
+      {
+        ref<Expr> t = ExplicitFloatExpr::create(se->trueExpr);
+        ref<Expr> f = ExplicitFloatExpr::create(se->falseExpr);
+
+        return FSelectExpr::create(se->cond, t, f);
+      }
+      return Builder.ExplicitFloat(cast<NonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(Cond))
+        return CE->isTrue() ? LHS : RHS;
+
+      return Builder.Select(cast<FNonConstantExpr>(Cond), LHS, RHS);
+    }
+
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
+        return CE->FExt(W, RM);
+
+      return Builder.FExt(cast<FNonConstantExpr>(LHS), W, RM);
+    }
+
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->UToF(W, RM);
+
+      return Builder.UToF(cast<NonConstantExpr>(LHS), W, RM);
+    }
+
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(LHS))
+        return CE->SToF(W, RM);
+
+      return Builder.SToF(cast<NonConstantExpr>(LHS), W, RM);
+    }
+
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) {
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
+        return CE->FAbs();
+
+      return Builder.FAbs(cast<FNonConstantExpr>(LHS));
+    }
+
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
+        return CE->FSqrt(RM);
+
+      return Builder.FSqrt(cast<FNonConstantExpr>(LHS), RM);
+    }
+
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *CE = dyn_cast<FConstantExpr>(LHS))
+        return CE->FNearbyInt(RM);
+
+      return Builder.FNearbyInt(cast<FNonConstantExpr>(LHS), RM);
+    }
+
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FAdd(RCE, RM);
+        return Builder.FAdd(LCE, cast<FNonConstantExpr>(RHS), RM);
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FAdd(cast<FNonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FAdd(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS), RM);
+    }
+
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FSub(RCE, RM);
+        return Builder.FSub(LCE, cast<FNonConstantExpr>(RHS), RM);
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FSub(cast<FNonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FSub(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS), RM);
+    }
+
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FMul(RCE, RM);
+        return Builder.FMul(LCE, cast<FNonConstantExpr>(RHS), RM);
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FMul(cast<FNonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FMul(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS), RM);
+    }
+
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FDiv(RCE, RM);
+        return Builder.FDiv(LCE, cast<FNonConstantExpr>(RHS), RM);
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FDiv(cast<FNonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FDiv(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS), RM);
+    }
+
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FRem(RCE, RM);
+        return Builder.FRem(LCE, cast<FNonConstantExpr>(RHS), RM);
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FRem(cast<FNonConstantExpr>(LHS), RCE, RM);
+      }
+
+      return Builder.FRem(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS), RM);
+    }
+
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FMin(RCE);
+        return Builder.FMin(LCE, cast<FNonConstantExpr>(RHS));
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FMin(cast<FNonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FMin(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
+    }
+
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+      if (FConstantExpr *LCE = dyn_cast<FConstantExpr>(LHS)) {
+        if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS))
+          return LCE->FMax(RCE);
+        return Builder.FMax(LCE, cast<FNonConstantExpr>(RHS));
+      }
+      else if (FConstantExpr *RCE = dyn_cast<FConstantExpr>(RHS)) {
+        return Builder.FMax(cast<FNonConstantExpr>(LHS), RCE);
+      }
+
+      return Builder.FMax(cast<FNonConstantExpr>(LHS),
+                          cast<FNonConstantExpr>(RHS));
     }
   };
 

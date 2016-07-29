@@ -536,10 +536,30 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           ctx);
     }
 
-    if (CE->getType() == Expr::FloatingPoint)
-      return bv_to_float(Res);
-
     return Res;
+  }
+
+  case Expr::FConstant: {
+    FConstantExpr * CE = cast<FConstantExpr>(e);
+    *width_out = CE->getWidth();
+
+    switch (*width_out)
+    {
+    case Expr::Fl32:
+      return Z3ASTHandle(Z3_mk_fpa_numeral_float(ctx, CE->getAPValue().convertToFloat(), Z3_mk_fpa_sort_32(ctx)), ctx);
+    case Expr::Fl64:
+      return Z3ASTHandle(Z3_mk_fpa_numeral_double(ctx, CE->getAPValue().convertToDouble(), Z3_mk_fpa_sort_64(ctx)), ctx);
+    case Expr::Fl80:
+      uint8_t sign = CE->getAPValue().bitcastToAPInt().getRawData()[0] >> 15 && 0x1;
+      uint16_t exp = CE->getAPValue().bitcastToAPInt().getRawData()[0] && 0x7FFF;
+      uint64_t mnt = CE->getAPValue().bitcastToAPInt().getRawData()[1];
+
+      return Z3ASTHandle(Z3_mk_fpa_fp(ctx,
+                                      Z3_mk_unsigned_int(ctx, exp, Z3_mk_bv_sort(ctx, 15)),
+                                      Z3_mk_unsigned_int(ctx, mnt, Z3_mk_bv_sort(ctx, 64)),
+                                      Z3_mk_unsigned_int(ctx, sign, Z3_mk_bv_sort(ctx, 1))),
+                         ctx);
+    }
   }
 
   // Special

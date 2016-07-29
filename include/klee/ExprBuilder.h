@@ -34,18 +34,13 @@ namespace klee {
                               unsigned Offset, Expr::Width W) = 0;
     virtual ref<Expr> ZExt(const ref<Expr> &LHS, Expr::Width W) = 0;
     virtual ref<Expr> SExt(const ref<Expr> &LHS, Expr::Width W) = 0;
-    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
     virtual ref<Expr> FToU(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
     virtual ref<Expr> FToS(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FAbs(const ref<Expr> &LHS) = 0;
+    virtual ref<Expr> Not(const ref<Expr> &LHS) = 0;
     virtual ref<Expr> FpClassify(const ref<Expr> &LHS) = 0;
     virtual ref<Expr> FIsFinite(const ref<Expr> &LHS) = 0;
     virtual ref<Expr> FIsNan(const ref<Expr> &LHS) = 0;
     virtual ref<Expr> FIsInf(const ref<Expr> &LHS) = 0;
-    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) = 0;
     virtual ref<Expr> Add(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Sub(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Mul(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
@@ -53,20 +48,12 @@ namespace klee {
     virtual ref<Expr> SDiv(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> URem(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> SRem(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
-    virtual ref<Expr> Not(const ref<Expr> &LHS) = 0;
     virtual ref<Expr> And(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Or(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Xor(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Shl(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> LShr(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> AShr(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
-    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
-    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
-    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Eq(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Ne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> Ult(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
@@ -91,6 +78,21 @@ namespace klee {
     virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS) = 0;
+    virtual ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> SToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FAbs(const ref<Expr> &LHS) = 0;
+    virtual ref<Expr> FSqrt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FNearbyInt(const ref<Expr> &LHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FAdd(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FSub(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FMul(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FDiv(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FRem(const ref<Expr> &LHS, const ref<Expr> &RHS, llvm::APFloat::roundingMode RM) = 0;
+    virtual ref<Expr> FMin(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+    virtual ref<Expr> FMax(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
 
     // Utility functions
 
