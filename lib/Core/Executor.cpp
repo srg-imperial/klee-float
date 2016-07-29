@@ -1135,32 +1135,34 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
                              ref<Expr> &e) {
   ref<Expr> result = e;
 
-  if (!isa<ConstantExpr>(e)) {
+  if (isa<IExpr>(e) && !isa<ConstantExpr>(e)) {
     ref<ConstantExpr> value;
     bool isTrue = false;
 
-    solver->setTimeout(coreSolverTimeout);      
-    if (solver->getValue(state, e, value))
-    {
-      bool success;
-
-      // need to consider NaNs as equal
-      if (value->getType() == Expr::FloatingPoint)
-      {
-        if (value->FpClassify()->getAPValue().getZExtValue() == FP_NAN)
-          success = solver->mustBeTrue(state, EqExpr::create(FIsNanExpr::create(e), ConstantExpr::create(1, sizeof(int) * 8)), isTrue);
-        else
-          success = solver->mustBeTrue(state, FOeqExpr::create(e, value), isTrue);
-      }
-      else
-        success = solver->mustBeTrue(state, EqExpr::create(e, value), isTrue);
-
-      if (success && isTrue)
-        result = value;
-    }
+    solver->setTimeout(coreSolverTimeout);
+    if (solver->getValue(state, e, value) &&
+        solver->mustBeTrue(state, EqExpr::create(e, value), isTrue) &&
+        isTrue)
+      result = value;
     solver->setTimeout(0);
   }
-  
+  else if (isa<FExpr>(e) && !isa<FConstantExpr>(e)) {
+    ref<ConstantExpr> value;
+    bool isTrue = false;
+
+    solver->setTimeout(coreSolverTimeout);
+    if (solver->getValue(state, e, value) &&
+        solver->mustBeTrue(state, 
+                           OrExpr::create(
+                             FOeqExpr::create(e, ExplicitFloatExpr::create(value)),
+                             AndExpr::create(
+                               FIsNanExpr::create(e), 
+                               FIsNanExpr::create(ExplicitFloatExpr::create(value)))),
+                           isTrue) &&
+        isTrue)
+      result = value;
+    solver->setTimeout(0);
+  }
   return result;
 }
 
@@ -1916,7 +1918,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> cond = eval(ki, 0, state).value;
     ref<Expr> tExpr = eval(ki, 1, state).value;
     ref<Expr> fExpr = eval(ki, 2, state).value;
-    ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
+    ref<Expr> result;
+    if (isa<FExpr>(tExpr)) {
+      assert(isa<FExpr>(fExpr));
+      result = FSelectExpr::create(cond, tExpr, fExpr);
+    }
+    else {
+       result = SelectExpr::create(cond, tExpr, fExpr);
+    }
     bindLocal(ki, state, result);
     break;
   }

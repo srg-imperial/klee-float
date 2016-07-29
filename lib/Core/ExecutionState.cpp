@@ -326,7 +326,15 @@ bool ExecutionState::merge(const ExecutionState &b) {
         // if one is null then by implication (we are at same pc)
         // we cannot reuse this local, so just ignore
       } else {
-        av = SelectExpr::create(inA, av, bv);
+        if (isa<FExpr>(av))
+        {
+          assert(isa<FExpr>(bv));
+          av = FSelectExpr::create(inA, av, bv);
+        }
+        else
+        {
+          av = SelectExpr::create(inA, av, bv);
+        }
       }
     }
   }
