@@ -228,8 +228,8 @@ public:
     FKindFirst=FConstant,
     FCastKindFirst=FExt,
     FCastKindLast=SToF,
-    FCastRoundKindFirst=FToU,
-    FCastRoundKindLast=FToS,
+    FCastRoundKindFirst=FExt,
+    FCastRoundKindLast=SToF,
     FUnaryKindFirst=FAbs,
     FUnaryKindLast=FNearbyInt,
     FUnaryRoundKindFirst=FSqrt,
@@ -1406,9 +1406,10 @@ class FCastRoundExpr : public FCastExpr {
 public:
   llvm::APFloat::roundingMode round;
 
-public:
+protected:
   FCastRoundExpr(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm) : FCastExpr(e, w), round(rm) {}
 
+public:
   llvm::APFloat::roundingMode getRoundingMode() const { return round; }
 
   int compareContents(const Expr &b) const {
@@ -1747,11 +1748,6 @@ public:
   /// Clients should generally not use the APInt value directly and instead use
   /// native FConstantExpr APIs.
   const llvm::APFloat &getAPValue() const { return value; }
-
-  /// toString - Return the constant value as a string
-  /// \param Res specifies the string for the result to be placed in
-  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
-  void toString(std::string &Res, unsigned radix = 10) const;
   
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
     assert(0 && "rebuild() on FConstantExpr");

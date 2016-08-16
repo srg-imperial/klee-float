@@ -129,6 +129,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
   switch(k) {
 #define X(C) case C: os << #C; break
     X(Constant);
+    X(FConstant);
     X(NotOptimized);
     X(Read);
     X(Select);
