@@ -1366,14 +1366,6 @@ int main(int argc, char **argv, char **envp) {
     mainModule = klee::linkWithLibrary(mainModule, libFilename);
   }
 
-  if (CoreSolverToUse == Z3_SOLVER)
-  {
-    // link in the declaration of fegetround
-    SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "fenv.bc");
-    mainModule = klee::linkWithLibrary(mainModule, Path.c_str());
-  }
-
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
   Function *mainFn = mainModule->getFunction(EntryPoint);
