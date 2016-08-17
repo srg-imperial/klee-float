@@ -346,11 +346,11 @@ public:
 	PC << "(w" << e->getWidth() << " ";
 
       if (e->getWidth() <= 64) {
-        PC << e->getZExtValue();
+        PC << e->getZExtValue() << "i";
       } else {
         std::string S;
         e->toString(S);
-        PC << S;
+        PC << S << "i";
       }
 
       if (printWidth)
@@ -368,7 +368,7 @@ public:
 
 	std::string S;
 	e->toString(S);
-	PC << S;
+	PC << S << "f";
 
     if (printWidth)
       PC << ")";

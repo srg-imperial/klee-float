@@ -1161,9 +1161,6 @@ ref<Expr> FSelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
   assert(c->getWidth() == Bool && "type mismatch");
   assert(kt == f->getWidth() && "type mismatch");
 
-  floatArg(t);
-  floatArg(f);
-
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(c)) {
     return CE->isTrue() ? t : f;
   }
@@ -1591,7 +1588,6 @@ BCREATE(AShrExpr, AShr)
 
 #define FTOI_UCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &e) {       \
-  floatArg(e);                                        \
   if (FConstantExpr *ce = dyn_cast<FConstantExpr>(e)) \
       return ce->_op();                               \
   return _e_op ## _create(e);                         \
@@ -1609,7 +1605,6 @@ FTOI_UCREATE(FIsInfExpr, FIsInf)
 
 #define FFUCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &e) {       \
-  floatArg(e);                                        \
   if (FConstantExpr *ce = dyn_cast<FConstantExpr>(e)) \
       return ce->_op();                               \
   return _e_op ## _create(e);                         \
@@ -1621,7 +1616,6 @@ FFUCREATE(FAbsExpr, FAbs)
 
 #define FFU_RM_CREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &e, llvm::APFloat::roundingMode rm) { \
-  floatArg(e);                                                                  \
   if (FConstantExpr *ce = dyn_cast<FConstantExpr>(e))                           \
       return ce->_op(rm);                                                       \
   return _e_op ## _create(e, rm);                                               \
@@ -1839,7 +1833,6 @@ CMPCREATE(SleExpr, Sle)
 static ref<Expr> FExtExpr_create(const ref<Expr> &e, Expr::Width w, llvm::APFloat::roundingMode rm) { return FExtExpr::alloc(e, w, rm); }
 
 ref<Expr> FExtExpr::create(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm) {
-  floatArg(e);
   if (FConstantExpr *ce = dyn_cast<FConstantExpr>(e))
     return ce->FExt(w, rm);
   return FExtExpr_create(e, w, rm);
@@ -1847,7 +1840,6 @@ ref<Expr> FExtExpr::create(const ref<Expr> &e, Width w, llvm::APFloat::roundingM
 
 #define FTOI_CAST_CREATE(_e_op, _op)                                                     \
 ref<Expr>  _e_op ::create(const ref<Expr> &e, Width w, llvm::APFloat::roundingMode rm) { \
-  floatArg(e);                                                                           \
   if (FConstantExpr *ce = dyn_cast<FConstantExpr>(e))                                    \
     return ce->_op(w, rm);                                                               \
   return _e_op ## _create(e, w, rm);                                                     \
@@ -1875,8 +1867,6 @@ ITOF_CAST_CREATE(SToFExpr, SToF)
 #define FBCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
   assert(l->getWidth()==r->getWidth() && "type mismatch");          \
-  floatArg(l);                                                      \
-  floatArg(r);                                                      \
   if (FConstantExpr *cl = dyn_cast<FConstantExpr>(l))               \
     if (FConstantExpr *cr = dyn_cast<FConstantExpr>(r))             \
       return cl->_op(cr);                                           \
@@ -1892,8 +1882,6 @@ FBCREATE(FMaxExpr, FMax)
 #define FB_RM_CREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r, llvm::APFloat::roundingMode rm) { \
   assert(l->getWidth()==r->getWidth() && "type mismatch");                                          \
-  floatArg(l);                                                                                      \
-  floatArg(r);                                                                                      \
   if (FConstantExpr *cl = dyn_cast<FConstantExpr>(l))                                               \
     if (FConstantExpr *cr = dyn_cast<FConstantExpr>(r))                                             \
       return cl->_op(cr, rm);                                                                       \
@@ -1915,8 +1903,6 @@ FB_RM_CREATE(FRemExpr, FRem)
 #define FCMPCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {     \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
-  floatArg(l);                                                          \
-  floatArg(r);                                                          \
   if (FConstantExpr *cl = dyn_cast<FConstantExpr>(l))                   \
     if (FConstantExpr *cr = dyn_cast<FConstantExpr>(r))                 \
       return cl->_op(cr);                                               \

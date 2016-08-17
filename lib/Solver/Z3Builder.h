@@ -141,6 +141,7 @@ private:
 
   // Floating-point operations
   Z3ASTHandle bv_to_float(Z3ASTHandle expr);
+  Z3ASTHandle float_to_bv(Z3ASTHandle expr);
   Z3ASTHandle isNanExpr(Z3ASTHandle expr);
   Z3ASTHandle isInfinityExpr(Z3ASTHandle expr);
   Z3ASTHandle isFPZeroExpr(Z3ASTHandle expr);
