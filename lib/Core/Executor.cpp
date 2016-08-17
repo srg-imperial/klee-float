@@ -3388,6 +3388,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
         
+		if (target->inst->getType()->isFloatingPointTy())
+          result = ExplicitFloatExpr::create(result);
         bindLocal(target, state, result);
       }
 
@@ -3428,6 +3430,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         }
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
+		if (target->inst->getType()->isFloatingPointTy())
+          result = ExplicitFloatExpr::create(result);
         bindLocal(target, *bound, result);
       }
     }
