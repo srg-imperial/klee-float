@@ -45,10 +45,10 @@ using namespace llvm;
 
 namespace klee {
 
-  ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce) {
+  ref<klee::Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce) {
     LLVM_TYPE_Q llvm::Type *type = ce->getType();
 
-    ref<ConstantExpr> op1(0), op2(0), op3(0);
+    ref<Expr> op1(0), op2(0), op3(0);
     int numOperands = ce->getNumOperands();
 
     if (numOperands > 0) op1 = evalConstant(ce->getOperand(0));
@@ -63,32 +63,32 @@ namespace klee {
       abort();
 
     case Instruction::Trunc: 
-      return op1->Extract(0, getWidthForLLVMType(type));
-    case Instruction::ZExt:  return op1->ZExt(getWidthForLLVMType(type));
-    case Instruction::SExt:  return op1->SExt(getWidthForLLVMType(type));
-    case Instruction::Add:   return op1->Add(op2);
-    case Instruction::Sub:   return op1->Sub(op2);
-    case Instruction::Mul:   return op1->Mul(op2);
-    case Instruction::SDiv:  return op1->SDiv(op2);
-    case Instruction::UDiv:  return op1->UDiv(op2);
-    case Instruction::SRem:  return op1->SRem(op2);
-    case Instruction::URem:  return op1->URem(op2);
-    case Instruction::And:   return op1->And(op2);
-    case Instruction::Or:    return op1->Or(op2);
-    case Instruction::Xor:   return op1->Xor(op2);
-    case Instruction::Shl:   return op1->Shl(op2);
-    case Instruction::LShr:  return op1->LShr(op2);
-    case Instruction::AShr:  return op1->AShr(op2);
-    case Instruction::BitCast:  return op1;
+      return cast<ConstantExpr>(op1)->Extract(0, getWidthForLLVMType(type));
+    case Instruction::ZExt:  return cast<ConstantExpr>(op1)->ZExt(getWidthForLLVMType(type));
+    case Instruction::SExt:  return cast<ConstantExpr>(op1)->SExt(getWidthForLLVMType(type));
+    case Instruction::Add:   return cast<ConstantExpr>(op1)->Add(cast<ConstantExpr>(op2));
+    case Instruction::Sub:   return cast<ConstantExpr>(op1)->Sub(cast<ConstantExpr>(op2));
+    case Instruction::Mul:   return cast<ConstantExpr>(op1)->Mul(cast<ConstantExpr>(op2));
+    case Instruction::SDiv:  return cast<ConstantExpr>(op1)->SDiv(cast<ConstantExpr>(op2));
+    case Instruction::UDiv:  return cast<ConstantExpr>(op1)->UDiv(cast<ConstantExpr>(op2));
+    case Instruction::SRem:  return cast<ConstantExpr>(op1)->SRem(cast<ConstantExpr>(op2));
+    case Instruction::URem:  return cast<ConstantExpr>(op1)->URem(cast<ConstantExpr>(op2));
+    case Instruction::And:   return cast<ConstantExpr>(op1)->And(cast<ConstantExpr>(op2));
+    case Instruction::Or:    return cast<ConstantExpr>(op1)->Or(cast<ConstantExpr>(op2));
+    case Instruction::Xor:   return cast<ConstantExpr>(op1)->Xor(cast<ConstantExpr>(op2));
+    case Instruction::Shl:   return cast<ConstantExpr>(op1)->Shl(cast<ConstantExpr>(op2));
+    case Instruction::LShr:  return cast<ConstantExpr>(op1)->LShr(cast<ConstantExpr>(op2));
+    case Instruction::AShr:  return cast<ConstantExpr>(op1)->AShr(cast<ConstantExpr>(op2));
+    case Instruction::BitCast:  return cast<ConstantExpr>(op1);
 
     case Instruction::IntToPtr:
-      return op1->ZExt(getWidthForLLVMType(type));
+      return cast<ConstantExpr>(op1)->ZExt(getWidthForLLVMType(type));
 
     case Instruction::PtrToInt:
-      return op1->ZExt(getWidthForLLVMType(type));
+      return cast<ConstantExpr>(op1)->ZExt(getWidthForLLVMType(type));
 
     case Instruction::GetElementPtr: {
-      ref<ConstantExpr> base = op1->ZExt(Context::get().getPointerWidth());
+      ref<ConstantExpr> base = cast<ConstantExpr>(op1)->ZExt(Context::get().getPointerWidth());
 
       for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
            ii != ie; ++ii) {
@@ -105,7 +105,7 @@ namespace klee {
         } else {
           const SequentialType *set = cast<SequentialType>(*ii);
           ref<ConstantExpr> index = 
-            evalConstant(cast<Constant>(ii.getOperand()));
+            cast<ConstantExpr>(evalConstant(cast<Constant>(ii.getOperand())));
           unsigned elementSize = 
             kmodule->targetData->getTypeStoreSize(set->getElementType());
 
@@ -123,16 +123,16 @@ namespace klee {
     case Instruction::ICmp: {
       switch(ce->getPredicate()) {
       default: assert(0 && "unhandled ICmp predicate");
-      case ICmpInst::ICMP_EQ:  return op1->Eq(op2);
-      case ICmpInst::ICMP_NE:  return op1->Ne(op2);
-      case ICmpInst::ICMP_UGT: return op1->Ugt(op2);
-      case ICmpInst::ICMP_UGE: return op1->Uge(op2);
-      case ICmpInst::ICMP_ULT: return op1->Ult(op2);
-      case ICmpInst::ICMP_ULE: return op1->Ule(op2);
-      case ICmpInst::ICMP_SGT: return op1->Sgt(op2);
-      case ICmpInst::ICMP_SGE: return op1->Sge(op2);
-      case ICmpInst::ICMP_SLT: return op1->Slt(op2);
-      case ICmpInst::ICMP_SLE: return op1->Sle(op2);
+      case ICmpInst::ICMP_EQ:  return cast<ConstantExpr>(op1)->Eq(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_NE:  return cast<ConstantExpr>(op1)->Ne(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_UGT: return cast<ConstantExpr>(op1)->Ugt(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_UGE: return cast<ConstantExpr>(op1)->Uge(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_ULT: return cast<ConstantExpr>(op1)->Ult(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_ULE: return cast<ConstantExpr>(op1)->Ule(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_SGT: return cast<ConstantExpr>(op1)->Sgt(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_SGE: return cast<ConstantExpr>(op1)->Sge(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_SLT: return cast<ConstantExpr>(op1)->Slt(cast<ConstantExpr>(op2));
+      case ICmpInst::ICMP_SLE: return cast<ConstantExpr>(op1)->Sle(cast<ConstantExpr>(op2));
       }
     }
 

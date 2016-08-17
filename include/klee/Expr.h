@@ -130,6 +130,8 @@ public:
     SExt,
     FToU,
     FToS,
+    ExplicitFloat,
+	ExplicitInt,
 
     // Bit
     Not,
@@ -187,7 +189,6 @@ public:
 
     // Float
     FConstant,
-    ExplicitFloat,
 
     // Special
     FSelect,
@@ -1036,6 +1037,7 @@ UNARY_EXPR_CLASS(FpClassify)
 UNARY_EXPR_CLASS(FIsFinite)
 UNARY_EXPR_CLASS(FIsNan)
 UNARY_EXPR_CLASS(FIsInf)
+UNARY_EXPR_CLASS(ExplicitInt)
 
 // Arithmetic/Bit Exprs
 
@@ -1212,10 +1214,6 @@ public:
     ref<ConstantExpr> r(new ConstantExpr(v));
     r->computeHash();
     return r;
-  }
-
-  static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
-    return alloc(f.bitcastToAPInt());
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {
@@ -1685,6 +1683,11 @@ public:
   /// Clients should generally not use the APInt value directly and instead use
   /// native FConstantExpr APIs.
   const llvm::APFloat &getAPValue() const { return value; }
+
+  /// toString - Return the constant value as a string
+  /// \param Res specifies the string for the result to be placed in
+  /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
+  void toString(std::string &Res) const;
   
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
     assert(0 && "rebuild() on FConstantExpr");
@@ -1743,6 +1746,7 @@ public:
   ref<ConstantExpr> FOle(const ref<FConstantExpr> &RHS);
   ref<ConstantExpr> FUne(const ref<FConstantExpr> &RHS);
   ref<ConstantExpr> FOne(const ref<FConstantExpr> &RHS);
+  ref<ConstantExpr> ExplicitInt();
 };
 
 
