@@ -355,13 +355,31 @@ public:
 
       if (printWidth)
 	PC << ")";
-    }    
+    }
+  }
+
+  void printFConst(const ref<FConstantExpr> &e, PrintContext &PC, 
+                  bool printWidth) {
+    if (PCAllConstWidths)
+      printWidth = true;
+    
+    if (printWidth)
+      PC << "(w" << e->getWidth() << " ";
+
+	std::string S;
+	e->toString(S);
+	PC << S;
+
+    if (printWidth)
+      PC << ")";
   }
 
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
       printConst(CE, PC, printConstWidth);
-    else {
+	} else if(FConstantExpr *FCE = dyn_cast<FConstantExpr>(e)) {
+      printFConst(FCE, PC, printConstWidth);
+    } else {
       std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
       if (it!=bindings.end()) {
         PC << 'N' << it->second;

@@ -142,6 +142,8 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FToS);
     X(UToF);
     X(SToF);
+    X(ExplicitInt);
+    X(ExplicitFloat);
     X(FAbs);
     X(FpClassify);
     X(FIsFinite);
@@ -358,6 +360,7 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       UNARY_EXPR_CASE(FIsInf);
 
       UNARY_EXPR_CASE(ExplicitFloat);
+      UNARY_EXPR_CASE(ExplicitInt);
       
       UNARY_RM_EXPR_CASE(FSqrt);
       UNARY_RM_EXPR_CASE(FNearbyInt);
@@ -482,6 +485,12 @@ void ConstantExpr::toMemory(void *address) {
 
 void ConstantExpr::toString(std::string &Res, unsigned radix) const {
   Res = value.toString(radix, false);
+}
+
+void FConstantExpr::toString(std::string &Res) const {
+  llvm::SmallString<100> F;
+  value.toString(F, 0, 0);
+  Res = F.str();
 }
 
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
@@ -831,6 +840,10 @@ ref<ConstantExpr> FConstantExpr::FOne(const ref<FConstantExpr> &RHS) {
 
   bool Result = CmpRes != APFloat::cmpUnordered && CmpRes != APFloat::cmpEqual;
   return ConstantExpr::alloc(Result, Expr::Bool);
+}
+
+ref<ConstantExpr> FConstantExpr::ExplicitInt() {
+  return ConstantExpr::alloc(value.bitcastToAPInt());
 }
 
 ref<FConstantExpr> ConstantExpr::ExplicitFloat() {
@@ -1953,4 +1966,19 @@ ref<Expr> ExplicitFloatExpr::create(const ref<Expr> &e) {
     return FSelectExpr::create(se->cond, t, f);
   }
   return ExplicitFloatExpr::alloc(e);
+}
+
+ref<Expr> ExplicitIntExpr::create(const ref<Expr> &e) {
+  if (FConstantExpr *fce = dyn_cast<FConstantExpr>(e))
+  {
+    return fce->ExplicitInt();
+  }
+  if (SelectExpr *se = dyn_cast<SelectExpr>(e))
+  {
+    ref<Expr> t = ExplicitIntExpr::create(se->trueExpr);
+    ref<Expr> f = ExplicitIntExpr::create(se->falseExpr);
+
+    return FSelectExpr::create(se->cond, t, f);
+  }
+  return ExplicitIntExpr::alloc(e);
 }

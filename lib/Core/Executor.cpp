@@ -498,7 +498,9 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
 #endif
   } else if (!isa<UndefValue>(c)) {
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
-    ref<ConstantExpr> C = evalConstant(c);
+    ref<Expr> E = evalConstant(c);
+	ref<ConstantExpr> C = dyn_cast<ConstantExpr>(E);
+	if(&*C == NULL) C = cast<FConstantExpr>(E)->ExplicitInt();
 
     // Extend the constant if necessary;
     assert(StoreBits >= C->getWidth() && "Invalid store size!");
@@ -1041,14 +1043,14 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
 
-ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
+ref<klee::Expr> Executor::evalConstant(const Constant *c) {
   if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
     return evalConstantExpr(ce);
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
     } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
-      return ConstantExpr::alloc(cf->getValueAPF());
+      return FConstantExpr::alloc(cf->getValueAPF());
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
       return globalAddresses.find(gv)->second;
     } else if (isa<ConstantPointerNull>(c)) {
@@ -2240,7 +2242,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.add(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2264,7 +2266,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.subtract(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2289,7 +2291,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.multiply(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2314,7 +2316,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.divide(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2339,7 +2341,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Res(left->getAPValue());
     Res.mod(APFloat(right->getAPValue()), state.roundingMode);
 #endif
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -2365,7 +2367,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.convert(*fpWidthToSemantics(resultType),
                 state.roundingMode,
                 &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } //else fall through to FPExt
 
@@ -2385,7 +2387,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Res.convert(*fpWidthToSemantics(resultType),
                 state.roundingMode,
                 &losesInfo);
-    bindLocal(ki, state, ConstantExpr::alloc(Res));
+    bindLocal(ki, state, FConstantExpr::alloc(Res));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
@@ -2467,7 +2469,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat f(*semantics, 0);
     f.convertFromAPInt(arg->getAPValue(), false, state.roundingMode);
 
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    bindLocal(ki, state, FConstantExpr::alloc(f));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
@@ -2489,7 +2491,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat f(*semantics, 0);
     f.convertFromAPInt(arg->getAPValue(), true, state.roundingMode);
 
-    bindLocal(ki, state, ConstantExpr::alloc(f));
+    bindLocal(ki, state, FConstantExpr::alloc(f));
     break;
   } else {
     CastInst *ci = cast<CastInst>(i);
@@ -2821,7 +2823,7 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
       Value *operand = ii.getOperand();
       if (Constant *c = dyn_cast<Constant>(operand)) {
         ref<ConstantExpr> index = 
-          evalConstant(c)->SExt(Context::get().getPointerWidth());
+          cast<ConstantExpr>(evalConstant(c))->SExt(Context::get().getPointerWidth());
         ref<ConstantExpr> addend = 
           index->Mul(ConstantExpr::alloc(elementSize,
                                          Context::get().getPointerWidth()));
