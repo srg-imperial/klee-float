@@ -560,13 +560,19 @@ void SpecialFunctionHandler::handlePrintRange(ExecutionState &state,
   llvm::errs() << msg_str << ":" << arguments[1];
   if (!isa<ConstantExpr>(arguments[1])) {
     // FIXME: Pull into a unique value method?
-    ref<ConstantExpr> value;
+    ref<Expr> value;
     bool success __attribute__ ((unused)) = executor.solver->getValue(state, arguments[1], value);
     assert(success && "FIXME: Unhandled solver failure");
     bool res;
-    success = executor.solver->mustBeTrue(state, 
-                                          EqExpr::create(arguments[1], value), 
+	if(ConstantExpr *ce = dyn_cast<ConstantExpr>(value)) {
+      success = executor.solver->mustBeTrue(state, 
+                                          EqExpr::create(arguments[1], ce), 
                                           res);
+    } else if(FConstantExpr *fce = dyn_cast<FConstantExpr>(value)) {
+      success = executor.solver->mustBeTrue(state, 
+                                          FOeqExpr::create(arguments[1], fce), 
+                                          res);
+	} else assert(false && "FIXME: the solver should give one of the constant expression types");
     assert(success && "FIXME: Unhandled solver failure");
     if (res) {
       llvm::errs() << " == " << value;

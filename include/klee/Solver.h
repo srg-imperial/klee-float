@@ -166,7 +166,7 @@ namespace klee {
     /// satisfying assignment.
     ///
     /// \return True on success.
-    bool getValue(const Query&, ref<ConstantExpr> &result);
+    bool getValue(const Query&, ref<Expr> &result);
 
     /// getInitialValues - Compute the initial values for a list of objects.
     ///

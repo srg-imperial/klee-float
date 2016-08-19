@@ -38,7 +38,7 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
 }
 
 ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
-  if (isa<ConstantExpr>(e) || isa<FConstantExpr>(e)) {    
+  if (isa<ConstantExpr>(e) || isa<FConstantExpr>(e) || isa<FConstantExpr>(e)) {    
     return e;
   } else {
     Expr &ep = *e.get();
@@ -64,6 +64,8 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::SExt: res = visitSExt(static_cast<SExtExpr&>(ep)); break;
     case Expr::FToU: res = visitFToU(static_cast<FToUExpr&>(ep)); break;
     case Expr::FToS: res = visitFToS(static_cast<FToSExpr&>(ep)); break;
+    case Expr::ExplicitFloat: res = visitExplicitFloat(static_cast<ExplicitFloatExpr&>(ep)); break;
+    case Expr::ExplicitInt: res = visitExplicitInt(static_cast<ExplicitIntExpr&>(ep)); break;
     case Expr::Not: res = visitNot(static_cast<NotExpr&>(ep)); break;
     case Expr::FpClassify: res = visitFpClassify(static_cast<FpClassifyExpr&>(ep)); break;
     case Expr::FIsFinite: res = visitFIsFinite(static_cast<FIsFiniteExpr&>(ep)); break;
@@ -106,7 +108,6 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::FOle: res = visitFOle(static_cast<FOleExpr&>(ep)); break;
     case Expr::FUne: res = visitFUne(static_cast<FUneExpr&>(ep)); break;
     case Expr::FOne: res = visitFOne(static_cast<FOneExpr&>(ep)); break;
-    case Expr::ExplicitFloat: res = visitExplicitFloat(static_cast<ExplicitFloatExpr&>(ep)); break;
     case Expr::FSelect: res = visitFSelect(static_cast<FSelectExpr&>(ep)); break;
     case Expr::FExt: res = visitFExt(static_cast<FExtExpr&>(ep)); break;
     case Expr::UToF: res = visitUToF(static_cast<UToFExpr&>(ep)); break;
@@ -374,6 +375,10 @@ ExprVisitor::Action ExprVisitor::visitFOne(const FOneExpr&) {
 }
 
 ExprVisitor::Action ExprVisitor::visitExplicitFloat(const ExplicitFloatExpr&) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitExplicitInt(const ExplicitIntExpr&) {
   return Action::doChildren();
 }
 

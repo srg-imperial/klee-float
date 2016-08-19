@@ -81,10 +81,10 @@ bool AddressSpace::resolveOne(ExecutionState &state,
 
     // try cheap search, will succeed for any inbounds pointer
 
-    ref<ConstantExpr> cex;
+    ref<Expr> cex;
     if (!solver->getValue(state, address, cex))
       return false;
-    uint64_t example = cex->getZExtValue();
+    uint64_t example = cast<ConstantExpr>(cex)->getZExtValue();
     MemoryObject hack(example);
     const MemoryMap::value_type *res = objects.lookup_previous(&hack);
     
@@ -188,10 +188,10 @@ bool AddressSpace::resolve(ExecutionState &state,
     // to hit the fast path with exactly 2 queries). we could also
     // just get this by inspection of the expr.
     
-    ref<ConstantExpr> cex;
+    ref<Expr> cex;
     if (!solver->getValue(state, p, cex))
       return true;
-    uint64_t example = cex->getZExtValue();
+    uint64_t example = cast<ConstantExpr>(cex)->getZExtValue();
     MemoryObject hack(example);
     
     MemoryMap::iterator oi = objects.upper_bound(&hack);

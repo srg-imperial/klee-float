@@ -100,11 +100,11 @@ void SeedInfo::patchSeed(const ExecutionState &state,
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
-        ref<ConstantExpr> value;
+        ref<Expr> value;
         bool success = solver->getValue(tmp, read, value);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
-        it2->second[i] = value->getZExtValue(8);
+        it2->second[i] = cast<ConstantExpr>(value)->getZExtValue(8);
         tmp.addConstraint(EqExpr::create(read, 
                                          ConstantExpr::alloc(it2->second[i], 
                                                              Expr::Int8)));
@@ -137,11 +137,11 @@ void SeedInfo::patchSeed(const ExecutionState &state,
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
-        ref<ConstantExpr> value;
+        ref<Expr> value;
         bool success = solver->getValue(tmp, read, value);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
-        it->second[i] = value->getZExtValue(8);
+        it->second[i] = cast<ConstantExpr>(value)->getZExtValue(8);
         tmp.addConstraint(EqExpr::create(read, 
                                          ConstantExpr::alloc(it->second[i], 
                                                              Expr::Int8)));

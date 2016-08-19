@@ -325,7 +325,7 @@ Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
 }
 
 Z3ASTHandle Z3Builder::float_to_bv(Z3ASTHandle expr) {
-  assert(0 && "not implemented. fix this.");
+  return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, expr), ctx);
 }
 
 Z3ASTHandle Z3Builder::isNanExpr(Z3ASTHandle expr) {
@@ -745,7 +745,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::ExplicitFloat: {
     ExplicitFloatExpr *ce = cast<ExplicitFloatExpr>(e);
-    Z3ASTHandle src = construct(ce->expr, width_out);
+    Z3ASTHandle src = construct(ce->src, width_out); // FIXME: width argument?
 
     src = bv_to_float(src);
 
@@ -754,7 +754,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::ExplicitInt: {
     ExplicitIntExpr *ce = cast<ExplicitIntExpr>(e);
-    Z3ASTHandle src = construct(ce->expr, width_out);
+    Z3ASTHandle src = construct(ce->src, width_out); // FIXME: width argument?
 
     src = float_to_bv(src);
 

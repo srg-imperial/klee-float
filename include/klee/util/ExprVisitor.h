@@ -100,6 +100,7 @@ namespace klee {
     virtual Action visitFUne(const FUneExpr&);
     virtual Action visitFOne(const FOneExpr&);
     virtual Action visitExplicitFloat(const ExplicitFloatExpr&);
+    virtual Action visitExplicitInt(const ExplicitIntExpr&);
     virtual Action visitFSelect(const FSelectExpr&);
     virtual Action visitFExt(const FExtExpr&);
     virtual Action visitUToF(const UToFExpr&);
