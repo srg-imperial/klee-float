@@ -347,6 +347,8 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
 
       CAST_EXPR_CASE(ZExt);
       CAST_EXPR_CASE(SExt);
+      CAST_EXPR_CASE(ExplicitInt);
+      CAST_EXPR_CASE(ExplicitFloat);
       CAST_RM_EXPR_CASE(FExt);
       CAST_RM_EXPR_CASE(FToU);
       CAST_RM_EXPR_CASE(FToS);
@@ -359,9 +361,6 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       UNARY_EXPR_CASE(FIsNan);
       UNARY_EXPR_CASE(FIsInf);
 
-      UNARY_EXPR_CASE(ExplicitFloat);
-      UNARY_EXPR_CASE(ExplicitInt);
-      
       UNARY_RM_EXPR_CASE(FSqrt);
       UNARY_RM_EXPR_CASE(FNearbyInt);
       
@@ -526,17 +525,6 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
   default:
     return 0;
   }
-}
-
-static inline ref<Expr> floatArg(const ref<Expr>& arg)
-{
-  Expr::Kind k = arg->getKind();
-  if (k == Expr::Read || k == Expr::Concat || k == Expr::Constant)
-  {
-    return ExplicitFloatExpr::create(arg);
-  }
-  assert(k >= Expr::FKindFirst);
-  return arg;
 }
 
 ref<ConstantExpr> FConstantExpr::FToU(Width W, llvm::APFloat::roundingMode rm) {
@@ -842,13 +830,13 @@ ref<ConstantExpr> FConstantExpr::FOne(const ref<FConstantExpr> &RHS) {
   return ConstantExpr::alloc(Result, Expr::Bool);
 }
 
-ref<ConstantExpr> FConstantExpr::ExplicitInt() {
-  return ConstantExpr::alloc(value.bitcastToAPInt());
+ref<ConstantExpr> FConstantExpr::ExplicitInt(Width W) {
+  return ConstantExpr::alloc(value.bitcastToAPInt().zextOrTrunc(W)); // TODO: Figure out what really happens when e.g. 32 bit float is extended to 64 bit signed long long
 }
 
-ref<FConstantExpr> ConstantExpr::ExplicitFloat() {
+ref<FConstantExpr> ConstantExpr::ExplicitFloat(Width W) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
-  llvm::APFloat Res(*fpWidthToSemantics(getWidth()), value);
+  llvm::APFloat Res(*fpWidthToSemantics(W), value);
 #else
   llvm::APFloat Res(value);
 #endif
@@ -1551,8 +1539,8 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 }
 
 #define BCREATE_R(_e_op, _op, partialL, partialR) \
-ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  assert(l->getWidth()==r->getWidth() && "type mismatch");              \
+ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {     \
+  assert(l->getWidth() == r->getWidth() && "type mismatch");            \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                   \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
       return cl->_op(cr);                                               \
@@ -1939,32 +1927,44 @@ FCMPCREATE(FOleExpr, FOle)
 FCMPCREATE(FUneExpr, FUne)
 FCMPCREATE(FOneExpr, FOne)
 
-ref<Expr> ExplicitFloatExpr::create(const ref<Expr> &e) {
+ref<Expr> ExplicitFloatExpr::create(const ref<Expr> &e, Width w) {
   if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e))
   {
-    return ce->ExplicitFloat();
+    return ce->ExplicitFloat(w);
   }
   if (SelectExpr *se = dyn_cast<SelectExpr>(e))
   {
-    ref<Expr> t = ExplicitFloatExpr::create(se->trueExpr);
-    ref<Expr> f = ExplicitFloatExpr::create(se->falseExpr);
+    ref<Expr> t = ExplicitFloatExpr::create(se->trueExpr, w);
+    ref<Expr> f = ExplicitFloatExpr::create(se->falseExpr, w);
 
     return FSelectExpr::create(se->cond, t, f);
   }
-  return ExplicitFloatExpr::alloc(e);
+  if (ExplicitIntExpr *ie = dyn_cast<ExplicitIntExpr>(e)) {
+    if (ie->getWidth() == w) {
+      return ie->src;
+    } else assert(false && "double to int bitcasts of differeng lengths are not supported at the moment");
+  }
+  assert(!isa<FExpr>(e));
+  return ExplicitFloatExpr::alloc(e, w);
 }
 
-ref<Expr> ExplicitIntExpr::create(const ref<Expr> &e) {
+ref<Expr> ExplicitIntExpr::create(const ref<Expr> &e, Width w) {
   if (FConstantExpr *fce = dyn_cast<FConstantExpr>(e))
   {
-    return fce->ExplicitInt();
+    return fce->ExplicitInt(w);
   }
   if (SelectExpr *se = dyn_cast<SelectExpr>(e))
   {
-    ref<Expr> t = ExplicitIntExpr::create(se->trueExpr);
-    ref<Expr> f = ExplicitIntExpr::create(se->falseExpr);
+    ref<Expr> t = ExplicitIntExpr::create(se->trueExpr, w);
+    ref<Expr> f = ExplicitIntExpr::create(se->falseExpr, w);
 
     return FSelectExpr::create(se->cond, t, f);
   }
-  return ExplicitIntExpr::alloc(e);
+  if (ExplicitFloatExpr *fe = dyn_cast<ExplicitFloatExpr>(e)) {
+    if (fe->getWidth() == w) {
+      return fe->src;
+    } else assert(false && "double to int bitcasts of differeng lengths are not supported at the moment");
+  }
+  assert(isa<FExpr>(e));
+  return ExplicitIntExpr::alloc(e, w);
 }

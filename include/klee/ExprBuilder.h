@@ -78,7 +78,8 @@ namespace klee {
     virtual ref<Expr> FOle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> FUne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> FOne(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
-    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS) = 0;
+    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS, Expr::Width W) = 0;
+    virtual ref<Expr> ExplicitInt(const ref<Expr> &LHS, Expr::Width W) = 0;
     virtual ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
     virtual ref<Expr> FExt(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;
     virtual ref<Expr> UToF(const ref<Expr> &LHS, Expr::Width W, llvm::APFloat::roundingMode RM) = 0;

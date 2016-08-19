@@ -130,7 +130,6 @@ public:
     SExt,
     FToU,
     FToS,
-    ExplicitFloat,
 	ExplicitInt,
 
     // Bit
@@ -197,6 +196,7 @@ public:
     FExt,
     UToF,
     SToF,
+    ExplicitFloat,
 
     // Special functions
     FAbs,
@@ -217,7 +217,7 @@ public:
     LastKind=FMax,
 
     CastKindFirst=ZExt,
-    CastKindLast=FToS,
+    CastKindLast=ExplicitInt,
     CastRoundKindFirst=FToU,
     CastRoundKindLast=FToS,
     UnaryKindFirst=FpClassify,
@@ -228,11 +228,11 @@ public:
     CmpKindLast=FOne,
     FKindFirst=FConstant,
     FCastKindFirst=FExt,
-    FCastKindLast=SToF,
+    FCastKindLast=ExplicitFloat,
     FCastRoundKindFirst=FExt,
     FCastRoundKindLast=SToF,
     FUnaryKindFirst=FAbs,
-    FUnaryKindLast=FNearbyInt,
+    FUnaryKindLast=ExplicitFloat,
     FUnaryRoundKindFirst=FSqrt,
     FUnaryRoundKindLast=FNearbyInt,
     FBinaryKindFirst=FAdd,
@@ -984,6 +984,7 @@ public:                                                          \
 
 CAST_EXPR_CLASS(SExt)
 CAST_EXPR_CLASS(ZExt)
+CAST_EXPR_CLASS(ExplicitInt)
 
 // Casting with roundingMode
 
@@ -1087,7 +1088,6 @@ UNARY_EXPR_CLASS(FpClassify)
 UNARY_EXPR_CLASS(FIsFinite)
 UNARY_EXPR_CLASS(FIsNan)
 UNARY_EXPR_CLASS(FIsInf)
-UNARY_EXPR_CLASS(ExplicitInt)
 
 // Arithmetic/Bit Exprs
 
@@ -1351,7 +1351,7 @@ public:
   // Operations that take an int and return a float
   ref<FConstantExpr> UToF(Width W, llvm::APFloat::roundingMode RM);
   ref<FConstantExpr> SToF(Width W, llvm::APFloat::roundingMode RM);
-  ref<FConstantExpr> ExplicitFloat();
+  ref<FConstantExpr> ExplicitFloat(Width W);
 };
 
 class FExpr : public Expr {
@@ -1399,6 +1399,34 @@ public:
   }
   static bool classof(const FCastExpr *) { return true; }
 };
+
+#define FCAST_EXPR_CLASS(_class_kind)                             \
+class _class_kind ## Expr : public FCastExpr {                    \
+public:                                                          \
+  static const Kind kind = _class_kind;                          \
+  static const unsigned numKids = 1;                             \
+public:                                                          \
+    _class_kind ## Expr(ref<Expr> e, Width w) : FCastExpr(e,w) {} \
+    static ref<Expr> alloc(const ref<Expr> &e, Width w) {        \
+      ref<Expr> r(new _class_kind ## Expr(e, w));                \
+      r->computeHash();                                          \
+      return r;                                                  \
+    }                                                            \
+    static ref<Expr> create(const ref<Expr> &e, Width w);        \
+    Kind getKind() const { return _class_kind; }                 \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {          \
+      return create(kids[0], width);                             \
+    }                                                            \
+                                                                 \
+    static bool classof(const Expr *E) {                         \
+      return E->getKind() == Expr::_class_kind;                  \
+    }                                                            \
+    static bool classof(const  _class_kind ## Expr *) {          \
+      return true;                                               \
+    }                                                            \
+};                                                               \
+
+FCAST_EXPR_CLASS(ExplicitFloat)
 
 class FCastRoundExpr : public FCastExpr {
 public:
@@ -1498,7 +1526,6 @@ public:                                                  \
 };
 
 FLOAT_UNARY_EXPR_CLASS(FAbs)
-FLOAT_UNARY_EXPR_CLASS(ExplicitFloat)
 
 class FUnaryRoundExpr : public FUnaryExpr {
 public:
@@ -1809,7 +1836,7 @@ public:
   ref<ConstantExpr> FOle(const ref<FConstantExpr> &RHS);
   ref<ConstantExpr> FUne(const ref<FConstantExpr> &RHS);
   ref<ConstantExpr> FOne(const ref<FConstantExpr> &RHS);
-  ref<ConstantExpr> ExplicitInt();
+  ref<ConstantExpr> ExplicitInt(Width W);
 };
 
 

@@ -252,7 +252,7 @@ static bool EvaluateInputAST(const char *Filename,
                "FIXME: Support counterexamples for multiple values!");
         assert(QC->Query->isFalse() &&
                "FIXME: Support counterexamples with non-trivial query!");
-        ref<ConstantExpr> result;
+        ref<Expr> result;
         if (S->getValue(Query(ConstraintManager(QC->Constraints), 
                               QC->Values[0]),
                         result)) {

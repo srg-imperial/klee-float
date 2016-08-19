@@ -61,7 +61,7 @@ private:
   }
 
   bool isVerySimple(const ref<Expr> &e) { 
-    return isa<ConstantExpr>(e) || bindings.find(e)!=bindings.end();
+    return isa<ConstantExpr>(e) || isa<FConstantExpr>(e) || bindings.find(e)!=bindings.end();
   }
 
   bool isVerySimpleUpdate(const UpdateNode *un) {

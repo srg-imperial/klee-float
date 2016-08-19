@@ -500,7 +500,7 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
     ref<Expr> E = evalConstant(c);
 	ref<ConstantExpr> C = dyn_cast<ConstantExpr>(E);
-	if(&*C == NULL) C = cast<FConstantExpr>(E)->ExplicitInt();
+	if(C.isNull()) C = cast<FConstantExpr>(E)->ExplicitInt(E->getWidth()); // FIXME: this is broken for long doubles...
 
     // Extend the constant if necessary;
     assert(StoreBits >= C->getWidth() && "Invalid store size!");
@@ -745,13 +745,13 @@ void Executor::branch(ExecutionState &state,
            siie = seeds.end(); siit != siie; ++siit) {
       unsigned i;
       for (i=0; i<N; ++i) {
-        ref<ConstantExpr> res;
+        ref<Expr> res;
         bool success = 
           solver->getValue(state, siit->assignment.evaluate(conditions[i]), 
                            res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
-        if (res->isTrue())
+        if (cast<ConstantExpr>(res)->isTrue())
           break;
       }
       
@@ -805,11 +805,14 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         (MaxStaticCPForkPct<1. &&
          cpn && (cpn->statistics.getValue(stats::solverTime) > 
                  stats::solverTime*MaxStaticCPSolvePct))) {
-      ref<ConstantExpr> value; 
+      ref<Expr> value; 
       bool success = solver->getValue(current, condition, value);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      addConstraint(current, EqExpr::create(value, condition));
+      if (ConstantExpr *ce = dyn_cast<ConstantExpr>(value))
+        addConstraint(current, EqExpr::create(ce, condition));
+      else if (FConstantExpr *fce = dyn_cast<FConstantExpr>(value))
+        addConstraint(current, FOeqExpr::create(fce, condition));
       condition = value;
     }
   }
@@ -884,12 +887,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     // Is seed extension still ok here?
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
-      ref<ConstantExpr> res;
+      ref<Expr> res;
       bool success = 
         solver->getValue(current, siit->assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      if (res->isTrue()) {
+      if (cast<ConstantExpr>(res)->isTrue()) {
         trueSeed = true;
       } else {
         falseSeed = true;
@@ -945,9 +948,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       std::vector<SeedInfo> &falseSeeds = seedMap[falseState];
       for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
              siie = seeds.end(); siit != siie; ++siit) {
-        ref<ConstantExpr> res;
+        ref<Expr> tmp;
         bool success = 
-          solver->getValue(current, siit->assignment.evaluate(condition), res);
+          solver->getValue(current, siit->assignment.evaluate(condition), tmp);
+        ref<ConstantExpr> res = cast<ConstantExpr>(tmp);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         if (res->isTrue()) {
@@ -1138,7 +1142,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
   ref<Expr> result = e;
 
   if (isa<IExpr>(e) && !isa<ConstantExpr>(e)) {
-    ref<ConstantExpr> value;
+    ref<Expr> value;
     bool isTrue = false;
 
     solver->setTimeout(coreSolverTimeout);
@@ -1149,17 +1153,17 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
     solver->setTimeout(0);
   }
   else if (isa<FExpr>(e) && !isa<FConstantExpr>(e)) {
-    ref<ConstantExpr> value;
+    ref<Expr> value;
     bool isTrue = false;
 
     solver->setTimeout(coreSolverTimeout);
     if (solver->getValue(state, e, value) &&
         solver->mustBeTrue(state, 
                            OrExpr::create(
-                             FOeqExpr::create(e, ExplicitFloatExpr::create(value)),
+                             FOeqExpr::create(e, value),
                              AndExpr::create(
-                               FIsNanExpr::create(e), 
-                               FIsNanExpr::create(ExplicitFloatExpr::create(value)))),
+                               EqExpr::create(FIsNanExpr::create(e), ConstantExpr::create(0, 8*sizeof(int))), 
+                               EqExpr::create(FIsNanExpr::create(value), ConstantExpr::create(0, 8*sizeof(int))))), 
                            isTrue) &&
         isTrue)
       result = value;
@@ -1179,8 +1183,9 @@ Executor::toConstant(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
 
-  ref<ConstantExpr> value;
-  bool success = solver->getValue(state, e, value);
+  ref<Expr> tmp;
+  bool success = solver->getValue(state, e, tmp);
+  ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
   assert(success && "FIXME: Unhandled solver failure");
   (void) success;
 
@@ -1207,8 +1212,9 @@ void Executor::executeGetValue(ExecutionState &state,
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
-    ref<ConstantExpr> value;
-    bool success = solver->getValue(state, e, value);
+    ref<Expr> tmp;
+    bool success = solver->getValue(state, e, tmp);
+    ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
     bindLocal(target, state, value);
@@ -1216,9 +1222,10 @@ void Executor::executeGetValue(ExecutionState &state,
     std::set< ref<Expr> > values;
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
-      ref<ConstantExpr> value;
+      ref<Expr> tmp;
       bool success = 
-        solver->getValue(state, siit->assignment.evaluate(e), value);
+        solver->getValue(state, siit->assignment.evaluate(e), tmp);
+      ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       values.insert(value);
@@ -1874,8 +1881,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
          have already got a value. But in the end the caches should
          handle it for us, albeit with some overhead. */
       do {
-        ref<ConstantExpr> value;
-        bool success = solver->getValue(*free, v, value);
+        ref<Expr> tmp;
+        bool success = solver->getValue(*free, v, tmp);
+		ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         StatePair res = fork(*free, EqExpr::create(v, value), true);
@@ -3026,8 +3034,9 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     example = CE->getZExtValue();
   } else {
-    ref<ConstantExpr> value;
-    bool success = solver->getValue(state, address, value);
+    ref<Expr> tmp;
+    bool success = solver->getValue(state, address, tmp);
+	ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
     example = value->getZExtValue();
@@ -3273,8 +3282,9 @@ void Executor::callExternalFunction(ExecutionState &state,
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
        ae = arguments.end(); ai!=ae; ++ai) {
     if (AllowExternalSymCalls) { // don't bother checking uniqueness
-      ref<ConstantExpr> ce;
-      bool success = solver->getValue(state, *ai, ce);
+      ref<Expr> tmp;
+      bool success = solver->getValue(state, *ai, tmp);
+	  ref<ConstantExpr> ce = cast<ConstantExpr>(tmp);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       ce->toMemory(&args[wordIndex]);
@@ -3425,8 +3435,9 @@ void Executor::executeAlloc(ExecutionState &state,
     // return argument first). This shows up in pcre when llvm
     // collapses the size expression with a select.
 
-    ref<ConstantExpr> example;
-    bool success = solver->getValue(state, size, example);
+    ref<Expr> t;
+    bool success = solver->getValue(state, size, t);
+	ref<ConstantExpr> example = cast<ConstantExpr>(t);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
     
@@ -3447,18 +3458,19 @@ void Executor::executeAlloc(ExecutionState &state,
     
     if (fixedSize.second) { 
       // Check for exactly two values
-      ref<ConstantExpr> tmp;
+      ref<Expr> tmp;
       bool success = solver->getValue(*fixedSize.second, size, tmp);
+	  ref<ConstantExpr> ce = cast<ConstantExpr>(tmp);
       assert(success && "FIXME: Unhandled solver failure");      
       (void) success;
       bool res;
       success = solver->mustBeTrue(*fixedSize.second, 
-                                   EqExpr::create(tmp, size),
+                                   EqExpr::create(ce, size),
                                    res);
       assert(success && "FIXME: Unhandled solver failure");      
       (void) success;
       if (res) {
-        executeAlloc(*fixedSize.second, tmp, isLocal,
+        executeAlloc(*fixedSize.second, ce, isLocal,
                      target, zeroMemory, reallocFrom);
       } else {
         // See if a *really* big value is possible. If so assume
@@ -3479,7 +3491,7 @@ void Executor::executeAlloc(ExecutionState &state,
           llvm::raw_string_ostream info(Str);
           ExprPPrinter::printOne(info, "  size expr", size);
           info << "  concretization : " << example << "\n";
-          info << "  unbound example: " << tmp << "\n";
+          info << "  unbound example: " << ce << "\n";
           terminateStateOnError(*hugeSize.second, "concretized symbolic size",
                                 Model, NULL, info.str());
         }
@@ -3605,6 +3617,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           terminateStateOnError(state, "memory error: object read only",
                                 ReadOnly);
         } else {
+		  if (isa<FExpr>(value))
+            value = ExplicitIntExpr::create(value, value->getWidth());
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
         }          
@@ -3615,7 +3629,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           result = replaceReadWithSymbolic(state, result);
         
 		if (target->inst->getType()->isFloatingPointTy())
-          result = ExplicitFloatExpr::create(result);
+          result = ExplicitFloatExpr::create(result, result->getWidth());
         bindLocal(target, state, result);
       }
 
@@ -3650,13 +3664,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           terminateStateOnError(*bound, "memory error: object read only",
                                 ReadOnly);
         } else {
+		  if (isa<FExpr>(value))
+            value = ExplicitIntExpr::create(value, value->getWidth());
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), value);
         }
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 		if (target->inst->getType()->isFloatingPointTy())
-          result = ExplicitFloatExpr::create(result);
+          result = ExplicitFloatExpr::create(result, result->getWidth());
         bindLocal(target, *bound, result);
       }
     }

@@ -325,7 +325,7 @@ bool CexCachingSolver::computeValue(const Query& query,
     return false;
   assert(a && "computeValue() must have assignment");
   result = a->evaluate(query.expr);  
-  assert(isa<ConstantExpr>(result) && 
+  assert((isa<ConstantExpr>(result) || isa <FConstantExpr>(result)) && 
          "assignment evaluation did not result in constant");
   return true;
 }

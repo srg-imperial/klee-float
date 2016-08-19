@@ -230,8 +230,12 @@ namespace {
       return FOneExpr::alloc(LHS, RHS);
     }
 
-    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS) {
-      return ExplicitFloatExpr::alloc(LHS);
+    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS, Expr::Width W) {
+      return ExplicitFloatExpr::alloc(LHS, W);
+    }
+
+    virtual ref<Expr> ExplicitInt(const ref<Expr> &LHS, Expr::Width W) {
+      return ExplicitIntExpr::alloc(LHS, W);
     }
 
     virtual ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -519,8 +523,12 @@ namespace {
       return Base->FOne(LHS, RHS);
     }
 
-    ref<Expr> ExplicitFloat(const ref<Expr> &LHS) {
-      return Base->ExplicitFloat(LHS);
+    ref<Expr> ExplicitFloat(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->ExplicitFloat(LHS, W);
+    }
+
+    ref<Expr> ExplicitInt(const ref<Expr> &LHS, Expr::Width W) {
+      return Base->ExplicitInt(LHS, W);
     }
 
     ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) {
@@ -1207,19 +1215,34 @@ namespace {
                           cast<FNonConstantExpr>(RHS));
     }
 
-    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS) {
+    virtual ref<Expr> ExplicitFloat(const ref<Expr> &LHS, Expr::Width W) {
       if (ConstantExpr *ce = dyn_cast<ConstantExpr>(LHS))
       {
-        return ce->ExplicitFloat();
+        return ce->ExplicitFloat(W);
       }
       if (SelectExpr *se = dyn_cast<SelectExpr>(LHS))
       {
-        ref<Expr> t = ExplicitFloatExpr::create(se->trueExpr);
-        ref<Expr> f = ExplicitFloatExpr::create(se->falseExpr);
+        ref<Expr> t = ExplicitFloatExpr::create(se->trueExpr, W);
+        ref<Expr> f = ExplicitFloatExpr::create(se->falseExpr, W);
 
         return FSelectExpr::create(se->cond, t, f);
       }
-      return Builder.ExplicitFloat(cast<NonConstantExpr>(LHS));
+      return Builder.ExplicitFloat(cast<NonConstantExpr>(LHS), W);
+    }
+
+    virtual ref<Expr> ExplicitInt(const ref<Expr> &LHS, Expr::Width W) {
+      if (FConstantExpr *ce = dyn_cast<FConstantExpr>(LHS))
+      {
+        return ce->ExplicitInt(W);
+      }
+      if (SelectExpr *se = dyn_cast<SelectExpr>(LHS))
+      {
+        ref<Expr> t = ExplicitIntExpr::create(se->trueExpr, W);
+        ref<Expr> f = ExplicitIntExpr::create(se->falseExpr, W);
+
+        return FSelectExpr::create(se->cond, t, f);
+      }
+      return Builder.ExplicitInt(cast<FNonConstantExpr>(LHS), W);
     }
 
     virtual ref<Expr> FSelect(const ref<Expr> &Cond, const ref<Expr> &LHS, const ref<Expr> &RHS) {

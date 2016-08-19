@@ -56,8 +56,7 @@ namespace klee {
 
     bool mayBeFalse(const ExecutionState&, ref<Expr>, bool &result);
 
-    bool getValue(const ExecutionState &, ref<Expr> expr, 
-                  ref<ConstantExpr> &result);
+    bool getValue(const ExecutionState &, ref<Expr> expr, ref<Expr> &result);
 
     bool getInitialValues(const ExecutionState&, 
                           const std::vector<const Array*> &objects,
