@@ -855,7 +855,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
     assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FSqrt");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_sqrt(ctx, getRoundingModeAST(fe->getRoundingMode()), expr), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
     return result;
   }
 
@@ -865,7 +864,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
     assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FNearbyInt");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_round_to_integral(ctx, getRoundingModeAST(fe->getRoundingMode()), expr), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
     return result;
   }
 
@@ -1076,10 +1074,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FAdd");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FAdd");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_add(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1088,10 +1084,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FSub");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FSub");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_sub(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1100,10 +1094,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FMul");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FMul");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_mul(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1112,10 +1104,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FDiv");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FDiv");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_div(ctx, getRoundingModeAST(fe->getRoundingMode()), left, right), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1124,10 +1114,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FRem");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FRem");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_rem(ctx, left, right), ctx); // Z3's frem doesn't ask for rounding mode
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1136,10 +1124,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FMin");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FMin");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_min(ctx, left, right), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1148,10 +1134,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FMax");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FMax");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_max(ctx, left, right), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) &&
-           "width mismatch");
     return result;
   }
 
@@ -1218,7 +1202,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOrd");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOrd");
     *width_out = 1;
     Z3ASTHandle result = andExpr(notExpr(isNanExpr(left)), notExpr(isNanExpr(right)));
     return result;
@@ -1229,7 +1213,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUno");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUno");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right));
     return result;
@@ -1240,7 +1224,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUeq");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUeq");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx));
     return result;
@@ -1251,7 +1235,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOeq");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOeq");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx);
     return result;
@@ -1262,7 +1246,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUgt");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUgt");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx));
     return result;
@@ -1273,7 +1257,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOgt");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOgt");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_gt(ctx, left, right), ctx);
     return result;
@@ -1284,7 +1268,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUge");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUge");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx));
     return result;
@@ -1295,7 +1279,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOge");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOge");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_geq(ctx, left, right), ctx);
     return result;
@@ -1306,7 +1290,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUlt");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUlt");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx));
     return result;
@@ -1317,7 +1301,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOlt");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOlt");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_lt(ctx, left, right), ctx);
     return result;
@@ -1328,7 +1312,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUle");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUle");
     *width_out = 1;
     Z3ASTHandle result = orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx));
     return result;
@@ -1339,7 +1323,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOle");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOle");
     *width_out = 1;
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_leq(ctx, left, right), ctx);
     return result;
@@ -1350,7 +1334,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FUne");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FUne");
     *width_out = 1;
     Z3ASTHandle result = notExpr(Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx));
     return result;
@@ -1361,7 +1345,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(fe->left, width_out);
     Z3ASTHandle right = construct(fe->right, width_out);
 
-    assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FOne");
+    assert((*width_out == Expr::Fl32 || *width_out == Expr::Fl64 || *width_out == Expr::Fl80) && "non-float argument to FOne");
     *width_out = 1;
     Z3ASTHandle result = notExpr(orExpr(isNanExpr(left), isNanExpr(right), Z3ASTHandle(Z3_mk_fpa_eq(ctx, left, right), ctx)));
     return result;

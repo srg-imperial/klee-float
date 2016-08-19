@@ -358,8 +358,8 @@ public:
     }
   }
 
-  void printFConst(const ref<FConstantExpr> &e, PrintContext &PC, 
-                  bool printWidth) {
+  void printFConst(const ref<FConstantExpr> &e, PrintContext &PC, bool printWidth) {
+    printWidth = true;
     if (PCAllConstWidths)
       printWidth = true;
     
