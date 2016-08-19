@@ -769,7 +769,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
     assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FAbs");
     Z3ASTHandle result = Z3ASTHandle(Z3_mk_fpa_abs(ctx, expr), ctx);
-    assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
     return result;
   }
 
