@@ -265,7 +265,7 @@ Z3ASTHandle Z3Builder::andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
 }
 
 Z3ASTHandle Z3Builder::bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvand(ctx, lhs, rhs), ctx);
+  return Z3ASTHandle(Z3_mk_bvand(ctx, castToBitVector(lhs), castToBitVector(rhs)), ctx);
 }
 
 Z3ASTHandle Z3Builder::orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
@@ -1040,6 +1040,24 @@ Z3ASTHandle Z3Builder::castToFloat(Z3ASTHandle e) {
     assert(0 && "Sort cannot be cast to float");
   }
 }
+
+Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
+  Z3SortHandle currentSort = Z3SortHandle(Z3_get_sort(ctx, e), ctx);
+  Z3_sort_kind kind = Z3_get_sort_kind(ctx, currentSort);
+  switch (kind) {
+  case Z3_BV_SORT:
+    // Already a bitvector
+    return e;
+  case Z3_FLOATING_POINT_SORT: {
+    // Note this picks a single representation for NaN which means
+    // `castToBitVector(castToFloat(e))` might not equal `e`.
+    return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+  }
+  default:
+    assert(0 && "Sort cannot be cast to float");
+  }
+}
+
 
 Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
   // FIXME: Cache these

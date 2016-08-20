@@ -174,6 +174,7 @@ private:
 
   // Float casts
   Z3ASTHandle castToFloat(Z3ASTHandle e);
+  Z3ASTHandle castToBitVector(Z3ASTHandle e);
 
   Z3ASTHandle getRoundingModeSort(llvm::APFloat::roundingMode);
 
