@@ -210,7 +210,16 @@ int main() {
       }
       break;
     }
-    // FIXME: We need to test ConcatExpr, ReadExpr, and ExtractExpr but there isn't
+    case 31: {
+      // ExtractExpr
+      char small_value = 0;
+      // Trigger truncate llvm instruction. KLEE should build
+      // an ExtractExpr for this.
+      small_value = (int8_t) x;
+      newValue = small_value > 0;
+      break;
+    }
+    // FIXME: We need to test ConcatExpr and ReadExpr but there isn't
     // an obvious way to do that.
     default:
       break;
