@@ -6,11 +6,11 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 # the resulting image is unnecessarily large!
 
 ENV LLVM_VERSION=3.4 \
-    SOLVERS=STP:Z3 \
+    SOLVERS=Z3 \
     STP_VERSION=master \
     DISABLE_ASSERTIONS=0 \
     ENABLE_OPTIMIZED=1 \
-    KLEE_UCLIBC=klee_uclibc_v1.0.0 \
+    KLEE_UCLIBC=klee_0_9_29 \
     KLEE_SRC=/home/klee/klee_src \
     COVERAGE=0 \
     BUILD_DIR=/home/klee/klee_build
