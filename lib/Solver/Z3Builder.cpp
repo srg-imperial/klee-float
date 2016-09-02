@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
-
+#include <iostream>
 using namespace klee;
 
 namespace {
@@ -304,7 +304,7 @@ Z3ASTHandle Z3Builder::bvSignExtend(Z3ASTHandle src, unsigned width) {
 }
 
 Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
-  unsigned width = Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, expr), ctx));
+  unsigned width = getBVLength(expr);
   Z3SortHandle sort;
   switch (width) {
   case 16:
@@ -316,9 +316,36 @@ Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
   case 64:
     sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
     break;
-  case 80:
-    sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
-    break;
+  case 80: {
+    // turn the 80-bit bitvector into a 79-bit one, discarding the 63rd bit
+    sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
+
+    Z3_set_ast_print_mode(ctx, Z3_PRINT_SMTLIB_FULL);
+
+    Z3_ast signexp = Z3_mk_extract(ctx, 79, 64, expr);
+    
+    std::cout << "\n" << "signexp, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, signexp), ctx)) << " :\n" << Z3_ast_to_string(ctx, signexp) << "\n";
+    
+    Z3_ast signexpsimp = Z3_simplify(ctx, signexp);
+    
+    std::cout << "\n" << "signexp simplified, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, signexpsimp),ctx)) << ":\n" << Z3_ast_to_string(ctx, signexpsimp) << "\n";
+    
+    Z3_ast mnt = Z3_mk_extract(ctx, 62, 0, expr);
+    
+    std::cout << "\n" << "mnt, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, mnt), ctx)) << ":\n" << Z3_ast_to_string(ctx, mnt) << "\n";
+    
+    Z3_ast mntsimp = Z3_simplify(ctx, mnt);
+    
+    std::cout << "\n" << "mnt simplified:, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, mntsimp),ctx)) << "\n" << Z3_ast_to_string(ctx, mntsimp) << "\n";
+    
+//    Z3_ast conc = Z3_mk_concat(ctx, Z3_simplify(ctx, signexp), Z3_simplify(ctx, mnt));
+    Z3_ast conc = Z3_mk_concat(ctx, signexpsimp, mntsimp);
+
+    std::cout << "\n" << "conc, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, conc), ctx)) << ":\n" << Z3_ast_to_string(ctx, expr) << "\n";
+
+    expr = Z3ASTHandle(conc, ctx);
+   
+    break; }
   case 128:
     sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
     break;
@@ -327,7 +354,20 @@ Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
 }
 
 Z3ASTHandle Z3Builder::float_to_bv(Z3ASTHandle expr) {
-  return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, expr), ctx);
+  Z3ASTHandle ret = Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, expr), ctx);
+
+  if (getBVLength(ret) == 79)
+  {
+    Z3_ast sign = Z3_mk_extract(ctx, 78, 78, ret);
+    Z3_ast exp = Z3_mk_extract(ctx, 77, 63, ret);
+    Z3_ast mnt = Z3_mk_extract(ctx, 62, 0, ret);
+
+    // if the exponent is all zeros, bit 63 has to be 0, else it has to be 1
+    Z3ASTHandle ite = iteExpr(eqExpr(Z3ASTHandle(Z3_mk_bvredor(ctx, exp), ctx), bvZero(1)), bvZero(1), bvOne(1));
+
+    ret = Z3ASTHandle(Z3_mk_concat(ctx, Z3_mk_concat(ctx, Z3_mk_concat(ctx, sign, exp), ite), mnt), ctx);
+  }
+  return ret;
 }
 
 Z3ASTHandle Z3Builder::isNanExpr(Z3ASTHandle expr) {
@@ -555,14 +595,18 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     case Expr::Fl64:
       return Z3ASTHandle(Z3_mk_fpa_numeral_double(ctx, CE->getAPValue().convertToDouble(), Z3_mk_fpa_sort_64(ctx)), ctx);
     case Expr::Fl80:
-      uint8_t sign = CE->getAPValue().bitcastToAPInt().getRawData()[0] >> 15 && 0x1;
-      uint16_t exp = CE->getAPValue().bitcastToAPInt().getRawData()[0] && 0x7FFF;
-      uint64_t mnt = CE->getAPValue().bitcastToAPInt().getRawData()[1];
+      uint8_t sign = CE->getAPValue().bitcastToAPInt().getRawData()[1] >> 15 & 0x1;
+      uint16_t exp = CE->getAPValue().bitcastToAPInt().getRawData()[1] & 0x7FFF;
+      uint64_t mnt = CE->getAPValue().bitcastToAPInt().getRawData()[0];
 
+      // the hidden bit isn't hidden in Fl80s, but it should always have the proper value (1 for normal, 0 for denormal)
+      assert((exp == 0 && ((mnt >> 63) & 0x1) == 0) || (exp != 0 && ((mnt >> 63) & 0x1) == 1));
+
+      mnt &= 0x7FFFFFFFFFFFFFFF;
       return Z3ASTHandle(Z3_mk_fpa_fp(ctx,
+                                      Z3_mk_unsigned_int(ctx, sign, Z3_mk_bv_sort(ctx, 1)),
                                       Z3_mk_unsigned_int(ctx, exp, Z3_mk_bv_sort(ctx, 15)),
-                                      Z3_mk_unsigned_int(ctx, mnt, Z3_mk_bv_sort(ctx, 64)),
-                                      Z3_mk_unsigned_int(ctx, sign, Z3_mk_bv_sort(ctx, 1))),
+                                      Z3_mk_unsigned_int(ctx, mnt, Z3_mk_bv_sort(ctx, 63))),
                          ctx);
     }
   }
@@ -658,7 +702,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
       break;
     case 80:
-      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
       break;
     case 128:
       sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
@@ -706,7 +750,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
       break;
     case 80:
-      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
       break;
     case 128:
       sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
@@ -734,7 +778,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
       break;
     case 80:
-      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 64), ctx);
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
       break;
     case 128:
       sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
