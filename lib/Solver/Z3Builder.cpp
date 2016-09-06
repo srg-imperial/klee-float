@@ -16,7 +16,7 @@
 #include "ConstantDivision.h"
 #include "klee/SolverStats.h"
 #include "llvm/Support/CommandLine.h"
-#include <iostream>
+
 using namespace klee;
 
 namespace {
@@ -316,32 +316,13 @@ Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
     break;
   case 80: {
     // turn the 80-bit bitvector into a 79-bit one, discarding the 63rd bit
-    sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
 
-    Z3_set_ast_print_mode(ctx, Z3_PRINT_SMTLIB_FULL);
+    // the second parameter is the number of bits in the exponent, the third is the number of bits in the mantissa, *including* the hidden bit
+    sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 15, 64), ctx);
 
-    Z3_ast signexp = Z3_mk_extract(ctx, 79, 64, expr);
-    
-    std::cout << "\n" << "signexp, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, signexp), ctx)) << " :\n" << Z3_ast_to_string(ctx, signexp) << "\n";
-    
-    Z3_ast signexpsimp = Z3_simplify(ctx, signexp);
-    
-    std::cout << "\n" << "signexp simplified, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, signexpsimp),ctx)) << ":\n" << Z3_ast_to_string(ctx, signexpsimp) << "\n";
-    
-    Z3_ast mnt = Z3_mk_extract(ctx, 62, 0, expr);
-    
-    std::cout << "\n" << "mnt, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, mnt), ctx)) << ":\n" << Z3_ast_to_string(ctx, mnt) << "\n";
-    
-    Z3_ast mntsimp = Z3_simplify(ctx, mnt);
-    
-    std::cout << "\n" << "mnt simplified:, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, mntsimp),ctx)) << "\n" << Z3_ast_to_string(ctx, mntsimp) << "\n";
-    
-//    Z3_ast conc = Z3_mk_concat(ctx, Z3_simplify(ctx, signexp), Z3_simplify(ctx, mnt));
-    Z3_ast conc = Z3_mk_concat(ctx, signexpsimp, mntsimp);
-
-    std::cout << "\n" << "conc, size " << Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, conc), ctx)) << ":\n" << Z3_ast_to_string(ctx, expr) << "\n";
-
-    expr = Z3ASTHandle(conc, ctx);
+    Z3ASTHandle signexp = Z3ASTHandle(Z3_mk_extract(ctx, 79, 64, expr), ctx);
+    Z3ASTHandle mnt = Z3ASTHandle(Z3_mk_extract(ctx, 62, 0, expr), ctx);
+    expr = Z3ASTHandle(Z3_mk_concat(ctx, signexp, mnt), ctx);
    
     break; }
   case 128:
@@ -603,9 +584,9 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
       mnt &= 0x7FFFFFFFFFFFFFFF;
       return Z3ASTHandle(Z3_mk_fpa_fp(ctx,
-                                      Z3_mk_unsigned_int(ctx, sign, Z3_mk_bv_sort(ctx, 1)),
-                                      Z3_mk_unsigned_int(ctx, exp, Z3_mk_bv_sort(ctx, 15)),
-                                      Z3_mk_unsigned_int(ctx, mnt, Z3_mk_bv_sort(ctx, 63))),
+                                      Z3ASTHandle(Z3_mk_unsigned_int(ctx, sign, Z3_mk_bv_sort(ctx, 1)), ctx),
+                                      Z3ASTHandle(Z3_mk_unsigned_int(ctx, exp, Z3_mk_bv_sort(ctx, 15)), ctx),
+                                      Z3ASTHandle(Z3_mk_unsigned_int(ctx, mnt, Z3_mk_bv_sort(ctx, 63)), ctx)),
                          ctx);
     }
   }
