@@ -371,17 +371,17 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
 #endif
   if (const ConstantVector *cp = dyn_cast<ConstantVector>(c)) {
     unsigned elementSize =
-      targetData->getTypeStoreSize(cp->getType()->getElementType());
+      targetData->getTypeAllocSize(cp->getType()->getElementType());
     for (unsigned i=0, e=cp->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, cp->getOperand(i), 
 			     offset + i*elementSize);
   } else if (isa<ConstantAggregateZero>(c)) {
-    unsigned i, size = targetData->getTypeStoreSize(c->getType());
+    unsigned i, size = targetData->getTypeAllocSize(c->getType());
     for (i=0; i<size; i++)
       os->write8(offset+i, (uint8_t) 0);
   } else if (const ConstantArray *ca = dyn_cast<ConstantArray>(c)) {
     unsigned elementSize =
-      targetData->getTypeStoreSize(ca->getType()->getElementType());
+      targetData->getTypeAllocSize(ca->getType()->getElementType());
     for (unsigned i=0, e=ca->getNumOperands(); i != e; ++i)
       initializeGlobalObject(state, os, ca->getOperand(i), 
 			     offset + i*elementSize);
@@ -395,13 +395,13 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
   } else if (const ConstantDataSequential *cds =
                dyn_cast<ConstantDataSequential>(c)) {
     unsigned elementSize =
-      targetData->getTypeStoreSize(cds->getElementType());
+      targetData->getTypeAllocSize(cds->getElementType());
     for (unsigned i=0, e=cds->getNumElements(); i != e; ++i)
       initializeGlobalObject(state, os, cds->getElementAsConstant(i),
                              offset + i*elementSize);
 #endif
   } else if (!isa<UndefValue>(c)) {
-    unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
+    unsigned StoreBits = targetData->getTypeAllocSizeInBits(c->getType());
     ref<Expr> E = evalConstant(c);
 	ref<ConstantExpr> C = dyn_cast<ConstantExpr>(E);
 	if(C.isNull()) C = cast<FConstantExpr>(E)->ExplicitInt(E->getWidth()); // FIXME: this is broken for long doubles...
@@ -506,7 +506,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       // hack where we check the object file information.
 
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+      uint64_t size = kmodule->targetData->getTypeAllocSize(ty);
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
@@ -548,7 +548,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+      uint64_t size = kmodule->targetData->getTypeAllocSize(ty);
       MemoryObject *mo = memory->allocate(size, false, true, &*i);
       if (!mo)
         llvm::report_fatal_error("out of memory");
@@ -1952,7 +1952,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Alloca: {
     AllocaInst *ai = cast<AllocaInst>(i);
     unsigned elementSize = 
-      kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
+      kmodule->targetData->getTypeAllocSize(ai->getAllocatedType());
     ref<Expr> size = Expr::createPointer(elementSize);
     if (ai->isArrayAllocation()) {
       ref<Expr> count = eval(ki, 0, state).value;
@@ -2630,7 +2630,7 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
     } else {
       const SequentialType *set = cast<SequentialType>(*ii);
       uint64_t elementSize = 
-        kmodule->targetData->getTypeStoreSize(set->getElementType());
+        kmodule->targetData->getTypeAllocSize(set->getElementType());
       Value *operand = ii.getOperand();
       if (Constant *c = dyn_cast<Constant>(operand)) {
         ref<ConstantExpr> index = 
