@@ -107,7 +107,7 @@ namespace klee {
           ref<ConstantExpr> index = 
             cast<ConstantExpr>(evalConstant(cast<Constant>(ii.getOperand())));
           unsigned elementSize = 
-            kmodule->targetData->getTypeStoreSize(set->getElementType());
+            kmodule->targetData->getTypeAllocSize(set->getElementType());
 
           index = index->ZExt(Context::get().getPointerWidth());
           addend = index->Mul(ConstantExpr::alloc(elementSize, 
