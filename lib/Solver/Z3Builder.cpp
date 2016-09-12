@@ -124,8 +124,8 @@ Z3ASTHandle Z3Builder::bvZExtConst(unsigned width, uint64_t value) {
   Z3ASTHandle expr = Z3ASTHandle(bvConst64(64, value), ctx);
   Z3ASTHandle zero = Z3ASTHandle(bvConst64(64, 0), ctx);
   for (width -= 64; width > 64; width -= 64)
-    expr = Z3ASTHandle(Z3_mk_concat(ctx, zero, expr), ctx);
-  return Z3ASTHandle(Z3_mk_concat(ctx, bvConst64(width, 0), expr), ctx);
+    expr = concatExpr(zero, expr);
+  return concatExpr(bvConst64(width, 0), expr);
 }
 
 Z3ASTHandle Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
@@ -135,11 +135,11 @@ Z3ASTHandle Z3Builder::bvSExtConst(unsigned width, uint64_t value) {
   Z3SortHandle t = getBvSort(width - 64);
   if (value >> 63) {
     Z3ASTHandle r = Z3ASTHandle(Z3_mk_int64(ctx, -1, t), ctx);
-    return Z3ASTHandle(Z3_mk_concat(ctx, r, bvConst64(64, value)), ctx);
+    return concatExpr(r, bvConst64(64, value));
   }
 
   Z3ASTHandle r = Z3ASTHandle(Z3_mk_int64(ctx, 0, t), ctx);
-  return Z3ASTHandle(Z3_mk_concat(ctx, r, bvConst64(64, value)), ctx);
+  return concatExpr(r, bvConst64(64, value));
 }
 
 Z3ASTHandle Z3Builder::bvBoolExtract(Z3ASTHandle expr, int bit) {
@@ -164,9 +164,7 @@ Z3ASTHandle Z3Builder::bvRightShift(Z3ASTHandle expr, unsigned shift) {
   } else if (shift >= width) {
     return bvZero(width); // Overshift to zero
   } else {
-    return Z3ASTHandle(
-        Z3_mk_concat(ctx, bvZero(shift), bvExtract(expr, width - 1, shift)),
-        ctx);
+    return concatExpr(bvZero(shift), bvExtract(expr, width - 1, shift));
   }
 }
 
@@ -179,9 +177,7 @@ Z3ASTHandle Z3Builder::bvLeftShift(Z3ASTHandle expr, unsigned shift) {
   } else if (shift >= width) {
     return bvZero(width); // Overshift to zero
   } else {
-    return Z3ASTHandle(
-        Z3_mk_concat(ctx, bvExtract(expr, width - shift - 1, 0), bvZero(shift)),
-        ctx);
+    return concatExpr(bvExtract(expr, width - shift - 1, 0), bvZero(shift));
   }
 }
 
@@ -293,12 +289,32 @@ Z3ASTHandle Z3Builder::bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   return Z3ASTHandle(Z3_mk_bvxor(ctx, lhs, rhs), ctx);
 }
 
+Z3ASTHandle Z3Builder::bvRedorExpr(Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_bvredor(ctx, expr), ctx);
+}
+
 Z3ASTHandle Z3Builder::bvSignExtend(Z3ASTHandle src, unsigned width) {
   unsigned src_width =
       Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, src), ctx));
   assert(src_width <= width && "attempted to extend longer data");
 
   return Z3ASTHandle(Z3_mk_sign_ext(ctx, width - src_width, src), ctx);
+}
+
+Z3ASTHandle Z3Builder::extractExpr(unsigned high, unsigned low, Z3ASTHandle expr) {
+  return Z3ASTHandle(Z3_mk_extract(ctx, high, low, expr), ctx);
+}
+
+Z3ASTHandle Z3Builder::concatExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
+  return Z3ASTHandle(Z3_mk_concat(ctx, lhs, rhs), ctx);
+}
+
+Z3ASTHandle Z3Builder::concatExpr(Z3ASTHandle first, Z3ASTHandle second, Z3ASTHandle third) {
+  return Z3ASTHandle(Z3_mk_concat(ctx, Z3_mk_concat(ctx, first, second), third), ctx);
+}
+
+Z3ASTHandle Z3Builder::concatExpr(Z3ASTHandle first, Z3ASTHandle second, Z3ASTHandle third, Z3ASTHandle fourth) {
+  return Z3ASTHandle(Z3_mk_concat(ctx, Z3_mk_concat(ctx, Z3_mk_concat(ctx, first, second), third), fourth), ctx);
 }
 
 Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
@@ -320,11 +336,15 @@ Z3ASTHandle Z3Builder::bv_to_float(Z3ASTHandle expr) {
     // the second parameter is the number of bits in the exponent, the third is the number of bits in the mantissa, *including* the hidden bit
     sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 15, 64), ctx);
 
-    Z3ASTHandle signexp = Z3ASTHandle(Z3_mk_extract(ctx, 79, 64, expr), ctx);
-    Z3ASTHandle mnt = Z3ASTHandle(Z3_mk_extract(ctx, 62, 0, expr), ctx);
-    expr = Z3ASTHandle(Z3_mk_concat(ctx, signexp, mnt), ctx);
-   
-    break; }
+    Z3ASTHandle sign = extractExpr(79, 79, expr);
+    Z3ASTHandle exp = extractExpr(78, 64, expr);
+    Z3ASTHandle hiddenBit = extractExpr(63, 63, expr);
+    Z3ASTHandle mnt = extractExpr(62, 0, expr);
+
+    Z3ASTHandle correctHiddenBit = eqExpr(hiddenBit, iteExpr(eqExpr(bvRedorExpr(exp), bvZero(1)), bvZero(1), bvOne(1)));
+    
+    return iteExpr(correctHiddenBit, Z3ASTHandle(Z3_mk_fpa_to_fp_bv(ctx, concatExpr(sign, exp, mnt), sort), ctx), nanExpr(sort));
+  }
   case 128:
     sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
     break;
@@ -337,14 +357,14 @@ Z3ASTHandle Z3Builder::float_to_bv(Z3ASTHandle expr) {
 
   if (getBVLength(ret) == 79)
   {
-    Z3_ast sign = Z3_mk_extract(ctx, 78, 78, ret);
-    Z3_ast exp = Z3_mk_extract(ctx, 77, 63, ret);
-    Z3_ast mnt = Z3_mk_extract(ctx, 62, 0, ret);
+    Z3ASTHandle sign = extractExpr(78, 78, ret);
+    Z3ASTHandle exp = extractExpr(77, 63, ret);
+    Z3ASTHandle mnt = extractExpr(62, 0, ret);
 
     // if the exponent is all zeros, bit 63 has to be 0, else it has to be 1
-    Z3ASTHandle ite = iteExpr(eqExpr(Z3ASTHandle(Z3_mk_bvredor(ctx, exp), ctx), bvZero(1)), bvZero(1), bvOne(1));
+    Z3ASTHandle ite = iteExpr(eqExpr(bvRedorExpr(exp), bvZero(1)), bvZero(1), bvOne(1));
 
-    ret = Z3ASTHandle(Z3_mk_concat(ctx, Z3_mk_concat(ctx, Z3_mk_concat(ctx, sign, exp), ite), mnt), ctx);
+    ret = concatExpr(sign, exp, ite, mnt);
   }
   return ret;
 }
@@ -384,6 +404,10 @@ Z3_ast Z3Builder::getRoundingModeAST(llvm::APFloat::roundingMode rm) {
   case llvm::APFloat::rmNearestTiesToAway:
     return Z3_mk_fpa_round_nearest_ties_to_away(ctx);
   }
+}
+
+Z3ASTHandle Z3Builder::nanExpr(Z3SortHandle sort) {
+  return Z3ASTHandle(Z3_mk_fpa_nan(ctx, sort), ctx);
 }
 
 Z3ASTHandle Z3Builder::writeExpr(Z3ASTHandle array, Z3ASTHandle index,
@@ -431,9 +455,8 @@ Z3ASTHandle Z3Builder::constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
   } else {
     // FIXME: Is this really the best way to interact with Z3?
     return iteExpr(isSigned,
-                   Z3ASTHandle(Z3_mk_concat(ctx, bvMinusOne(shift),
-                                            bvExtract(expr, width - 1, shift)),
-                               ctx),
+                   concatExpr(bvMinusOne(shift),
+                              bvExtract(expr, width - 1, shift)),
                    bvRightShift(expr, shift));
   }
 }
@@ -554,11 +577,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     while (Tmp->getWidth() > 64) {
       Tmp = Tmp->Extract(64, Tmp->getWidth() - 64);
       unsigned Width = std::min(64U, Tmp->getWidth());
-      Res = Z3ASTHandle(
-          Z3_mk_concat(ctx,
-                       bvConst64(Width, Tmp->Extract(0, Width)->getZExtValue()),
-                       Res),
-          ctx);
+      Res = concatExpr(bvConst64(Width, Tmp->Extract(0, Width)->getZExtValue()),
+                       Res);
     }
 
     return Res;
@@ -618,8 +638,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     unsigned numKids = ce->getNumKids();
     Z3ASTHandle res = construct(ce->getKid(numKids - 1), 0);
     for (int i = numKids - 2; i >= 0; i--) {
-      res =
-          Z3ASTHandle(Z3_mk_concat(ctx, construct(ce->getKid(i), 0), res), ctx);
+      res = concatExpr(construct(ce->getKid(i), 0), res);
     }
     *width_out = ce->getWidth();
     return res;
@@ -646,8 +665,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (srcWidth == 1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
-      return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - srcWidth), src),
-                         ctx);
+      return concatExpr(bvZero(*width_out - srcWidth), src);
     }
   }
 
@@ -972,9 +990,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
-            return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - bits),
-                                            bvExtract(left, bits - 1, 0)),
-                               ctx);
+            return concatExpr(bvZero(*width_out - bits),
+                              bvExtract(left, bits - 1, 0));
           }
         }
       }
