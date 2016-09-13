@@ -3622,8 +3622,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           terminateStateOnError(state, "memory error: object read only",
                                 ReadOnly);
         } else {
-		  if (isa<FExpr>(value))
-            value = ExplicitIntExpr::create(value, value->getWidth());
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
         }          

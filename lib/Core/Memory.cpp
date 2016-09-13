@@ -509,6 +509,9 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
     return;
   }
 
+  if (isa<FExpr>(value))
+    value = ExplicitIntExpr::create(value, value->getWidth());
+
   // Treat bool specially, it is the only non-byte sized write we allow.
   Expr::Width w = value->getWidth();
   if (w == Expr::Bool) {
@@ -527,6 +530,9 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
 }
 
 void ObjectState::write(unsigned offset, ref<Expr> value) {
+  if (isa<FExpr>(value))
+    value = ExplicitIntExpr::create(value, value->getWidth());
+  
   // Check for writes of constant values.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     Expr::Width w = CE->getWidth();
