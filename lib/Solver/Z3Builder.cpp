@@ -154,6 +154,21 @@ Z3ASTHandle Z3Builder::bvExtract(Z3ASTHandle expr, unsigned top,
 }
 
 Z3ASTHandle Z3Builder::eqExpr(Z3ASTHandle a, Z3ASTHandle b) {
+  // Handle implicit bitvector/float coercision
+  Z3SortHandle aSort = Z3SortHandle(Z3_get_sort(ctx, a), ctx);
+  Z3SortHandle bSort = Z3SortHandle(Z3_get_sort(ctx, b), ctx);
+  Z3_sort_kind aKind = Z3_get_sort_kind(ctx, aSort);
+  Z3_sort_kind bKind = Z3_get_sort_kind(ctx, bSort);
+
+  if (aKind == Z3_BV_SORT && bKind == Z3_FLOATING_POINT_SORT) {
+    // Coerce `b` to be a bitvector
+    b = castToBitVector(b);
+  }
+
+  if (aKind == Z3_FLOATING_POINT_SORT && bKind == Z3_BV_SORT) {
+    // Coerce `a` to be a bitvector
+    a = castToBitVector(a);
+  }
   return Z3ASTHandle(Z3_mk_eq(ctx, a, b), ctx);
 }
 
