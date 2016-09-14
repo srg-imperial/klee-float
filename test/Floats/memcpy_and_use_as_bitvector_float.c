@@ -219,6 +219,13 @@ int main() {
       newValue = small_value > 0;
       break;
     }
+    case 32: {
+      // EqExpr
+      int havoc = 0;
+      klee_make_symbolic(&havoc, sizeof(int), "havoc2");
+      newValue = (x == havoc);
+      printf("EqExpr\n");
+    }
     // FIXME: We need to test ConcatExpr and ReadExpr but there isn't
     // an obvious way to do that.
     default:
