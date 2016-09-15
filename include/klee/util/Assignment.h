@@ -60,6 +60,18 @@ namespace klee {
     ref<Expr> getInitialValue(const Array &mo, unsigned index) {
       return a.evaluate(&mo, index);
     }
+    Action visitExprPost(const Expr& e) {
+      // FIXME: Should this be in `ExprEvaluator` instead? It is clear
+      // here that `NotOptimizedExpr` should be folded but I'm not sure
+      // about other cases.
+
+      // When evaluating an assignment we should fold  NotOptimizedExpr
+      // nodes so we can fully evaluate the assignment.
+      if (e.getKind() == Expr::NotOptimized) {
+        return Action::changeTo(static_cast<const NotOptimizedExpr&>(e).src);
+      }
+      return Action::skipChildren();
+    }
     
   public:
     AssignmentEvaluator(const Assignment &_a) : a(_a) {}    
