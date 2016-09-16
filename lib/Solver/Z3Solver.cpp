@@ -17,6 +17,7 @@
 #include "klee/util/ExprUtil.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace {
 llvm::cl::opt<std::string> Z3QueryDumpFile(
@@ -26,9 +27,9 @@ llvm::cl::opt<std::string> Z3QueryDumpFile(
 llvm::cl::opt<bool> Z3ValidateModels(
     "z3-validate-models", llvm::cl::init(false),
     llvm::cl::desc("When generating Z3 models validate these against the query"));
+
 }
 
-#include "llvm/Support/ErrorHandling.h"
 
 namespace klee {
 
@@ -317,8 +318,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     // Validate the model if requested
     if (Z3ValidateModels) {
       bool success = validateZ3Model(theSolver, theModel);
-      if (!success)
+      if (!success) {
+        builder->closeInteractionLog();
         abort();
+      }
     }
 
     Z3_model_dec_ref(builder->ctx, theModel);
@@ -337,6 +340,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
       return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
     }
     klee_warning("Unexpected solver failure. Reason is \"%s,\"\n", reason);
+    builder->closeInteractionLog();
     abort();
   }
   default:
