@@ -700,7 +700,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
       break;
     case 80:
-      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 15, 64), ctx);
       break;
     case 128:
       sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
@@ -748,7 +748,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
       break;
     case 80:
-      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 15, 64), ctx);
       break;
     case 128:
       sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
@@ -776,7 +776,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
       sort = Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
       break;
     case 80:
-      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 16, 63), ctx);
+      sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 15, 64), ctx);
       break;
     case 128:
       sort = Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
