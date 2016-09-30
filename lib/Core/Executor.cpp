@@ -1095,8 +1095,16 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       }
       ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
       return cast<ConstantExpr>(res);
+    } else if (const ConstantVector *cv = dyn_cast<ConstantVector>(c)) {
+      ref<Expr> *kids = new ref<Expr>[cv->getNumOperands()];
+      for (int i = 0, e = cv->getNumOperands(); i < e; ++i)
+        kids[i] = evalConstant(cv->getOperand(i));
+      ref<Expr> res = ConcatExpr::createN(cv->getNumOperands(), kids);
+      delete[] kids;
+      assert(isa<ConstantExpr>(res) &&
+             "result of constant vector build not a constant");
+      return cast<ConstantExpr>(res);
     } else {
-      // Constant{Vector}
       llvm::report_fatal_error("invalid argument to evalConstant()");
     }
   }
@@ -2526,11 +2534,35 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 #endif
+  case Instruction::InsertElement: {
+    InsertElementInst *iei = cast<InsertElementInst>(i);
+    ref<Expr> vec = eval(ki, 0, state).value;
+    ref<Expr> newElt = eval(ki, 1, state).value;
+    ref<Expr> idx = eval(ki, 2, state).value;
 
+    assert(isa<ConstantExpr>(idx) && "symbolic index unsupported");
+    ConstantExpr *cIdx = cast<ConstantExpr>(idx);
+    uint64_t iIdx = cIdx->getZExtValue();
+
+    const llvm::VectorType *vt = iei->getType();
+    unsigned EltBits = getWidthForLLVMType(vt->getElementType());
+
+    unsigned ElemCount = vt->getNumElements();
+    ref<Expr> *elems = new ref<Expr>[ElemCount];
+    for (unsigned i = 0; i < ElemCount; ++i)
+      elems[ElemCount-i-1] = i == iIdx
+                             ? newElt
+                             : ExtractExpr::create(vec, EltBits*i, EltBits);
+
+    ref<Expr> Result = ConcatExpr::createN(ElemCount, elems);
+    delete[] elems;
+
+    bindLocal(ki, state, Result);
+    break;
+  }
   // Other instructions...
   // Unhandled
   case Instruction::ExtractElement:
-  case Instruction::InsertElement:
   case Instruction::ShuffleVector:
     terminateStateOnError(state, "XXX vector instructions unhandled",
                           Unhandled);
