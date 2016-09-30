@@ -180,6 +180,8 @@ private:
                      llvm::BasicBlock *defaultBlock);
 };
 
+llvm::FunctionPass *createScalarizerPass();
+
 }
 
 #endif
