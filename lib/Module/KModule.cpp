@@ -386,6 +386,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     replaceFunctionIfPresent(module, "__finitef", "klee_internal_finitef");
     replaceFunctionIfPresent(module, "__finite", "klee_internal_finite");
   }
+  replaceFunctionIfPresent(module, "fegetround", "klee_internal_fegetround");
+  replaceFunctionIfPresent(module, "fesetround", "klee_internal_fesetround");
 
   // Add internal functions which are not used to check if instructions
   // have been already visited
