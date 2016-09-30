@@ -173,4 +173,16 @@ extern "C" {
 }
 #endif
 
+enum KleeRoundingMode {
+  KLEE_FP_RNE = 0, // Round to nearest ties to even.
+  KLEE_FP_RNA,
+  KLEE_FP_RU,
+  KLEE_FP_RD,
+  KLEE_FP_RZ,
+  KLEE_FP_UNKNOWN
+};
+
+void klee_set_rounding_mode(enum KleeRoundingMode rm);
+enum KleeRoundingMode klee_get_rounding_mode();
+
 #endif /* __KLEE_H__ */
