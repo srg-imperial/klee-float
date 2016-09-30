@@ -38,6 +38,8 @@
 #include "llvm/IR/DataLayout.h"
 #endif
 
+#include "klee/klee.h" // For KLEE_FP_* constants
+
 #include <errno.h>
 
 using namespace llvm;
@@ -149,6 +151,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_is_normal_double", handleIsNormal, true),
     add("klee_is_subnormal_float", handleIsSubnormal, true),
     add("klee_is_subnormal_double", handleIsSubnormal, true),
+
+    // Rounding mode intrinsics
+    add("klee_get_rounding_mode", handleGetRoundingMode, true),
+    add("klee_set_rounding_mode_internal", handleSetConcreteRoundingMode, false),
 #undef addDNR
 #undef add
 };
@@ -820,4 +826,73 @@ void SpecialFunctionHandler::handleIsSubnormal(
   assert(arguments.size() == 1 && "invalid number of arguments to IsSubnormal");
   ref<Expr> result = IsSubnormalExpr::create(arguments[0]);
   executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleGetRoundingMode(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to GetRoundingMode");
+  unsigned returnValue = 0;
+  switch (state.roundingMode) {
+  case llvm::APFloat::rmNearestTiesToEven:
+    returnValue = KLEE_FP_RNE;
+    break;
+  case llvm::APFloat::rmNearestTiesToAway:
+    returnValue = KLEE_FP_RNA;
+    break;
+  case llvm::APFloat::rmTowardPositive:
+    returnValue = KLEE_FP_RU;
+    break;
+  case llvm::APFloat::rmTowardNegative:
+    returnValue = KLEE_FP_RD;
+    break;
+  case llvm::APFloat::rmTowardZero:
+    returnValue = KLEE_FP_RZ;
+    break;
+  default:
+    // FIXME: Emit warning
+    returnValue = KLEE_FP_UNKNOWN;
+  }
+  // FIXME: The width is fragile. It's dependent on what the compiler
+  // choose to be the width of the enum.
+  ref<Expr> result = ConstantExpr::create(returnValue, Expr::Int32);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleSetConcreteRoundingMode(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to SetRoundingMode");
+  llvm::APFloat::roundingMode newRoundingMode = llvm::APFloat::rmNearestTiesToEven;
+  ref<Expr> roundingModeArg = arguments[0];
+  if (!isa<ConstantExpr>(roundingModeArg)) {
+    executor.terminateStateOnError(state, "argument should be concrete",
+                                   Executor::User);
+    return;
+  }
+  const ConstantExpr* CE = dyn_cast<ConstantExpr>(roundingModeArg);
+  switch (CE->getZExtValue()) {
+    case KLEE_FP_RNE:
+      newRoundingMode = llvm::APFloat::rmNearestTiesToEven;
+      break;
+    case KLEE_FP_RNA:
+      newRoundingMode = llvm::APFloat::rmNearestTiesToAway;
+      break;
+    case KLEE_FP_RU:
+      newRoundingMode = llvm::APFloat::rmTowardPositive;
+      break;
+    case KLEE_FP_RD:
+      newRoundingMode = llvm::APFloat::rmTowardNegative;
+      break;
+    case KLEE_FP_RZ:
+      newRoundingMode = llvm::APFloat::rmTowardZero;
+      break;
+    default:
+      executor.terminateStateOnError(state, "Invalid rounding mode",
+                                     Executor::User);
+      return;
+  }
+  state.roundingMode = newRoundingMode;
 }

@@ -141,6 +141,8 @@ namespace klee {
     HANDLER(handleIsInfinite);
     HANDLER(handleIsNormal);
     HANDLER(handleIsSubnormal);
+    HANDLER(handleGetRoundingMode);
+    HANDLER(handleSetConcreteRoundingMode);
 #undef HANDLER
   };
 } // End klee namespace
