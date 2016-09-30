@@ -493,7 +493,7 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
 #endif
   } else if (!isa<UndefValue>(c)) {
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
-    ref<ConstantExpr> C = evalConstant(c);
+    ref<ConstantExpr> C = evalConstant(c, state.roundingMode);
 
     // Extend the constant if necessary;
     assert(StoreBits >= C->getWidth() && "Invalid store size!");
@@ -659,8 +659,9 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::alias_iterator i = m->alias_begin(), ie = m->alias_end(); 
        i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
-    // addresses for everything, even undefined functions. 
-    globalAddresses.insert(std::make_pair(i, evalConstant(i->getAliasee())));
+    // addresses for everything, even undefined functions.
+    globalAddresses.insert(
+        std::make_pair(i, evalConstant(i->getAliasee(), state.roundingMode)));
   }
 
   // once all objects are allocated, do the actual initialization
@@ -1027,9 +1028,10 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
 
-ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
+ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
+                                               llvm::APFloat::roundingMode rm) {
   if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
-    return evalConstantExpr(ce);
+    return evalConstantExpr(ce, rm);
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
@@ -1046,7 +1048,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
                  dyn_cast<ConstantDataSequential>(c)) {
       std::vector<ref<Expr> > kids;
       for (unsigned i = 0, e = cds->getNumElements(); i != e; ++i) {
-        ref<Expr> kid = evalConstant(cds->getElementAsConstant(i));
+        ref<Expr> kid = evalConstant(cds->getElementAsConstant(i), rm);
         kids.push_back(kid);
       }
       ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
@@ -1057,7 +1059,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       llvm::SmallVector<ref<Expr>, 4> kids;
       for (unsigned i = cs->getNumOperands(); i != 0; --i) {
         unsigned op = i-1;
-        ref<Expr> kid = evalConstant(cs->getOperand(op));
+        ref<Expr> kid = evalConstant(cs->getOperand(op), rm);
 
         uint64_t thisOffset = sl->getElementOffsetInBits(op),
                  nextOffset = (op == cs->getNumOperands() - 1)
@@ -1076,7 +1078,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
       llvm::SmallVector<ref<Expr>, 4> kids;
       for (unsigned i = ca->getNumOperands(); i != 0; --i) {
         unsigned op = i-1;
-        ref<Expr> kid = evalConstant(ca->getOperand(op));
+        ref<Expr> kid = evalConstant(ca->getOperand(op), rm);
         kids.push_back(kid);
       }
       ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
@@ -1084,7 +1086,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c) {
     } else if (const ConstantVector *cv = dyn_cast<ConstantVector>(c)) {
       ref<Expr> *kids = new ref<Expr>[cv->getNumOperands()];
       for (int i = 0, e = cv->getNumOperands(); i < e; ++i)
-        kids[i] = evalConstant(cv->getOperand(i));
+        kids[i] = evalConstant(cv->getOperand(i), rm);
       ref<Expr> res = ConcatExpr::createN(cv->getNumOperands(), kids);
       delete[] kids;
       assert(isa<ConstantExpr>(res) &&
@@ -1680,10 +1682,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
       for (SwitchInst::CaseIt i = si->case_begin(), e = si->case_end(); i != e;
            ++i) {
-        ref<Expr> value = evalConstant(i.getCaseValue());
+        ref<Expr> value = evalConstant(i.getCaseValue(), state.roundingMode);
 #else
       for (unsigned i = 1, cases = si->getNumCases(); i < cases; ++i) {
-        ref<Expr> value = evalConstant(si->getCaseValue(i));
+        ref<Expr> value = evalConstant(si->getCaseValue(i), state.roundingMode);
 #endif
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
@@ -2520,8 +2522,10 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
         kmodule->targetData->getTypeStoreSize(set->getElementType());
       Value *operand = ii.getOperand();
       if (Constant *c = dyn_cast<Constant>(operand)) {
-        ref<ConstantExpr> index = 
-          evalConstant(c)->SExt(Context::get().getPointerWidth());
+        // Rounding mode shouldn't matter here as working with ints.
+        ref<ConstantExpr> index =
+            evalConstant(c, llvm::APFloat::rmNearestTiesToEven)
+                ->SExt(Context::get().getPointerWidth());
         ref<ConstantExpr> addend = 
           index->Mul(ConstantExpr::alloc(elementSize,
                                          Context::get().getPointerWidth()));
@@ -2560,7 +2564,8 @@ void Executor::bindModuleConstants() {
   kmodule->constantTable = new Cell[kmodule->constants.size()];
   for (unsigned i=0; i<kmodule->constants.size(); ++i) {
     Cell &c = kmodule->constantTable[i];
-    c.value = evalConstant(kmodule->constants[i]);
+    // Correct rounding mode?
+    c.value = evalConstant(kmodule->constants[i], llvm::APFloat::rmNearestTiesToEven);
   }
 }
 

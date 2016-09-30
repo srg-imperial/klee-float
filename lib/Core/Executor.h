@@ -351,7 +351,7 @@ private:
                     ExecutionState &state,
                     ref<Expr> value);
 
-  ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *ce);
+  ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *ce, llvm::APFloat::roundingMode rm);
   ref<Expr> evaluateFCmp(unsigned int predicate, ref<Expr> left,
                          ref<Expr> right) const;
 
@@ -444,7 +444,7 @@ public:
   }
 
   // XXX should just be moved out to utility module
-  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c);
+  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c, llvm::APFloat::roundingMode rm);
 
   virtual void setPathWriter(TreeStreamWriter *tsw) {
     pathWriter = tsw;
