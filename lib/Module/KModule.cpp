@@ -315,6 +315,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // module.
   PassManager pm;
   pm.add(createScalarizerPass()); // Remove vector instructions as early as possible.
+ // Remove left over dead vector instructions. DeadInstElimination is not
+ // enough because we may have chains of instructions that depend on each
+ // other which needs multiple passes to remove.
+  pm.add(createDeadCodeEliminationPass());
   pm.add(new RaiseAsmPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
