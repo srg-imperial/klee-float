@@ -55,6 +55,8 @@ namespace klee {
     if (numOperands > 1) op2 = evalConstant(ce->getOperand(1));
     if (numOperands > 2) op3 = evalConstant(ce->getOperand(2));
 
+    // FIXME: get the rounding mode from the state.
+    llvm::APFloat::roundingMode rm = llvm::APFloat::rmNearestTiesToEven;
     switch (ce->getOpcode()) {
     default :
       ce->dump();
@@ -139,19 +141,50 @@ namespace klee {
     case Instruction::Select:
       return op1->isTrue() ? op2 : op3;
 
+    // Floating point
     case Instruction::FAdd:
+      return op1->FAdd(op2, rm);
     case Instruction::FSub:
+      return op1->FSub(op2, rm);
     case Instruction::FMul:
+      return op1->FMul(op2, rm);
     case Instruction::FDiv:
-    case Instruction::FRem:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::FCmp:
-      assert(0 && "floating point ConstantExprs unsupported");
+      return op1->FDiv(op2, rm);
+
+    case Instruction::FRem: {
+      // FIXME:
+      llvm_unreachable("Not supported");
+    }
+
+    case Instruction::FPTrunc: {
+      Expr::Width width = getWidthForLLVMType(ce->getType());
+      return op1->FPTrunc(width, rm);
+    }
+    case Instruction::FPExt: {
+      Expr::Width width = getWidthForLLVMType(ce->getType());
+      return op1->FPExt(width);
+    }
+    case Instruction::UIToFP: {
+      Expr::Width width = getWidthForLLVMType(ce->getType());
+      return op1->UIToFP(width, rm);
+    }
+    case Instruction::SIToFP: {
+      Expr::Width width = getWidthForLLVMType(ce->getType());
+      return op1->SIToFP(width, rm);
+    }
+    case Instruction::FPToUI: {
+      Expr::Width width = getWidthForLLVMType(ce->getType());
+      return op1->FPToUI(width, rm);
+    }
+    case Instruction::FPToSI: {
+      Expr::Width width = getWidthForLLVMType(ce->getType());
+      return op1->FPToSI(width, rm);
+    }
+    case Instruction::FCmp: {
+      // FIXME: Refactor how the Executor handles this instruction
+      // so we can reuse it.
+      llvm_unreachable("Not supported");
+    }
     }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
     llvm_unreachable("Unsupported expression in evalConstantExpr");
