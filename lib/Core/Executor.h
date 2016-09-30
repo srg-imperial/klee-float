@@ -353,6 +353,8 @@ private:
                     ref<Expr> value);
 
   ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *ce);
+  ref<Expr> evaluateFCmp(unsigned int predicate, ref<Expr> left,
+                         ref<Expr> right) const;
 
   /// Return a unique constant value for the given expression in the
   /// given state, if it has one (i.e. it provably only has a single
