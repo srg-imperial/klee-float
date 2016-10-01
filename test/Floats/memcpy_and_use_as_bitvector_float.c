@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
+// RUN: %klee -search=bfs -use-construct-hash-z3=1 -z3-validate-models --output-dir=%t.klee-out --exit-on-error %t1.bc
 #include "klee/klee.h"
 #include <assert.h>
 #include <stdio.h>
