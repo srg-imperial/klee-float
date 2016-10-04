@@ -364,6 +364,21 @@ Z3ASTHandle Z3Builder::readExpr(Z3ASTHandle array, Z3ASTHandle index) {
 
 Z3ASTHandle Z3Builder::iteExpr(Z3ASTHandle condition, Z3ASTHandle whenTrue,
                                Z3ASTHandle whenFalse) {
+  // Handle implicit bitvector/float coercision
+  Z3SortHandle whenTrueSort = Z3SortHandle(Z3_get_sort(ctx, whenTrue), ctx);
+  Z3SortHandle whenFalseSort = Z3SortHandle(Z3_get_sort(ctx, whenFalse), ctx);
+  Z3_sort_kind whenTrueKind = Z3_get_sort_kind(ctx, whenTrueSort);
+  Z3_sort_kind whenFalseKind = Z3_get_sort_kind(ctx, whenFalseSort);
+
+  if (whenTrueKind == Z3_BV_SORT && whenFalseKind == Z3_FLOATING_POINT_SORT) {
+    // Coerce `whenFalse` to be a bitvector
+    whenFalse = castToBitVector(whenFalse);
+  }
+
+  if (whenTrueKind == Z3_FLOATING_POINT_SORT && whenFalseKind == Z3_BV_SORT) {
+    // Coerce `whenTrue` to be a bitvector
+    whenTrue = castToBitVector(whenTrue);
+  }
   return Z3ASTHandle(Z3_mk_ite(ctx, condition, whenTrue, whenFalse), ctx);
 }
 
