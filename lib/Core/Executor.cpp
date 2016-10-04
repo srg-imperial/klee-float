@@ -2473,9 +2473,25 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, Result);
     break;
   }
+  case Instruction::ExtractElement: {
+    ExtractElementInst *eei = cast<ExtractElementInst>(i);
+    ref<Expr> vec = eval(ki, 0, state).value;
+    ref<Expr> idx = eval(ki, 1, state).value;
+
+    assert(isa<ConstantExpr>(idx) && "symbolic index unsupported");
+    ConstantExpr *cIdx = cast<ConstantExpr>(idx);
+    uint64_t iIdx = cIdx->getZExtValue();
+
+    const llvm::VectorType *vt = eei->getVectorOperandType();
+    unsigned EltBits = getWidthForLLVMType(vt->getElementType());
+
+    ref<Expr> Result = ExtractExpr::create(vec, EltBits*iIdx, EltBits);
+
+    bindLocal(ki, state, Result);
+    break;
+  }
   // Other instructions...
   // Unhandled
-  case Instruction::ExtractElement:
   case Instruction::ShuffleVector:
     terminateStateOnError(state, "XXX vector instructions unhandled",
                           Unhandled);
