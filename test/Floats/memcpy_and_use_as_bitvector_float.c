@@ -226,6 +226,13 @@ int main() {
       newValue = (x == havoc);
       printf("EqExpr\n");
     }
+    case 33: {
+      // SelectExpr
+      int havoc = 0;
+      klee_make_symbolic(&havoc, sizeof(int), "havoc3");
+      newValue = havoc ? x : 0;
+      printf("SelectExpr\n");
+    }
     // FIXME: We need to test ConcatExpr and ReadExpr but there isn't
     // an obvious way to do that.
     default:
