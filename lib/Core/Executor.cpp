@@ -2447,6 +2447,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (!isa<ConstantExpr>(idx)) {
       terminateStateOnError(state, "InsertElement, support for symbolic index not implemented", Unhandled);
+      return;
     }
     ConstantExpr *cIdx = cast<ConstantExpr>(idx);
     uint64_t iIdx = cIdx->getZExtValue();
@@ -2478,7 +2479,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> vec = eval(ki, 0, state).value;
     ref<Expr> idx = eval(ki, 1, state).value;
 
-    assert(isa<ConstantExpr>(idx) && "symbolic index unsupported");
+    if (!isa<ConstantExpr>(idx)) {
+      terminateStateOnError(state, "ExtractElement, support for symbolic index not implemented", Unhandled);
+      return;
+    }
     ConstantExpr *cIdx = cast<ConstantExpr>(idx);
     uint64_t iIdx = cIdx->getZExtValue();
 
