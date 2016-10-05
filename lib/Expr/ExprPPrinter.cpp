@@ -36,6 +36,9 @@ namespace {
   llvm::cl::opt<bool>
   PCAllConstWidths("pc-all-const-widths",  llvm::cl::init(false));
 
+  llvm::cl::opt<bool>
+  PCConstsAsBytes("pc-consts-as-bytes",  llvm::cl::init(false));
+
   llvm::cl::opt<bool> PCFloatConstantsAsHexFloat(
       "pc-float-constants-as-hex-float", llvm::cl::init(false),
       llvm::cl::desc("Enable floating point constants as C99 hexfloats if "
@@ -350,7 +353,16 @@ public:
       if (printWidth)
         PC << "(w" << e->getWidth() << " ";
 
-      if (e->getWidth() <= 64 && !(e->isFloat())) {
+      if (PCConstsAsBytes) {
+        PC << "[";
+        const uint8_t* bits = (const uint8_t*) e->getAPValue().getRawData();
+        for (unsigned index=0, endIndex = Expr::getMinBytesForWidth(e->getWidth()); index < endIndex; ++index) {
+          PC <<  ((uint64_t) bits[index]) << ",";
+          assert(index < (e->getAPValue().getNumWords() * sizeof(uint64_t)));
+        }
+        PC << "]";
+      }
+      else if (e->getWidth() <= 64 && !(e->isFloat())) {
         PC << e->getZExtValue();
       } else {
         std::string S;
