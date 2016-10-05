@@ -2446,10 +2446,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     unsigned ElemCount = vt->getNumElements();
     ref<Expr> *elems = new ref<Expr>[ElemCount];
-    for (unsigned i = 0; i < ElemCount; ++i)
-      elems[ElemCount-i-1] = i == iIdx
-                             ? newElt
-                             : ExtractExpr::create(vec, EltBits*i, EltBits);
+    for (unsigned i = 0; i < ElemCount; ++i) {
+      // evalConstant() will use ConcatExpr to build vectors with the
+      // zero-th element left most (most significant bits), followed
+      // by the next element (second left most) and so on. This means
+      // that we have to adjust the index so we read left to right
+      // rather than right to left.
+      unsigned bitOffset = EltBits*(vt->getNumElements() -i -1);
+      elems[i] =
+          i == iIdx ? newElt : ExtractExpr::create(vec, bitOffset, EltBits);
+    }
 
     ref<Expr> Result = ConcatExpr::createN(ElemCount, elems);
     delete[] elems;
