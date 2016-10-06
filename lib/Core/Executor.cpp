@@ -2497,6 +2497,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     const llvm::VectorType *vt = eei->getVectorOperandType();
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
+    if (iIdx >= vt->getNumElements()) {
+      // Out of bounds read
+      // FIXME: Should have our own TerminateReason.
+      terminateStateOnError(state, "Out of bounds read when extracting element",
+                            ReportError);
+      return;
+    }
+
     // evalConstant() will use ConcatExpr to build vectors with the
     // zero-th element left most (most significant bits), followed
     // by the next element (second left most) and so on. This means
