@@ -2509,13 +2509,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, Result);
     break;
   }
-  // Other instructions...
-  // Unhandled
   case Instruction::ShuffleVector:
-    terminateStateOnError(state, "XXX vector instructions unhandled",
-                          Unhandled);
+    llvm_unreachable("ShuffleVector instruction should have been removed by scalarize pass");
     break;
  
+  // Other instructions...
+  // Unhandled
   default:
     terminateStateOnExecError(state, "illegal instruction");
     break;
