@@ -2463,6 +2463,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     const llvm::VectorType *vt = iei->getType();
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
+    if (iIdx >= vt->getNumElements()) {
+      // Out of bounds write
+      // FIXME: Should have our own TerminateReason.
+      terminateStateOnError(state, "Out of bounds write when inserting element",
+                            ReportError);
+      return;
+    }
+
     unsigned ElemCount = vt->getNumElements();
     ref<Expr> *elems = new ref<Expr>[ElemCount];
     for (unsigned i = 0; i < ElemCount; ++i) {
