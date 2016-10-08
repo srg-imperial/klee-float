@@ -13,14 +13,14 @@ namespace klee {
 ArrayAckermannizationInfo::ArrayAckermannizationInfo()
     : contiguousMSBitIndex(0), contiguousLSBitIndex(0) {}
 
-bool ArrayAckermannizationInfo::isContiguousArrayRead() {
+bool ArrayAckermannizationInfo::isContiguousArrayRead() const {
   if (isa<ConcatExpr>(toReplace)) {
     return true;
   }
   return false;
 }
 
-const Array *ArrayAckermannizationInfo::getArray() {
+const Array *ArrayAckermannizationInfo::getArray() const {
   if (ReadExpr *re = dyn_cast<ReadExpr>(toReplace)) {
     return re->updates.root;
   } else if (ConcatExpr *ce = dyn_cast<ConcatExpr>(toReplace)) {
@@ -33,7 +33,7 @@ const Array *ArrayAckermannizationInfo::getArray() {
   return NULL;
 }
 
-bool ArrayAckermannizationInfo::isWholeArray() {
+bool ArrayAckermannizationInfo::isWholeArray() const {
   const Array *theArray = getArray();
   if (isContiguousArrayRead()) {
     unsigned bitWidthOfArray = theArray->size * theArray->range;
@@ -44,6 +44,18 @@ bool ArrayAckermannizationInfo::isWholeArray() {
     }
   }
   return false;
+}
+
+const unsigned ArrayAckermannizationInfo::getWidth() const {
+  return (contiguousMSBitIndex - contiguousLSBitIndex) + 1;
+}
+
+void ArrayAckermannizationInfo::dump() const {
+  llvm::errs() << "isWholeArray: " << isWholeArray() << "\n";
+  llvm::errs() << "contiguousMSBitIndex:" << contiguousMSBitIndex << "\n";
+  llvm::errs() << "contiguousLSBitIndex:" << contiguousLSBitIndex << "\n";
+  llvm::errs() << "width:" << getWidth() << "\n";
+  llvm::errs() << "toReplace:\n" << toReplace << "\n";
 }
 
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
@@ -264,4 +276,23 @@ failedMatch :
 }
 
 void FindArrayAckermannizationVisitor::clear() { ackermannizationInfo.clear(); }
+
+void FindArrayAckermannizationVisitor::dump() const {
+  llvm::errs() << "[FindArrayAckermannizationVisitor: "
+               << ackermannizationInfo.size() << " arrays]\n";
+  for (ArrayToAckermannizationInfoMapTy::const_iterator
+           i = ackermannizationInfo.begin(),
+           e = ackermannizationInfo.end();
+       i != e; ++i) {
+    llvm::errs() << "Array:" << i->first->name << "\n"
+                 << i->second.size() << " array ackermannization info(s)"
+                 << "\n";
+    for (std::vector<ArrayAckermannizationInfo>::const_iterator
+             iaai = i->second.begin(),
+             eaai = i->second.end();
+         iaai != eaai; ++iaai) {
+      iaai->dump();
+    }
+  }
+}
 }
