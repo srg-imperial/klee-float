@@ -15,6 +15,7 @@
 #include "klee/SolverImpl.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprUtil.h"
+#include "../Expr/FindArrayAckermannizationVisitor.h" // FIXME: No relative includes!
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -28,6 +29,10 @@ llvm::cl::opt<bool> Z3ValidateModels(
     "z3-validate-models", llvm::cl::init(false),
     llvm::cl::desc("When generating Z3 models validate these against the query"));
 
+llvm::cl::opt<bool> Z3AckermannizeArrays(
+    "z3-array-ackermannize", llvm::cl::init(false),
+    llvm::cl::desc("Try to ackermannize arrays before building Z3 queries "
+                   "(experimental) (default false)"));
 }
 
 
@@ -219,6 +224,18 @@ bool Z3SolverImpl::internalRunSolver(
   Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
 
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
+
+  // Try ackermannize the arrays
+  if (Z3AckermannizeArrays) {
+    FindArrayAckermannizationVisitor faav(/*recursive=*/false, /*maxWidth=*/64);
+    for (ConstraintManager::const_iterator it = query.constraints.begin(),
+                                           ie = query.constraints.end();
+         it != ie; ++it) {
+      faav.visit(*it);
+    }
+    faav.visit(query.expr);
+    faav.dump();
+  }
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                          ie = query.constraints.end();
