@@ -17,12 +17,14 @@ namespace klee {
 
 struct ArrayAckermannizationInfo {
   ref<Expr> toReplace;
-  bool isContiguousArrayRead();
+  bool isContiguousArrayRead() const;
   unsigned contiguousMSBitIndex; // only relevant if isContiguousArrayRead() is true
   unsigned contiguousLSBitIndex; // only relevant if isContiguousArrayRead() is true
-  const Array *getArray();
-  bool isWholeArray();
+  const unsigned getWidth() const;
+  const Array *getArray() const;
+  bool isWholeArray() const;
   ArrayAckermannizationInfo();
+  void dump() const;
 };
 
 /// This class looks for opportunities to perform ackermannization (ackermann's
@@ -30,7 +32,7 @@ struct ArrayAckermannizationInfo {
 /// into uses of bitvector variables of bitwidth <= ``maxArrayWidth``. Note
 /// this visitor doesn't actually modify the expressions given to it, instead
 /// it just looks for opportunities to apply the reduction.
-class FindArrayAckermannizationVisitor : ExprVisitor {
+class FindArrayAckermannizationVisitor : public ExprVisitor {
 public:
   FindArrayAckermannizationVisitor(bool recursive, unsigned maxArrayWidth);
   void clear();
@@ -49,6 +51,7 @@ public:
   ArrayToAckermannizationInfoMapTy ackermannizationInfo;
   std::vector<ArrayAckermannizationInfo> *
   getOrInsertAckermannizationInfo(const Array *, bool *wasInsert);
+  void dump() const;
 
 protected:
   Action visitConcat(const ConcatExpr &);
