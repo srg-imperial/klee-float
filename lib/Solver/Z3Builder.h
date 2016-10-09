@@ -100,8 +100,10 @@ public:
 };
 
 class Z3Builder {
+  friend class Z3SolverImpl;
   ExprHashMap<std::pair<Z3ASTHandle, unsigned> > constructed;
   Z3ArrayExprHash _arr_hash;
+  ExprHashMap<Z3ASTHandle> replaceWithVariable;
 
 private:
   Z3ASTHandle bvOne(unsigned width);
@@ -193,6 +195,15 @@ public:
 
   void clearConstructCache() { constructed.clear(); }
   void closeInteractionLog(); // Should be called before aborting
+
+  // Create a fresh variable of bitvector type that has the width
+  // of the passed in expression and during calls to `construct()`
+  // all uses of the expression `e` will be replaced with the
+  // fresh variable. This function can be called multiple times
+  // to add multiple replacements. The replacements are cleared
+  Z3ASTHandle addReplacementVariable(const ref<Expr> e, const char* name);
+  // Clear the stored replacement variables.
+  void clearReplacementVariables();
 };
 }
 
