@@ -17,10 +17,9 @@ namespace klee {
 
 struct ArrayAckermannizationInfo {
   ref<Expr> toReplace;
-  bool isContiguousArrayRead() const;
-  unsigned contiguousMSBitIndex; // only relevant if isContiguousArrayRead() is true
-  unsigned contiguousLSBitIndex; // only relevant if isContiguousArrayRead() is true
-  const unsigned getWidth() const;
+  unsigned contiguousMSBitIndex;
+  unsigned contiguousLSBitIndex;
+  unsigned getWidth() const;
   const Array *getArray() const;
   bool isWholeArray() const;
   ArrayAckermannizationInfo();
