@@ -97,6 +97,7 @@ Z3Builder::~Z3Builder() {
   // Clear caches so exprs/sorts gets freed before the destroying context
   // they aren associated with.
   clearConstructCache();
+  clearReplacementVariables();
   _arr_hash.clear();
   Z3_del_context(ctx);
   closeInteractionLog();
@@ -485,6 +486,14 @@ Z3ASTHandle Z3Builder::getArrayForUpdate(const Array *root,
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
+  // See if a replacement variable should be used instead of constructing
+  // the replacement expression.
+  ExprHashMap<Z3ASTHandle>::iterator replIt = replaceWithVariable.find(e);
+  if (replIt != replaceWithVariable.end()) {
+    if (width_out)
+      *width_out = e->getWidth();
+    return replIt->second;
+  }
   // TODO: We could potentially use Z3_simplify() here
   // to store simpler expressions.
   if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
@@ -1169,5 +1178,25 @@ Z3ASTHandle Z3Builder::getRoundingModeSort(llvm::APFloat::roundingMode rm) {
       llvm_unreachable("Unhandled rounding mode");
   }
 }
+
+Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
+                                              const char *name) {
+#ifndef NDEBUG
+  ExprHashMap<Z3ASTHandle>::iterator it = replaceWithVariable.find(e);
+  assert(it == replaceWithVariable.end() &&
+         "Cannot add replacement for an expression that "
+         "already has a replacement");
+#endif
+
+  // Create fresh variable
+  // Does Z3 care about the string symbol name used for variables?
+  Z3SortHandle sort = getBvSort(e->getWidth());
+  Z3_symbol s = Z3_mk_string_symbol(ctx, name);
+  Z3ASTHandle newVar = Z3ASTHandle(Z3_mk_const(ctx, s, sort), ctx);
+  replaceWithVariable.insert(std::make_pair(e, newVar));
+  return newVar;
+}
+
+void Z3Builder::clearReplacementVariables() { replaceWithVariable.clear(); }
 }
 #endif // ENABLE_Z3

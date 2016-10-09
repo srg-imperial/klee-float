@@ -13,13 +13,6 @@ namespace klee {
 ArrayAckermannizationInfo::ArrayAckermannizationInfo()
     : contiguousMSBitIndex(0), contiguousLSBitIndex(0) {}
 
-bool ArrayAckermannizationInfo::isContiguousArrayRead() const {
-  if (isa<ConcatExpr>(toReplace)) {
-    return true;
-  }
-  return false;
-}
-
 const Array *ArrayAckermannizationInfo::getArray() const {
   if (ReadExpr *re = dyn_cast<ReadExpr>(toReplace)) {
     return re->updates.root;
@@ -35,18 +28,15 @@ const Array *ArrayAckermannizationInfo::getArray() const {
 
 bool ArrayAckermannizationInfo::isWholeArray() const {
   const Array *theArray = getArray();
-  if (isContiguousArrayRead()) {
-    unsigned bitWidthOfArray = theArray->size * theArray->range;
-    assert(contiguousMSBitIndex > contiguousLSBitIndex);
-    unsigned bitWidthOfRegion = contiguousMSBitIndex - contiguousLSBitIndex +1;
-    if (bitWidthOfArray == bitWidthOfRegion) {
-      return true;
-    }
+  unsigned bitWidthOfArray = theArray->size * theArray->range;
+  assert(contiguousMSBitIndex > contiguousLSBitIndex);
+  if (bitWidthOfArray == getWidth()) {
+    return true;
   }
   return false;
 }
 
-const unsigned ArrayAckermannizationInfo::getWidth() const {
+unsigned ArrayAckermannizationInfo::getWidth() const {
   return (contiguousMSBitIndex - contiguousLSBitIndex) + 1;
 }
 
@@ -259,6 +249,13 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
   // handle this using bitwise masking and or'ing and shifting. For now pretend
   // that they can't be ackermannized.
   if (re.updates.head != NULL) {
+    goto failedMatch;
+  }
+
+  if (ConstantExpr *index = dyn_cast<ConstantExpr>(re.index)) {
+    ackInfo.contiguousLSBitIndex = index->getZExtValue() * re.getWidth();
+    ackInfo.contiguousMSBitIndex = ((index->getZExtValue() + 1) * re.getWidth()) -1;
+  } else {
     goto failedMatch;
   }
 
