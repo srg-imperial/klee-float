@@ -57,5 +57,6 @@ endif
 
 ifeq ($(HOST_OS), $(filter $(HOST_OS), Linux GNU GNU/kFreeBSD))
     # Don't allow unresolved symbols.
-    LLVMLibsOptions += -Wl,--no-undefined
+    # Unbreak ASAN build
+    #LLVMLibsOptions += -Wl,--no-undefined
 endif
