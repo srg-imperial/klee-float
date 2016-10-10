@@ -97,6 +97,7 @@ public:
   Z3ArrayExprHash(){};
   virtual ~Z3ArrayExprHash();
   void clear();
+  void clearUpdates();
 };
 
 class Z3Builder {
