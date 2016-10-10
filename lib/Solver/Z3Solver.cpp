@@ -252,7 +252,7 @@ bool Z3SolverImpl::internalRunSolver(
         const ArrayAckermannizationInfo* aaInfo = &(*i); // Safe?
         std::string str;
         llvm::raw_string_ostream os(str);
-        os << aaInfo->getArray()->name << counter;
+        os << aaInfo->getArray()->name << "_ackermann_" << counter;
         Z3ASTHandle replacementVar = builder->addReplacementVariable(
             aaInfo->toReplace, os.str().c_str());
         ++counter;
@@ -286,9 +286,11 @@ bool Z3SolverImpl::internalRunSolver(
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
                                        hasSolution, faav, arrayReplacements);
 
-  // Remove any replacements we made as accumulating these across
-  // solver runs might not be valid.
-  builder->clearReplacementVariables();
+  if (Z3AckermannizeArrays) {
+    // Remove any replacements we made as accumulating these across
+    // solver runs might not be valid.
+    builder->clearReplacementVariables();
+  }
 
   Z3_solver_dec_ref(builder->ctx, theSolver);
   // Clear the builder's cache to prevent memory usage exploding.

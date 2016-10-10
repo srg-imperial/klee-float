@@ -70,8 +70,12 @@ void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
 Z3ArrayExprHash::~Z3ArrayExprHash() {}
 
 void Z3ArrayExprHash::clear() {
-  _update_node_hash.clear();
   _array_hash.clear();
+  clearUpdates();
+}
+
+void Z3ArrayExprHash::clearUpdates() {
+  _update_node_hash.clear();
 }
 
 Z3Builder::Z3Builder(bool autoClearConstructCache)
@@ -1197,6 +1201,13 @@ Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
   return newVar;
 }
 
-void Z3Builder::clearReplacementVariables() { replaceWithVariable.clear(); }
+void Z3Builder::clearReplacementVariables() {
+  // FIXME: Try to find a way to avoid doing this. We don't always
+  // need to clear everything in the cache.
+  // We have to clear the cached update expressions because they may
+  // use replacement variables.
+  _arr_hash.clearUpdates();
+  replaceWithVariable.clear();
+}
 }
 #endif // ENABLE_Z3
