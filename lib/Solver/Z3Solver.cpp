@@ -366,14 +366,11 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
             assert((offset*8) >= info->contiguousLSBitIndex);
             unsigned bitOffsetToReadWithinVariable = (offset*8) - info->contiguousLSBitIndex;
             assert(bitOffsetToReadWithinVariable < info->getWidth());
-            // Shift right to grab the relevant bits.
-            Z3ASTHandle shiftExpr = Z3ASTHandle(
-                builder->bvRightShift(replacementVariable,
-                                      bitOffsetToReadWithinVariable),
-                builder->ctx);
-            // Extract the first 8 bits to form the byte.
+            // Extract the byte
             initial_read = Z3ASTHandle(
-                Z3_mk_extract(builder->ctx, /*high=*/7, /*low=*/0, shiftExpr),
+                Z3_mk_extract(
+                    builder->ctx, /*high=*/bitOffsetToReadWithinVariable + 7,
+                    /*low=*/bitOffsetToReadWithinVariable, replacementVariable),
                 builder->ctx);
             break;
           }
