@@ -48,6 +48,20 @@ void ArrayAckermannizationInfo::dump() const {
   llvm::errs() << "toReplace:\n" << toReplace << "\n";
 }
 
+bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) const {
+  // right edge of other inside this
+  if (other.contiguousLSBitIndex >= this->contiguousLSBitIndex &&
+      other.contiguousLSBitIndex <= this->contiguousMSBitIndex) {
+    return true;
+  }
+  // left edge of other inside this
+  if (other.contiguousMSBitIndex >= this->contiguousLSBitIndex &&
+      other.contiguousMSBitIndex <= this->contiguousMSBitIndex) {
+    return true;
+  }
+  return false;
+}
+
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
     bool recursive, unsigned maxArrayWidth)
     : ExprVisitor(recursive), maxArrayWidth(maxArrayWidth) {}
@@ -204,6 +218,20 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   ackInfo.contiguousMSBitIndex = MSBitIndex;
   ackInfo.contiguousLSBitIndex = LSBitIndex;
   assert(ackInfo.contiguousMSBitIndex > ackInfo.contiguousLSBitIndex && "bit indicies incorrectly ordered");
+
+  // FIXME: This needs re-thinking. We should allow overlapping regions
+  // (especially regions where the regions are completly inside another).
+  // `ArrayAckermannizationInfo` needs to be worked to convey this information
+  // better. For now disallow overlapping regions.
+  for (std::vector<ArrayAckermannizationInfo>::const_iterator
+           i = ackInfos->begin(),
+           ie = ackInfos->end();
+       i != ie; ++i) {
+    if (i->overlapsWith(ackInfo)) {
+      goto failedMatch;
+    }
+  }
+
   ackInfos->push_back(ackInfo);
   // We know the indices are simple constants so need to traverse children
   return Action::skipChildren();
@@ -262,6 +290,19 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
   // This is an array read without constants values or updates so we
   // can definitely ackermannize this based on what we've seen so far.
   ackInfo.toReplace = ref<Expr>(const_cast<ReadExpr *>(&re));
+
+  // FIXME: This needs re-thinking. We should allow overlapping regions
+  // (especially regions where the regions are completly inside another).
+  // `ArrayAckermannizationInfo` needs to be worked to convey this information
+  // better to Z3SolverImpl. For now disallow overlapping regions.
+  for (std::vector<ArrayAckermannizationInfo>::const_iterator
+           i = ackInfos->begin(),
+           ie = ackInfos->end();
+       i != ie; ++i) {
+    if (i->overlapsWith(ackInfo)) {
+      goto failedMatch;
+    }
+  }
   ackInfos->push_back(ackInfo);
   return Action::doChildren(); // Traverse index expression
 
