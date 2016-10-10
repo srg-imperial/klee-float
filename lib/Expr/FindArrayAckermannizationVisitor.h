@@ -24,6 +24,7 @@ struct ArrayAckermannizationInfo {
   bool isWholeArray() const;
   ArrayAckermannizationInfo();
   void dump() const;
+  bool overlapsWith(ArrayAckermannizationInfo& other) const;
 };
 
 /// This class looks for opportunities to perform ackermannization (ackermann's
