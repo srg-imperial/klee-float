@@ -206,15 +206,6 @@ bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
 
-    if (dumpedQueriesFile) {
-      *dumpedQueriesFile << "; start Z3 query\n";
-      // FIXME: This might not be what is actually given to Z3
-      char* log = getConstraintLog(query);
-      *dumpedQueriesFile << log;
-      free(log);
-      *dumpedQueriesFile << "; end Z3 query\n\n";
-      dumpedQueriesFile->flush();
-    }
 
   TimerStatIncrementer t(stats::queryTime);
   // TODO: Does making a new solver for each query have a performance
@@ -281,6 +272,15 @@ bool Z3SolverImpl::internalRunSolver(
   Z3_solver_assert(
       builder->ctx, theSolver,
       Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx));
+
+  if (dumpedQueriesFile) {
+    *dumpedQueriesFile << "; start Z3 query\n";
+    *dumpedQueriesFile << Z3_solver_to_string(builder->ctx, theSolver);
+    *dumpedQueriesFile << "(check-sat)\n";
+    *dumpedQueriesFile << "(reset)\n";
+    *dumpedQueriesFile << "; end Z3 query\n\n";
+    dumpedQueriesFile->flush();
+  }
 
   ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
