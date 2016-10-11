@@ -18,8 +18,12 @@ int main() {
   KleeRoundingModeTy newRoundingMode = klee_get_rounding_mode();
   assert(newRoundingMode == rm);
   switch (newRoundingMode) {
-  #define CASE(X) case  X : \
-      printf( # X "\n"); break;
+// Using klee_print_expr() here is a hack to avoid making an external
+// call which prevents KLEE_FP_RNA from being used.
+#define CASE(X)                                                                \
+  case X:                                                                      \
+    klee_print_expr(#X "\n", "");                                              \
+    break;
     CASE(KLEE_FP_RNE)
     CASE(KLEE_FP_RNA)
     CASE(KLEE_FP_RU)

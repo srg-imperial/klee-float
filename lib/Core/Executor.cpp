@@ -23,19 +23,11 @@
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
 
-
-#include "klee/ExecutionState.h"
-#include "klee/Expr.h"
-#include "klee/Interpreter.h"
-#include "klee/TimerStatIncrementer.h"
 #include "klee/CommandLine.h"
 #include "klee/Common.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprPPrinter.h"
-#include "klee/util/ExprSMTLIBPrinter.h"
-#include "klee/util/ExprUtil.h"
-#include "klee/util/GetElementPtrTypeIterator.h"
 #include "klee/Config/Version.h"
+#include "klee/ExecutionState.h"
+#include "klee/Expr.h"
 #include "klee/Internal/ADT/KTest.h"
 #include "klee/Internal/ADT/RNG.h"
 #include "klee/Internal/Module/Cell.h"
@@ -44,9 +36,17 @@
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FloatEvaluation.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/Internal/Support/RoundingModeUtil.h"
 #include "klee/Internal/System/MemoryUsage.h"
+#include "klee/Internal/System/Time.h"
+#include "klee/Interpreter.h"
 #include "klee/SolverStats.h"
+#include "klee/TimerStatIncrementer.h"
+#include "klee/util/Assignment.h"
+#include "klee/util/ExprPPrinter.h"
+#include "klee/util/ExprSMTLIBPrinter.h"
+#include "klee/util/ExprUtil.h"
+#include "klee/util/GetElementPtrTypeIterator.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 3)
 #include "llvm/IR/Function.h"
@@ -3041,8 +3041,17 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
-  
-  bool success = externalDispatcher->executeCall(function, target->inst, args);
+
+  int roundingMode = LLVMRoundingModeToCRoundingMode(state.roundingMode);
+  if (roundingMode == -1) {
+    std::string msg("Cannot set rounding mode for external call to ");
+    msg += LLVMRoundingModeToString(state.roundingMode);
+    terminateStateOnError(state, msg, External);
+    return;
+  }
+
+  bool success = externalDispatcher->executeCall(function, target->inst, args,
+                                                 roundingMode);
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
                           External);
