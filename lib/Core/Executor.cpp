@@ -1217,22 +1217,22 @@ void Executor::executeGetValue(ExecutionState &state,
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
-    ref<Expr> tmp;
-    bool success = solver->getValue(state, e, tmp);
-    ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
-    assert(success && "FIXME: Unhandled solver failure");
-    (void) success;
-    bindLocal(target, state, value);
+    ref<Expr> value;
+    bool success = solver->getValue(state, e, value);
+		assert(success && "FIXME: Unhandled solver failure");
+		(void) success;
+		assert(isa<ConstantExpr>(value) || isa<FConstantExpr>(value));
+		bindLocal(target, state, value);
   } else {
     std::set< ref<Expr> > values;
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
-      ref<Expr> tmp;
+      ref<Expr> value;
       bool success = 
-        solver->getValue(state, siit->assignment.evaluate(e), tmp);
-      ref<ConstantExpr> value = cast<ConstantExpr>(tmp);
+        solver->getValue(state, siit->assignment.evaluate(e), value);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
+			assert(isa<ConstantExpr>(value) || isa<FConstantExpr>(value));
       values.insert(value);
     }
     
@@ -3300,6 +3300,10 @@ void Executor::callExternalFunction(ExecutionState &state,
         // XXX kick toMemory functions from here
         ce->toMemory(&args[wordIndex]);
         wordIndex += (ce->getWidth()+63)/64;
+      } else if (FConstantExpr *fce = dyn_cast<FConstantExpr>(arg)) {
+        // XXX kick toMemory functions from here
+        fce->toMemory(&args[wordIndex]);
+        wordIndex += (fce->getWidth()+63)/64;
       } else {
         terminateStateOnExecError(state, 
                                   "external call with symbolic argument: " + 

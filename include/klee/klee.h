@@ -119,6 +119,7 @@ extern "C" {
 
   KLEE_GET_VALUE_PROTO(f, float);
   KLEE_GET_VALUE_PROTO(d, double);
+  KLEE_GET_VALUE_PROTO(ld, long double);
   KLEE_GET_VALUE_PROTO(l, long);
   KLEE_GET_VALUE_PROTO(ll, long long);
   KLEE_GET_VALUE_PROTO(_i32, int32_t);
