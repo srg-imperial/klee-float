@@ -145,15 +145,14 @@ private:
   Z3ASTHandle concatExpr(Z3ASTHandle first, Z3ASTHandle second, Z3ASTHandle third, Z3ASTHandle fourth);
 
   // Floating-point operations
-  Z3ASTHandle bv_to_float(Z3ASTHandle expr);
-  Z3ASTHandle float_to_bv(Z3ASTHandle expr);
   Z3ASTHandle isNanExpr(Z3ASTHandle expr);
   Z3ASTHandle isInfinityExpr(Z3ASTHandle expr);
   Z3ASTHandle isFPZeroExpr(Z3ASTHandle expr);
   Z3ASTHandle isSubnormalExpr(Z3ASTHandle expr);
   Z3ASTHandle isFPNegativeExpr(Z3ASTHandle expr);
   Z3_ast getRoundingModeAST(llvm::APFloat::roundingMode rm);
-  Z3ASTHandle nanExpr(Z3SortHandle sort);
+  Z3ASTHandle fpNan(Z3SortHandle sort);
+  Z3ASTHandle fpZero(Z3SortHandle sort);
 
   // Array operations
   Z3ASTHandle writeExpr(Z3ASTHandle array, Z3ASTHandle index,
