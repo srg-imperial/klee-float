@@ -31,8 +31,8 @@ using namespace llvm;
 namespace {
   cl::opt<bool>
   ConstArrayOpt("const-array-opt",
-	 cl::init(false),
-	 cl::desc("Enable various optimizations involving all-constant arrays."));
+   cl::init(false),
+   cl::desc("Enable various optimizations involving all-constant arrays."));
 }
 
 /***/
@@ -298,14 +298,14 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       
 #define CAST_EXPR_CASE(T)                                    \
       case T:                                                \
-        assert(numArgs == 2 &&				     \
+        assert(numArgs == 2 &&             \
                args[0].isExpr() && args[1].isWidth() &&      \
                "invalid args array for given opcode");       \
       return T ## Expr::create(args[0].expr, args[1].width); \
 
 #define CAST_RM_EXPR_CASE(T)                                                        \
       case T:                                                                       \
-        assert(numArgs == 3 &&				                                              \
+        assert(numArgs == 3 &&                                                      \
                args[0].isExpr() && args[1].isWidth() && args[2].isRoundingMode() && \
                "invalid args array for given opcode");                              \
       return T ## Expr::create(args[0].expr, args[1].width, args[2].rm);            \
@@ -460,6 +460,15 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   }
 }
 
+ref<Expr> FConstantExpr::fromMemory(void *address, Width width) {
+  switch (width) {
+  case Expr::Fl32: return ExplicitFloatExpr::create(ConstantExpr::create(*((uint32_t*) address), Expr::Int32), Expr::Fl32);
+  case Expr::Fl64: return ExplicitFloatExpr::create(ConstantExpr::create(*((uint64_t*) address), Expr::Int64), Expr::Fl64);
+  case Expr::Fl80: assert(false && "not implemented");
+  }
+  return ConstantExpr::alloc(llvm::APInt());
+}
+
 void ConstantExpr::toMemory(void *address) {
   switch (getWidth()) {
   default: assert(0 && "invalid type");
@@ -468,10 +477,17 @@ void ConstantExpr::toMemory(void *address) {
   case Expr::Int16: *((uint16_t*) address) = getZExtValue(16); break;
   case Expr::Int32: *((uint32_t*) address) = getZExtValue(32); break;
   case Expr::Int64: *((uint64_t*) address) = getZExtValue(64); break;
+  }
+}
+
+void FConstantExpr::toMemory(void *address) {
+  llvm::APInt bits = value.bitcastToAPInt();
+  switch (getWidth()) {
+  default: assert(0 && "invalid type");
+  case Expr::Fl32: *((float*) address) = bits.getZExtValue(); break;
+  case Expr::Fl64: *((double*) address) = bits.getZExtValue(); break;
   // FIXME: what about machines without x87 support?
-  case Expr::Fl80:
-    *((long double*) address) = *(const long double*) value.getRawData();
-    break;
+  case Expr::Fl80: assert(false && "not implemented");
   }
 }
 
@@ -1204,11 +1220,11 @@ ref<Expr> ConcatExpr::create4(const ref<Expr> &kid1, const ref<Expr> &kid2,
 
 /// Shortcut to concat 8 kids.  The chain returned is unbalanced to the right
 ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
-			      const ref<Expr> &kid3, const ref<Expr> &kid4,
-			      const ref<Expr> &kid5, const ref<Expr> &kid6,
-			      const ref<Expr> &kid7, const ref<Expr> &kid8) {
+            const ref<Expr> &kid3, const ref<Expr> &kid4,
+            const ref<Expr> &kid5, const ref<Expr> &kid6,
+            const ref<Expr> &kid7, const ref<Expr> &kid8) {
   return ConcatExpr::create(kid1, ConcatExpr::create(kid2, ConcatExpr::create(kid3, 
-			      ConcatExpr::create(kid4, ConcatExpr::create4(kid5, kid6, kid7, kid8)))));
+            ConcatExpr::create(kid4, ConcatExpr::create4(kid5, kid6, kid7, kid8)))));
 }
 
 /***/
@@ -1226,15 +1242,15 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
     if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
       // if the extract skips the right side of the concat
       if (off >= ce->getRight()->getWidth())
-	return ExtractExpr::create(ce->getLeft(), off - ce->getRight()->getWidth(), w);
+  return ExtractExpr::create(ce->getLeft(), off - ce->getRight()->getWidth(), w);
       
       // if the extract skips the left side of the concat
       if (off + w <= ce->getRight()->getWidth())
-	return ExtractExpr::create(ce->getRight(), off, w);
+  return ExtractExpr::create(ce->getRight(), off, w);
 
       // E(C(x,y)) = C(E(x), E(y))
       return ConcatExpr::create(ExtractExpr::create(ce->getKid(0), 0, w - ce->getKid(1)->getWidth() + off),
-				ExtractExpr::create(ce->getKid(1), off, ce->getKid(1)->getWidth() - off));
+        ExtractExpr::create(ce->getKid(1), off, ce->getKid(1)->getWidth() - off));
     }
   }
   
@@ -1633,7 +1649,7 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 /// returns a disjunction of equalities on the index.  Otherwise,
 /// returns the initial equality expression. 
 static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, 
-				  ReadExpr *rd) {
+          ReadExpr *rd) {
   if (rd->updates.root->isSymbolicArray() || rd->updates.getSize())
     return EqExpr_create(cl, rd);
 

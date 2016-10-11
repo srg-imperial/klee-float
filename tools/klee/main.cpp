@@ -743,6 +743,7 @@ static const char *modelledExternals[] = {
   "klee_get_errno",
   "klee_get_valuef",
   "klee_get_valued",
+  "klee_get_valueld",
   "klee_get_valuel",
   "klee_get_valuell",
   "klee_get_value_i32",
