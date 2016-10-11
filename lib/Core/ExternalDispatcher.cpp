@@ -40,6 +40,7 @@
 #include "llvm/IR/CallSite.h"
 #endif
 
+#include <fenv.h>
 #include <setjmp.h>
 #include <signal.h>
 
@@ -119,7 +120,8 @@ ExternalDispatcher::~ExternalDispatcher() {
   delete executionEngine;
 }
 
-bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args) {
+bool ExternalDispatcher::executeCall(Function *f, Instruction *i,
+                                     uint64_t *args, int roundingMode) {
   dispatchers_ty::iterator it = dispatchers.find(i);
   Function *dispatcher;
 
@@ -152,7 +154,24 @@ bool ExternalDispatcher::executeCall(Function *f, Instruction *i, uint64_t *args
     dispatcher = it->second;
   }
 
-  return runProtectedCall(dispatcher, args);
+  // Save current rounding mode used by KLEE internally and set the
+  // rounding mode needed during the external call.
+  int oldRoundingMode = fegetround();
+  bool success = !fesetround(roundingMode);
+  if (!success) {
+    llvm::errs() << "Failed to set rounding mode during external call\n";
+    abort();
+  }
+
+  bool result = runProtectedCall(dispatcher, args);
+
+  // Restore rounding mode.
+  success = !fesetround(oldRoundingMode);
+  if (!success) {
+    llvm::errs() << "Failed to restore rounding mode during external call\n";
+    abort();
+  }
+  return result;
 }
 
 // FIXME: This is not reentrant.
