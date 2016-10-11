@@ -42,7 +42,8 @@ namespace klee {
      * ci with arguments in args[1], args[2], ... and writing the result
      * into args[0].
      */
-    bool executeCall(llvm::Function *function, llvm::Instruction *i, uint64_t *args);
+    bool executeCall(llvm::Function *function, llvm::Instruction *i,
+                     uint64_t *args, int roundingMode);
     void *resolveSymbol(const std::string &name);
   };  
 }
