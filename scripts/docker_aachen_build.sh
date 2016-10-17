@@ -5,16 +5,21 @@
 
 set -e
 
+IMAGE="klee-dev-fpbench-patched"
+# Patch the image to use the user id on this host
+docker build -t ${IMAGE} --build-arg host_user_id="$(id -u)" -f scripts/patch_aachen.Dockerfile .
+
+# Create a base image
+
 # Build KLEE inside the container
-IMAGE="${IMAGE:-comsys/klee-dev-fpbench-prebuilt}"
 TEMP_NAME="klee_afr_temp"
 NEW_IMAGE_NAME="local_klee_afr"
 WHOLE_PROGRAM_LLVM_TEMP_DIR="$(pwd)/temp_whole_program_llvm"
 
-# Used patched makefile so we don't build with STP.
+# Use patched makefile so we don't build with STP.
 docker kill ${TEMP_NAME} || echo "${TEMP_NAME} isn't running"
 docker rm ${TEMP_NAME} || echo "${TEMP_NAME} doesn't exist"
-docker run --rm --name=${TEMP_NAME} -ti ${NETWORK_FLAGS} \
+docker run --rm --user="$(id -u):$(id -g)" --name=${TEMP_NAME} -ti ${NETWORK_FLAGS} \
   -v `pwd`:/home/user/klee \
   -v `pwd`/scripts/container.Makefile:/home/user/makefile \
   ${IMAGE} \
