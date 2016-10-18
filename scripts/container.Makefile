@@ -72,6 +72,46 @@ check:
 all:
 	$(MAKE) llvm && $(MAKE) minisat && $(MAKE) stp && $(MAKE) z3 && $(MAKE) uclibc && $(MAKE) klee
 
+fp_bench_clone:
+	git clone https://github.com/delcypher/fp-bench && cd fp-bench && git checkout c198aab222cd95616511f605f8e345c6dd44d87b
+	cd fp-bench/benchmarks/c/ && git clone https://github.com/delcypher/fp-benchmarks-imperial.git imperial && \
+		cd imperial && git checkout 098085a9eb419930fb982eca5be4d3fc7a0d8655
+	cd fp-bench/benchmarks/c/ && git clone -b forked https://github.com/delcypher/fp-benchmarks-aachen.git aachen && \
+		cd aachen && git checkout e7b67b70d91b1eee30bbbed9df76cbf2ec2cd3c9
+
+fp_bench_build_O0:
+	mkdir -p build_O0
+	cd build_O0 && \
+		CC=/home/user/whole-program-llvm/wllvm \
+		CXX=/home/user/whole-program-llvm/wllvm++ \
+		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
+		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
+		cmake \
+		-DCMAKE_BUILD_TYPE=Debug \
+		-DBUILD_IMPERIAL_BENCHMARKS=OFF \
+		-DBUILD_AACHEN_BENCHMARKS=ON \
+		../fp-bench/
+	cd build_O0 && make create-augmented-spec-file-list
+	cd build_O0 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
+	cd build_O0 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
+
+fp_bench_build_O2:
+	mkdir -p build_O2
+	cd build_O2 && \
+		CC=/home/user/whole-program-llvm/wllvm \
+		CXX=/home/user/whole-program-llvm/wllvm++ \
+		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
+		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
+		cmake \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DBUILD_IMPERIAL_BENCHMARKS=ON \
+		-DBUILD_AACHEN_BENCHMARKS=OFF \
+		../fp-bench/
+	cd build_O2 && make create-augmented-spec-file-list
+	cd build_O2 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
+	cd build_O2 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
+
+
 pull:
 	cd llvm && git pull
 	cd llvm/tools/clang && git pull
@@ -108,5 +148,5 @@ unshallow:
 	cd klee && git fetch --unshallow
 	cd whole-program-llvm && git fetch --unshallow
 
-.PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee
+.PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee fp_bench_clone fp_bench_build_O0 fp_bench_build_O2
 .DEFAULT_GOAL := all
