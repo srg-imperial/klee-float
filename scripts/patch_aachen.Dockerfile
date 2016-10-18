@@ -49,3 +49,8 @@ WORKDIR /home/${container_username}/
 RUN make klee
 # Install
 RUN cd /home/${container_username}/klee/build && sudo make install && sudo ldconfig -n /usr/local/lib
+
+# Setup environment for shell so fp-bench is easy to build
+RUN echo "export KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/" >> /home/user/.bashrc && \
+    echo "export KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/" >> /home/user/.bashrc
+
