@@ -1,4 +1,6 @@
 .git
 autom4te.cache
 **/.*.swp
-Dockerfile
+scripts/patch_aachen.Dockerfile
+scripts/docker_aachen_build.sh
+scripts/patch_aachen.metadata.Dockerfile

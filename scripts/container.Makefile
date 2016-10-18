@@ -82,6 +82,7 @@ pull:
 	cd z3 && git pull
 	cd uclibc && git pull
 	cd klee && git pull
+	cd whole-program-llvm && git pull
 
 gc:
 	cd llvm && git gc --aggressive
@@ -93,6 +94,7 @@ gc:
 	cd z3 && git gc --aggressive
 	cd uclibc && git gc --aggressive
 	cd klee && git gc --aggressive
+	cd whole-program-llvm && git gc --agressive
 
 unshallow:
 	cd llvm && git fetch --unshallow
@@ -104,6 +106,7 @@ unshallow:
 	cd z3 && git fetch --unshallow
 	cd uclibc && git fetch --unshallow
 	cd klee && git fetch --unshallow
+	cd whole-program-llvm && git fetch --unshallow
 
 .PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee
 .DEFAULT_GOAL := all
