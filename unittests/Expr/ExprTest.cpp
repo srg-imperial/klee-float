@@ -12,6 +12,9 @@
 
 #include "klee/Expr.h"
 #include "klee/util/ArrayCache.h"
+#include <fenv.h>
+#include <inttypes.h>
+#include <math.h>
 
 using namespace klee;
 
@@ -111,6 +114,135 @@ TEST(ExprTest, ExtractConcat) {
   EXPECT_EQ(10U, concat2->getWidth());
   EXPECT_EQ(Expr::Extract, concat2->getKid(0)->getKind());
   EXPECT_EQ(Expr::Extract, concat2->getKid(1)->getKind());
+}
+/*
+
+This test case is motivated by an inconsistency in a model
+produced by Z3 which it claims is satisfiable but when
+fed back into KLEE's expression language we get unsatisfiable.
+
+Query Expression evaluated to true when using assignment
+Expression:
+(Eq false
+     (Slt 0
+          (ZExt w32 (Slt 0
+                         (SExt w32 (Extract w8 0 (FAdd w32 (ReadLSB w32 0 f)
+                                                           1.0E+0)))))))
+Assignment:
+f
+[0,8,128,127,]
+Query with assignment as constraints:
+; Emited by klee::Z3SolverImpl::getConstraintLog()
+(set-info :status unknown)
+(declare-fun f0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert
+ (let ((?x184 (select f0 (_ bv0 32))))
+ (= (_ bv0 8) ?x184)))
+(assert
+ (let ((?x407 (select f0 (_ bv1 32))))
+ (= (_ bv8 8) ?x407)))
+(assert
+ (let ((?x1733 (select f0 (_ bv2 32))))
+ (= (_ bv128 8) ?x1733)))
+(assert
+ (let ((?x2122 (select f0 (_ bv3 32))))
+ (= (_ bv127 8) ?x2122)))
+(assert
+ (let ((?x1733 (select f0 (_ bv2 32))))
+(let ((?x2122 (select f0 (_ bv3 32))))
+(let ((?x1001 (concat ?x2122 (concat ?x1733 (concat (select f0 (_ bv1 32)) (select f0 (_ bv0 32)))))))
+(let ((?x1908 ((_ extract 7 0) (to_ieee_bv (fp.add roundNearestTiesToEven ((_ to_fp 8 24) ?x1001) ((_ to_fp 8 24) (_ bv1065353216 32)))))))
+(not (not (bvslt (_ bv0 32) (ite (bvslt (_ bv0 32) ((_ sign_extend 24) ?x1908)) (_ bv1 32) (_ bv0 32))))))))))
+(check-sat)
+*/
+TEST(ExprTest, FAddNaN) {
+  // 32-bit float with bit value 0x7f800800 which is a NaN.
+  uint32_t lhsBits = 0x7f800800;
+  float lhsAsNativeFloat = 0.0f;
+  EXPECT_EQ(sizeof(lhsBits), sizeof(lhsAsNativeFloat));
+  memcpy(&lhsAsNativeFloat, &lhsBits, sizeof(lhsAsNativeFloat));
+  EXPECT_TRUE(isnan(lhsAsNativeFloat));
+  printf("lhs as native float: %f\n", lhsAsNativeFloat);
+  printf("lhs as native bits: 0x%" PRIx32 "\n" , lhsBits);
+
+  ref<ConstantExpr> lhs = ConstantExpr::create((uint64_t) lhsBits, Expr::Int32);
+  llvm::APFloat lhsAsLLVMFloat = lhs->getAPFloatValue();
+  {
+    llvm::SmallVector<char, 16> sv;
+    lhsAsLLVMFloat.toString(sv);
+    std::string lhsAsString(sv.begin(), sv.end());
+    llvm::errs() << "LHS as APFloat: " << lhsAsString << "\n";
+  }
+
+  // 32-bit float with bit value 0x3f800000 which is 1.0f
+  uint32_t rhsBits = 0x3f800000;
+  float rhsAsNativeFloat = 0.0f;
+  EXPECT_EQ(sizeof(rhsBits), sizeof(rhsAsNativeFloat));
+  memcpy(&rhsAsNativeFloat, &rhsBits, sizeof(rhsAsNativeFloat));
+  EXPECT_EQ(1.0f, rhsAsNativeFloat);
+  printf("rhs as native float: %f\n", rhsAsNativeFloat);
+  printf("rhs as native bits: 0x%" PRIx32 "\n" , rhsBits);
+  ref<ConstantExpr> rhs = ConstantExpr::create((uint64_t) rhsBits, Expr::Int32);
+  llvm::APFloat rhsAsLLVMFloat = rhs->getAPFloatValue();
+  {
+    llvm::SmallVector<char, 16> sv;
+    rhsAsLLVMFloat.toString(sv);
+    std::string rhsAsString(sv.begin(), sv.end());
+    llvm::errs() << "RHS as APFloat: " << rhsAsString << "\n";
+  }
+
+	// Switch to round-to-nearest ties to even if we aren't already
+  // using it
+	int result = fesetround(FE_TONEAREST);
+  EXPECT_EQ(0, result);
+
+  // Do addition natively
+  float resultAsNativeFloat = lhsAsNativeFloat + rhsAsNativeFloat;
+  uint32_t resultBits = 0;
+  memcpy(&resultBits, &resultAsNativeFloat, sizeof(resultAsNativeFloat));
+  printf("result as native float: %f\n", resultAsNativeFloat);
+  printf("result as native bits: 0x%" PRIx32 "\n" , resultBits);
+
+  // Do addition using LLVM's APFloat
+  llvm::APFloat resultAsLLVMFloat(lhsAsLLVMFloat);
+  llvm::APFloat::opStatus status =
+      resultAsLLVMFloat.add(rhsAsLLVMFloat, llvm::APFloat::rmNearestTiesToEven);
+  EXPECT_EQ(llvm::APFloat::opOK, status); // FIXME: Check this is correct.
+  {
+    llvm::SmallVector<char, 16> sv;
+    resultAsLLVMFloat.toString(sv);
+    std::string resultAsString(sv.begin(), sv.end());
+    llvm::errs() << "Result as APFloat: " << resultAsString << "\n";
+  }
+
+  // Show as raw bits
+  llvm::APInt resultAsAPInt = resultAsLLVMFloat.bitcastToAPInt();
+  EXPECT_EQ(sizeof(float)*8, resultAsAPInt.getBitWidth());
+  uint64_t rawBits = resultAsAPInt.getZExtValue();
+  EXPECT_EQ((uint64_t) 0, ((uint64_t) 0xffffffff00000000) & rawBits);
+  uint32_t rawBits32 = (uint32_t) rawBits;
+  printf("result as LLVM APFloat native bits: 0x%" PRIx32 "\n" , rawBits32);
+
+  /*
+Evaluate constant in Z3
+
+(declare-fun nanBits () (_ BitVec 32))
+(declare-fun resultBits () (_ BitVec 32))
+(assert (= nanBits #x7f800800))
+(assert
+(let ((?x1908 (to_ieee_bv (fp.add roundNearestTiesToEven ((_ to_fp 8 24) nanBits) ((_ to_fp 8 24) #x3f800000)))))
+(= ?x1908 resultBits)
+))
+(check-sat)
+(get-model)
+  */
+// This the value in the model that Z3 gives back.
+uint32_t rawBitsZ3result = 0x7f800001;
+printf("result from a Z3 model as bits: 0x%" PRIx32 "\n" , rawBitsZ3result);
+// Here is another model that Z3 gave back at some point (see constraints above).
+uint32_t otherZ3result = 0x7f800800;
+printf("result from another Z3 model as bits: 0x%" PRIx32 "\n" , otherZ3result);
+
 }
 
 }
