@@ -115,6 +115,7 @@ TEST(ExprTest, ExtractConcat) {
   EXPECT_EQ(Expr::Extract, concat2->getKid(0)->getKind());
   EXPECT_EQ(Expr::Extract, concat2->getKid(1)->getKind());
 }
+
 /*
 
 This test case is motivated by an inconsistency in a model
@@ -161,12 +162,21 @@ TEST(ExprTest, FAddNaN) {
   float lhsAsNativeFloat = 0.0f;
   EXPECT_EQ(sizeof(lhsBits), sizeof(lhsAsNativeFloat));
   memcpy(&lhsAsNativeFloat, &lhsBits, sizeof(lhsAsNativeFloat));
+
+  int x = issignaling(lhsAsNativeFloat);
+  EXPECT_EQ(1, issignaling(lhsAsNativeFloat)); // Not signaling
+  EXPECT_EQ(1, x);
+
   EXPECT_TRUE(isnan(lhsAsNativeFloat));
   printf("lhs as native float: %f\n", lhsAsNativeFloat);
   printf("lhs as native bits: 0x%" PRIx32 "\n" , lhsBits);
 
   ref<ConstantExpr> lhs = ConstantExpr::create((uint64_t) lhsBits, Expr::Int32);
   llvm::APFloat lhsAsLLVMFloat = lhs->getAPFloatValue();
+  // If we follow IEEE-754 2008 the most significant bit of the significand
+  // in the binary representation is the "is_quiet" bit. As that is zero here
+  // that implies this is a signaling NaN.
+  EXPECT_TRUE(lhsAsLLVMFloat.isSignaling());
   {
     llvm::SmallVector<char, 16> sv;
     lhsAsLLVMFloat.toString(sv);
@@ -197,7 +207,16 @@ TEST(ExprTest, FAddNaN) {
   EXPECT_EQ(0, result);
 
   // Do addition natively
+  int clearExceptResult = feclearexcept(FE_INVALID);
+	EXPECT_EQ(0, clearExceptResult);
+  EXPECT_EQ(0, fetestexcept(FE_INVALID)); // No exception raised yet
   float resultAsNativeFloat = lhsAsNativeFloat + rhsAsNativeFloat;
+  // IEEE-754 2008 7.2 says that the result should be a qNaN
+  EXPECT_EQ(0, issignaling(resultAsNativeFloat));
+
+  // Should be raised because lhsAsNativeFloat is a signalling NaN
+  EXPECT_EQ(FE_INVALID, fetestexcept(FE_INVALID));
+
   uint32_t resultBits = 0;
   memcpy(&resultBits, &resultAsNativeFloat, sizeof(resultAsNativeFloat));
   printf("result as native float: %f\n", resultAsNativeFloat);
@@ -207,7 +226,11 @@ TEST(ExprTest, FAddNaN) {
   llvm::APFloat resultAsLLVMFloat(lhsAsLLVMFloat);
   llvm::APFloat::opStatus status =
       resultAsLLVMFloat.add(rhsAsLLVMFloat, llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(llvm::APFloat::opOK, status); // FIXME: Check this is correct.
+  // FIXME: This is wrong. It looks like a bug in LLVM. If we have a signalling
+  // NaN then doing an operation with it should raise an Invalid Operation
+  // exception.
+  EXPECT_EQ(llvm::APFloat::opOK, status);
+  EXPECT_TRUE(resultAsLLVMFloat.isSignaling());
   {
     llvm::SmallVector<char, 16> sv;
     resultAsLLVMFloat.toString(sv);
