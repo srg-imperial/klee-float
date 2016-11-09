@@ -127,6 +127,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(NotOptimized);
     X(Read);
     X(Select);
+    X(FSelect);
     X(Concat);
     X(Extract);
     X(ZExt);
@@ -2126,12 +2127,12 @@ ref<Expr> ExplicitIntExpr::create(const ref<Expr> &e, Width w) {
   {
     return fce->ExplicitInt(w);
   }
-  if (SelectExpr *se = dyn_cast<SelectExpr>(e))
+  if (FSelectExpr *se = dyn_cast<FSelectExpr>(e))
   {
     ref<Expr> t = ExplicitIntExpr::create(se->trueExpr, w);
     ref<Expr> f = ExplicitIntExpr::create(se->falseExpr, w);
 
-    return FSelectExpr::create(se->cond, t, f);
+    return SelectExpr::create(se->cond, t, f);
   }
   if (ExplicitFloatExpr *fe = dyn_cast<ExplicitFloatExpr>(e)) {
     if (fe->getWidth() == w) {

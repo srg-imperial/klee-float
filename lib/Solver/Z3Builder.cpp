@@ -600,6 +600,14 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return iteExpr(cond, tExpr, fExpr);
   }
 
+  case Expr::FSelect: {
+    FSelectExpr *se = cast<FSelectExpr>(e);
+    Z3ASTHandle cond = construct(se->cond, 0);
+    Z3ASTHandle tExpr = construct(se->trueExpr, width_out);
+    Z3ASTHandle fExpr = construct(se->falseExpr, width_out);
+    return iteExpr(cond, tExpr, fExpr);
+  }
+
   case Expr::Concat: {
     ConcatExpr *ce = cast<ConcatExpr>(e);
     unsigned numKids = ce->getNumKids();
