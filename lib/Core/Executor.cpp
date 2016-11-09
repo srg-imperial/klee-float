@@ -2036,7 +2036,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::BitCast: {
+    CastInst *ci = cast<CastInst>(i);
     ref<Expr> result = eval(ki, 0, state).value;
+
+    if (ci->getSrcTy()->isFloatingPointTy())
+    {
+      if (!ci->getDestTy()->isFloatingPointTy())
+      {
+        result = ExplicitIntExpr::create(result, getWidthForLLVMType(ci->getDestTy()));
+      }
+    }
+    else if (ci->getDestTy()->isFloatingPointTy())
+    {
+      result = ExplicitFloatExpr::create(result, getWidthForLLVMType(ci->getDestTy()));
+    }
+
     bindLocal(ki, state, result);
     break;
   }
