@@ -72,12 +72,19 @@ check:
 all:
 	$(MAKE) llvm && $(MAKE) minisat && $(MAKE) stp && $(MAKE) z3 && $(MAKE) uclibc && $(MAKE) klee
 
+FPBENCH_URL := https://github.com/delcypher/fp-bench.git
+FPBENCH_COMMIT := 44e73517c8df2057b847e261567f0f1a440cf811
+IMPERIAL_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-imperial.git
+IMPERIAL_BENCHMARKS_COMMIT := c5b34b7f0204f12cb3a7cf84f0b7559a9d217c04
+AACHEN_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-aachen.git
+AACHEN_BENCHMARKS_COMMIT := 4f8338ada2066ba38fa5b59cfda8ec6ed917f2bd
+
 fp_bench_clone:
-	git clone https://github.com/delcypher/fp-bench && cd fp-bench && git checkout c198aab222cd95616511f605f8e345c6dd44d87b
-	cd fp-bench/benchmarks/c/ && git clone https://github.com/delcypher/fp-benchmarks-imperial.git imperial && \
-		cd imperial && git checkout 098085a9eb419930fb982eca5be4d3fc7a0d8655
-	cd fp-bench/benchmarks/c/ && git clone -b forked https://github.com/delcypher/fp-benchmarks-aachen.git aachen && \
-		cd aachen && git checkout e7b67b70d91b1eee30bbbed9df76cbf2ec2cd3c9
+	git clone  $(FPBENCH_URL) && cd fp-bench && git checkout $(FPBENCH_COMMIT)
+	cd fp-bench/benchmarks/c/ && git clone $(IMPERIAL_BENCHMARKS_URL)  imperial && \
+		cd imperial && git checkout $(IMPERIAL_BENCHMARKS_COMMIT)
+	cd fp-bench/benchmarks/c/ && git clone $(AACHEN_BENCHMARKS_URL) aachen && \
+		cd aachen && git checkout $(AACHEN_BENCHMARKS_COMMIT)
 
 fp_bench_build_O0:
 	mkdir -p build_O0
@@ -93,7 +100,7 @@ fp_bench_build_O0:
 		-DBUILD_IMPERIAL_BENCHMARKS=OFF \
 		-DBUILD_AACHEN_BENCHMARKS=ON \
 		../fp-bench/
-	cd build_O0 && LLVM_COMPILER=clang make create-augmented-spec-file-list
+	cd build_O0 && LLVM_COMPILER=clang make all create-augmented-spec-file-list
 	cd build_O0 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
 	cd build_O0 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
 
@@ -111,7 +118,7 @@ fp_bench_build_O2:
 		-DBUILD_IMPERIAL_BENCHMARKS=ON \
 		-DBUILD_AACHEN_BENCHMARKS=OFF \
 		../fp-bench/
-	cd build_O2 && LLVM_COMPILER=clang make create-augmented-spec-file-list
+	cd build_O2 && LLVM_COMPILER=clang make all create-augmented-spec-file-list
 	cd build_O2 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
 	cd build_O2 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
 
