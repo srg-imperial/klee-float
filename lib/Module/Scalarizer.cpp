@@ -23,6 +23,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
+#include<cassert>
+
 using namespace llvm;
 
 namespace llvm {
@@ -42,6 +44,9 @@ typedef std::map<Value *, ValueVector> ScatterMap;
 // Lists Instructions that have been replaced with scalar implementations,
 // along with a pointer to their scattered forms.
 typedef SmallVector<std::pair<Instruction *, ValueVector *>, 16> GatherList;
+
+// Lists all InsertElementInsts, we can delete these after scalarizing their uses
+typedef SmallVector<InsertElementInst *, 16> IEIVector;
 
 // Provides a very limited vector-like interface for lazily accessing one
 // component of a scattered vector or vector pointer.
@@ -136,6 +141,11 @@ public:
     initializeScalarizerPass(*PassRegistry::getPassRegistry());
   }
 
+  ~Scalarizer() {
+    if (TDL)
+      delete TDL;
+  }
+
   virtual bool doInitialization(Module &M);
   virtual bool runOnFunction(Function &F);
 
@@ -154,6 +164,8 @@ public:
   bool visitLoadInst(LoadInst &);
   bool visitStoreInst(StoreInst &);
 
+  bool visitInsertElementInst(InsertElementInst &);
+
 private:
   Scatterer scatter(Instruction *, Value *);
   void gather(Instruction *, const ValueVector &);
@@ -168,6 +180,8 @@ private:
   GatherList Gathered;
   unsigned ParallelLoopAccessMDKind;
   const DataLayout *TDL;
+
+  IEIVector InsertInsts;
 };
 
 char Scalarizer::ID = 0;
@@ -241,11 +255,11 @@ Value *Scatterer::operator[](unsigned I) {
 bool Scalarizer::doInitialization(Module &M) {
   ParallelLoopAccessMDKind =
     M.getContext().getMDKindID("llvm.mem.parallel_loop_access");
+  TDL = new DataLayout(M.getDataLayout());
   return false;
 }
 
 bool Scalarizer::runOnFunction(Function &F) {
-  TDL = getAnalysisIfAvailable<DataLayout>();
   for (Function::iterator BBI = F.begin(), BBE = F.end(); BBI != BBE; ++BBI) {
     BasicBlock *BB = BBI;
     for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
@@ -338,9 +352,6 @@ void Scalarizer::transferMetadata(Instruction *Op, const ValueVector &CV) {
 // the alignment of the vector, or 0 if the ABI default should be used.
 bool Scalarizer::getVectorLayout(Type *Ty, unsigned Alignment,
                                  VectorLayout &Layout) {
-  if (!TDL)
-    return false;
-
   // Make sure we're dealing with a vector.
   Layout.VecTy = dyn_cast<VectorType>(Ty);
   if (!Layout.VecTy)
@@ -358,6 +369,10 @@ bool Scalarizer::getVectorLayout(Type *Ty, unsigned Alignment,
     Layout.VecAlign = TDL->getABITypeAlignment(Layout.VecTy);
   Layout.ElemSize = TDL->getTypeStoreSize(Layout.ElemTy);
   return true;
+
+  Layout.VecTy = dyn_cast<VectorType>(Ty);
+  if (!Layout.VecTy)
+    return false;
 }
 
 // Scalarize two-operand instruction I, using Split(Builder, X, Y, Name)
@@ -581,11 +596,6 @@ bool Scalarizer::visitPHINode(PHINode &PHI) {
 }
 
 bool Scalarizer::visitLoadInst(LoadInst &LI) {
-  if (!ScalarizeLoadStore)
-    return false;
-  if (!LI.isSimple())
-    return false;
-
   VectorLayout Layout;
   if (!getVectorLayout(LI.getType(), LI.getAlignment(), Layout))
     return false;
@@ -604,11 +614,6 @@ bool Scalarizer::visitLoadInst(LoadInst &LI) {
 }
 
 bool Scalarizer::visitStoreInst(StoreInst &SI) {
-  if (!ScalarizeLoadStore)
-    return false;
-  if (!SI.isSimple())
-    return false;
-
   VectorLayout Layout;
   Value *FullValue = SI.getValueOperand();
   if (!getVectorLayout(FullValue->getType(), SI.getAlignment(), Layout))
@@ -628,6 +633,17 @@ bool Scalarizer::visitStoreInst(StoreInst &SI) {
   transferMetadata(&SI, Stores);
   return true;
 }
+
+bool Scalarizer::visitInsertElementInst(InsertElementInst &IEI) {
+  InsertInsts.push_back(&IEI);
+  return true;
+}
+
+struct IsEVIorIEI {
+  bool operator()(User* I) {
+    return isa<ExtractValueInst>(I) || isa<InsertElementInst>(I);
+  }
+};
 
 // Delete the instructions that we scalarized.  If a full vector result
 // is still needed, recreate it using InsertElements.
@@ -656,8 +672,20 @@ bool Scalarizer::finish() {
     }
     Op->eraseFromParent();
   }
+
+  // Delete all InsertElementInstructions - they're not used for anything anymore
+  // and this way we don't have to deal with them inside KLEE
+  for (IEIVector::iterator i = InsertInsts.begin(), end = InsertInsts.end(); i != end; ++i) {
+    assert(std::all_of((**i).use_begin(), (**i).use_end(), IsEVIorIEI()));
+    // Resolve dependencies before erasing
+    if (next(i) != end)
+      (**i).replaceAllUsesWith(InsertInsts.back());
+    (**i).eraseFromParent();
+  }
+
   Gathered.clear();
   Scattered.clear();
+  InsertInsts.clear();
   return true;
 }
 
