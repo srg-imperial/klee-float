@@ -3124,9 +3124,14 @@ void Executor::callExternalFunction(ExecutionState &state,
   }
 
   LLVM_TYPE_Q Type *resultType = target->inst->getType();
-  if (resultType != Type::getVoidTy(getGlobalContext())) {
+  if (resultType->isIntegerTy()) {
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
                                            getWidthForLLVMType(resultType));
+    bindLocal(target, state, e);
+  }
+  else if (resultType->isFloatingPointTy()) {
+    ref<Expr> e = FConstantExpr::fromMemory((void*) args,
+                                            getWidthForLLVMType(resultType));
     bindLocal(target, state, e);
   }
 }
