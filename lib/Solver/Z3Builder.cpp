@@ -691,8 +691,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     // casting unnormal f80s results in NaN
     if (srcWidth == Expr::Fl80)
     {
-      Z3ASTHandle num = readExpr(src, bvZero(1));
       Z3ASTHandle wrongHiddenBit = isNanExpr(readExpr(src, bvOne(1)));
+      src = readExpr(src, bvZero(1));
       return iteExpr(wrongHiddenBit, fpNan(sort), Z3ASTHandle(Z3_mk_fpa_to_fp_float(ctx, getRoundingModeAST(ce->getRoundingMode()), src, sort), ctx));
     }
     else
@@ -711,8 +711,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     // casting unnormal f80s results in 0
     if (srcWidth == Expr::Fl80)
     {
-      Z3ASTHandle num = readExpr(src, bvZero(1));
       Z3ASTHandle wrongHiddenBit = isNanExpr(readExpr(src, bvOne(1)));
+      src = readExpr(src, bvZero(1));
       return iteExpr(wrongHiddenBit, 
                      bvZero(*width_out), 
                      Z3ASTHandle(Z3_mk_fpa_to_ubv(ctx, getRoundingModeAST(ce->getRoundingMode()), src, *width_out), ctx));
@@ -900,7 +900,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     // fabs doesn't care about unnormal f80s - probably just sets the sign bit without reading the rest
     if (*width_out == Expr::Fl80)
     {
-      expr = writeExpr(expr, bvZero(1), Z3ASTHandle(Z3_mk_fpa_abs(ctx, readExpr(expr, bvOne(1))), ctx));
+      expr = writeExpr(expr, bvZero(1), Z3ASTHandle(Z3_mk_fpa_abs(ctx, readExpr(expr, bvZero(1))), ctx));
       return expr;
     }
     else
@@ -991,24 +991,33 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle expr = construct(fe->expr, width_out);
 
     assert((*width_out == Expr::Int32 || *width_out == Expr::Int64 || *width_out == Expr::Fl80) && "non-float argument to FIsInf");
-    // classification functions don't care about unnormal f80s (in Clang 3.4)
+    // isinf does care about unnormal f80s for some reason
+
     if (*width_out == Expr::Fl80)
     {
+      *width_out = sizeof(int) * 8;
+
+      Z3SortHandle sort = Z3SortHandle(Z3_mk_fpa_sort(ctx, 15, 64), ctx);
+      Z3ASTHandle wrongHiddenBit = isNanExpr(readExpr(expr, bvOne(1)));
       expr = readExpr(expr, bvZero(1));
+      Z3ASTHandle result = iteExpr(wrongHiddenBit, bvZero(*width_out), iteExpr(isInfinityExpr(expr), iteExpr(isFPNegativeExpr(expr), bvMinusOne(*width_out), bvOne(*width_out)), bvZero(*width_out)));
+      return result;
     }
+    else
+    {
+      *width_out = sizeof(int) * 8;
 
-    *width_out = sizeof(int) * 8;
-
-    Z3ASTHandle result = iteExpr(isInfinityExpr(expr),
-                           iteExpr(isFPNegativeExpr(expr),
-                             bvMinusOne(*width_out)
+      Z3ASTHandle result = iteExpr(isInfinityExpr(expr),
+                             iteExpr(isFPNegativeExpr(expr),
+                               bvMinusOne(*width_out)
+                             ,//else
+                               bvOne(*width_out)
+                             )
                            ,//else
-                             bvOne(*width_out)
-                           )
-                         ,//else
-                           bvZero(*width_out)
-                         );
-    return result;
+                             bvZero(*width_out)
+                           );
+      return result;
+    }
   }
 
   case Expr::FSqrt: {
