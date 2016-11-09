@@ -1680,6 +1680,7 @@ public:
 
 private:
   llvm::APFloat value;
+  bool correctHiddenBit = true;
 
   FConstantExpr(const llvm::APFloat &v) : value(v) {}
 
@@ -1774,6 +1775,9 @@ public:
   ref<ConstantExpr> FUne(const ref<FConstantExpr> &RHS);
   ref<ConstantExpr> FOne(const ref<FConstantExpr> &RHS);
   ref<ConstantExpr> ExplicitInt(Width W);
+
+  // ExplicitFloat needs access to correctHiddenBit
+  friend ref<FConstantExpr> ConstantExpr::ExplicitFloat(Width W);
 };
 
 

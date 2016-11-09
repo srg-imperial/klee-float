@@ -24,6 +24,7 @@
 
 #include <sstream>
 #include <fenv.h>
+#include <limits.h>
 
 using namespace klee;
 using namespace llvm;
@@ -539,6 +540,12 @@ static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
 ref<ConstantExpr> FConstantExpr::FToU(Width W, llvm::APFloat::roundingMode rm) {
   if (!fpWidthToSemantics(getWidth()) || W > 64)
     klee_error("Unsupported FToU operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(0, W);
+  }
+
   uint64_t new_value = 0;
   bool isExact = true;
   value.convertToInteger(&new_value, W, false, llvm::APFloat::rmTowardZero, &isExact);
@@ -548,6 +555,20 @@ ref<ConstantExpr> FConstantExpr::FToU(Width W, llvm::APFloat::roundingMode rm) {
 ref<ConstantExpr> FConstantExpr::FToS(Width W, llvm::APFloat::roundingMode rm) {
   if (!fpWidthToSemantics(getWidth()) || W > 64)
     klee_error("Unsupported FToS operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    switch (W)
+    {
+    case 32:
+      return ConstantExpr::alloc(std::numeric_limits<int32_t>::min(), W);
+    case 64:
+      return ConstantExpr::alloc(std::numeric_limits<int64_t>::min(), W);
+    default:
+      return ConstantExpr::alloc(0, W);
+    }
+  }
+
   uint64_t new_value = 0;
   bool isExact = true;
   value.convertToInteger(&new_value, W, true, llvm::APFloat::rmTowardZero, &isExact);
@@ -583,6 +604,14 @@ ref<ConstantExpr> FConstantExpr::FIsNan() {
 }
 
 ref<ConstantExpr> FConstantExpr::FIsInf() {
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    llvm::outs() << "\n\nwrong hidden bit\n\n";
+    return ConstantExpr::alloc(0, sizeof(int) * 8);
+  }
+
+
+  llvm::outs() << "\n\ncorrect hidden bit\n\n";
   int res = 0;
   if (value.isInfinity())
   {
@@ -723,6 +752,11 @@ ref<ConstantExpr> FConstantExpr::FUeq(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes == APFloat::cmpUnordered || CmpRes == APFloat::cmpEqual;
@@ -732,6 +766,11 @@ ref<ConstantExpr> FConstantExpr::FUeq(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FOeq(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -743,6 +782,11 @@ ref<ConstantExpr> FConstantExpr::FUgt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes == APFloat::cmpUnordered || CmpRes == APFloat::cmpGreaterThan;
@@ -752,6 +796,11 @@ ref<ConstantExpr> FConstantExpr::FUgt(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FOgt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -763,6 +812,11 @@ ref<ConstantExpr> FConstantExpr::FUge(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes == APFloat::cmpUnordered || CmpRes == APFloat::cmpGreaterThan || CmpRes == APFloat::cmpEqual;
@@ -772,6 +826,11 @@ ref<ConstantExpr> FConstantExpr::FUge(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FOge(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -783,6 +842,11 @@ ref<ConstantExpr> FConstantExpr::FUlt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes == APFloat::cmpUnordered || CmpRes == APFloat::cmpLessThan;
@@ -792,6 +856,11 @@ ref<ConstantExpr> FConstantExpr::FUlt(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FOlt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -803,6 +872,11 @@ ref<ConstantExpr> FConstantExpr::FUle(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes == APFloat::cmpUnordered || APFloat::cmpLessThan || CmpRes == APFloat::cmpEqual;
@@ -812,6 +886,11 @@ ref<ConstantExpr> FConstantExpr::FUle(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FOle(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -823,6 +902,11 @@ ref<ConstantExpr> FConstantExpr::FUne(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(true, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes == APFloat::cmpUnordered || CmpRes != APFloat::cmpEqual;
@@ -832,6 +916,11 @@ ref<ConstantExpr> FConstantExpr::FUne(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FOne(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return ConstantExpr::alloc(true, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -849,12 +938,29 @@ ref<FConstantExpr> ConstantExpr::ExplicitFloat(Width W) {
 #else
   llvm::APFloat Res(value);
 #endif
-  return FConstantExpr::alloc(Res);
+
+  ref<FConstantExpr> Ret = FConstantExpr::alloc(Res);
+
+  // check for the correct hidden bit on long doubles
+  if (W == Fl80)
+  {
+    uint16_t exp = value.getRawData()[1] & 0x7FFF;
+    uint64_t mnt = value.getRawData()[0];
+    Ret->correctHiddenBit = ((exp == 0) == (((mnt >> 63) & 0x1) == 0));
+  }
+
+  return Ret;
 }
 
 ref<FConstantExpr> FConstantExpr::FExt(Width W, llvm::APFloat::roundingMode rm) {
   if (!fpWidthToSemantics(W))
     klee_error("Unsupported FExt operation");
+
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    APFloat Res = APFloat::getNaN(*fpWidthToSemantics(W));
+    return FConstantExpr::alloc(Res);
+  }
 
   bool losesInfo = false;
   APFloat Res = value;
@@ -891,6 +997,11 @@ ref<FConstantExpr> FConstantExpr::FAbs() {
 }
 
 ref<FConstantExpr> FConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  { 
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
+
   // XXX hack, change this when LLVM implements native APFloat sqrt
   int rounding_mode;
   switch (rm)
@@ -957,6 +1068,11 @@ ref<FConstantExpr> FConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
 }
 
 ref<FConstantExpr> FConstantExpr::FNearbyInt(llvm::APFloat::roundingMode rm) {
+  if (getWidth() == Fl80 && !correctHiddenBit)
+  {
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
+
   APFloat Res = value;
   Res.roundToIntegral(rm);
   return FConstantExpr::alloc(Res);
@@ -965,6 +1081,11 @@ ref<FConstantExpr> FConstantExpr::FNearbyInt(llvm::APFloat::roundingMode rm) {
 ref<FConstantExpr> FConstantExpr::FAdd(const ref<FConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FAdd operation");
+
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
 
   llvm::APFloat Res = value;
   Res.add(RHS->getAPValue(), RM);
@@ -975,6 +1096,11 @@ ref<FConstantExpr> FConstantExpr::FSub(const ref<FConstantExpr> &RHS, llvm::APFl
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FSub operation");
 
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
+
   llvm::APFloat Res = value;
   Res.subtract(RHS->getAPValue(), RM);
   return FConstantExpr::alloc(Res);
@@ -983,6 +1109,11 @@ ref<FConstantExpr> FConstantExpr::FSub(const ref<FConstantExpr> &RHS, llvm::APFl
 ref<FConstantExpr> FConstantExpr::FMul(const ref<FConstantExpr> &RHS, llvm::APFloat::roundingMode RM) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FMul operation");
+
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
 
   llvm::APFloat Res = value;
   Res.multiply(RHS->getAPValue(), RM);
@@ -993,6 +1124,11 @@ ref<FConstantExpr> FConstantExpr::FDiv(const ref<FConstantExpr> &RHS, llvm::APFl
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FDiv operation");
 
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
+
   llvm::APFloat Res = value;
   Res.divide(RHS->getAPValue(), RM);
   return FConstantExpr::alloc(Res);
@@ -1002,6 +1138,11 @@ ref<FConstantExpr> FConstantExpr::FRem(const ref<FConstantExpr> &RHS, llvm::APFl
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FRem operation");
 
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return FConstantExpr::alloc(APFloat::getNaN(*fpWidthToSemantics(Fl80)));
+  }
+
   llvm::APFloat Res = value;
   Res.mod(RHS->getAPValue(), RM);
   return FConstantExpr::alloc(Res);
@@ -1010,6 +1151,24 @@ ref<FConstantExpr> FConstantExpr::FRem(const ref<FConstantExpr> &RHS, llvm::APFl
 ref<FConstantExpr> FConstantExpr::FMin(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FMin operation");
+
+  // fmin is weird with unnormal f80s - if one operand is unnormal it returns the other operand, if both are unnormal it returns the left one
+  if (getWidth() == Fl80)
+  {
+    if (!(RHS->correctHiddenBit))
+    {
+      // either only the right operand is unnormal or both are
+      ref<FConstantExpr> Res = FConstantExpr::alloc(value);
+      Res->correctHiddenBit = correctHiddenBit;
+      return Res;
+    }
+    if (!correctHiddenBit)
+    {
+      // the left operand is unnormal, the right isn't - return RHS
+      return FConstantExpr::alloc(RHS->getAPValue());
+    }
+    // else both have the correct hidden bit, continue with the actual comparison
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -1026,6 +1185,24 @@ ref<FConstantExpr> FConstantExpr::FMin(const ref<FConstantExpr> &RHS) {
 ref<FConstantExpr> FConstantExpr::FMax(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FMax operation");
+
+  // fmax is weird with unnormal f80s - if one operand is unnormal it returns the other operand, if both are unnormal it returns the left one
+  if (getWidth() == Fl80)
+  {
+    if (!(RHS->correctHiddenBit))
+    {
+      // either only the right operand is unnormal or both are
+      ref<FConstantExpr> Res = FConstantExpr::alloc(value);
+      Res->correctHiddenBit = correctHiddenBit;
+      return Res;
+    }
+    if (!correctHiddenBit)
+    {
+      // the left operand is unnormal, the right isn't - return RHS
+      return FConstantExpr::alloc(RHS->getAPValue());
+    }
+    // else both have the correct hidden bit, continue with the actual comparison
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
