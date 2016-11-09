@@ -653,15 +653,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-<<<<<<< HEAD
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+      uint64_t size = kmodule->targetData->getTypeAllocSize(ty);
       MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
                                           /*isGlobal=*/true, /*allocSite=*/v,
                                           /*alignment=*/globalObjectAlignment);
-=======
-      uint64_t size = kmodule->targetData->getTypeAllocSize(ty);
-      MemoryObject *mo = memory->allocate(size, false, true, &*i);
->>>>>>> getTypeStoreSize -> getTypeAllocSize. Apparently, this just works...
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
@@ -3362,9 +3357,16 @@ void Executor::callExternalFunction(ExecutionState &state,
 
   LLVM_TYPE_Q Type *resultType = target->inst->getType();
   if (resultType != Type::getVoidTy(function->getContext())) {
-    ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
-                                           getWidthForLLVMType(resultType));
-    bindLocal(target, state, e);
+    if (resultType->isIntegerTy()) {
+      ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
+                                             getWidthForLLVMType(resultType));
+      bindLocal(target, state, e);
+    }
+    else if (resultType->isFloatingPointTy()) {
+      ref<Expr> e = FConstantExpr::fromMemory((void*) args,
+                                              getWidthForLLVMType(resultType));
+      bindLocal(target, state, e);
+    }
   }
 }
 
