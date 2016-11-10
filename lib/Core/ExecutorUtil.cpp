@@ -119,7 +119,7 @@ namespace klee {
 
       return base;
     }
-      
+
     case Instruction::ICmp: {
       switch(ce->getPredicate()) {
       default: assert(0 && "unhandled ICmp predicate");
@@ -139,19 +139,37 @@ namespace klee {
     case Instruction::Select:
       return op1->isTrue() ? op2 : op3;
 
-    case Instruction::FAdd:
-    case Instruction::FSub:
-    case Instruction::FMul:
-    case Instruction::FDiv:
-    case Instruction::FRem:
+    case Instruction::FAdd:    return cast<FConstantExpr>(op1)->FAdd(cast<FConstantExpr>(op2), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FSub:    return cast<FConstantExpr>(op1)->FSub(cast<FConstantExpr>(op2), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FMul:    return cast<FConstantExpr>(op1)->FMul(cast<FConstantExpr>(op2), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FDiv:    return cast<FConstantExpr>(op1)->FDiv(cast<FConstantExpr>(op2), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FRem:    return cast<FConstantExpr>(op1)->FRem(cast<FConstantExpr>(op2), APFloat::roundingMode::rmNearestTiesToEven);
     case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::FCmp:
-      assert(0 && "floating point ConstantExprs unsupported");
+	[[fallthrough]]
+    case Instruction::FPExt:   return cast<FConstantExpr>(op1)->FExt(getWidthForLLVMType(type), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::UIToFP:  return cast<ConstantExpr>(op1)->UToF(getWidthForLLVMType(type), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::SIToFP:  return cast<ConstantExpr>(op1)->SToF(getWidthForLLVMType(type), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FPToUI:  return cast<FConstantExpr>(op1)->FToU(getWidthForLLVMType(type), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FPToSI:  return cast<FConstantExpr>(op1)->FToS(getWidthForLLVMType(type), APFloat::roundingMode::rmNearestTiesToEven);
+    case Instruction::FCmp: {
+      switch(ce->getPredicate()) {
+      default: assert(0 && "unhandled FCmp predicate");
+      case FCmpInst::FCMP_OEQ: return cast<FConstantExpr>(op1)->FOeq(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_OGT: return cast<FConstantExpr>(op1)->FOgt(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_OGE: return cast<FConstantExpr>(op1)->FOge(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_OLT: return cast<FConstantExpr>(op1)->FOlt(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_OLE: return cast<FConstantExpr>(op1)->FOle(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_ONE: return cast<FConstantExpr>(op1)->FOne(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_ORD: return cast<FConstantExpr>(op1)->FOrd(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_UNO: return cast<FConstantExpr>(op1)->FUno(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_UEQ: return cast<FConstantExpr>(op1)->FUeq(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_UGT: return cast<FConstantExpr>(op1)->FUgt(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_UGE: return cast<FConstantExpr>(op1)->FUge(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_ULT: return cast<FConstantExpr>(op1)->FUlt(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_ULE: return cast<FConstantExpr>(op1)->FUle(cast<FConstantExpr>(op2));
+      case FCmpInst::FCMP_UNE: return cast<FConstantExpr>(op1)->FUne(cast<FConstantExpr>(op2));
+      }
+    }
     }
   }
 
