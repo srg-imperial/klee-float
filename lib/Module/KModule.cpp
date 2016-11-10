@@ -302,6 +302,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // module.
   PassManager pm;
   pm.add(new RaiseAsmPass());
+  pm.add(createScalarizerPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
   // FIXME: This false here is to work around a bug in
@@ -377,7 +378,6 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   default: klee_error("invalid --switch-type");
   }
   pm3.add(new IntrinsicCleanerPass(*targetData));
-  pm3.add(createScalarizerPass());
   pm3.add(new PhiCleanerPass());
   pm3.run(*module);
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 3)
