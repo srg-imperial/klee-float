@@ -63,6 +63,7 @@ using namespace klee;
 
 namespace llvm {
   FunctionPass *createScalarizerPass();
+  ModulePass *createFunctionScalarizerPass();
 }
 
 namespace {
@@ -302,6 +303,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // module.
   PassManager pm;
   pm.add(new RaiseAsmPass());
+  pm.add(createFunctionScalarizerPass());
   pm.add(createScalarizerPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
