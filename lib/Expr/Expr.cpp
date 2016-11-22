@@ -607,12 +607,9 @@ ref<ConstantExpr> FConstantExpr::FIsNan() {
 ref<ConstantExpr> FConstantExpr::FIsInf() {
   if (getWidth() == Fl80 && !correctHiddenBit)
   {
-    llvm::outs() << "\n\nwrong hidden bit\n\n";
     return ConstantExpr::alloc(0, sizeof(int) * 8);
   }
 
-
-  llvm::outs() << "\n\ncorrect hidden bit\n\n";
   int res = 0;
   if (value.isInfinity())
   {
