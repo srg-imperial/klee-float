@@ -1242,8 +1242,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(lse->left, width_out);
     assert(*width_out != 1 && "uncanonicalized lshr");
 
-    llvm::outs() << e;
-
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(lse->right)) {
       return bvRightShift(left, (unsigned)CE->getLimitedValue());
     } else {
