@@ -13,7 +13,7 @@ RUN rm -rf /home/${container_username}/klee && mkdir /home/${container_username}
 USER root
 
 # Install python dependencies for fp-bench
-RUN pip install PyYAML==3.12 jsonschema==2.5.1
+RUN pip install PyYAML==3.12 jsonschema==2.5.1 wllvm==1.0.16
 
 # Change the UID of the user "user" to have the specified UID.
 # The usermod  manual claims that it will fix permissions of
@@ -33,9 +33,6 @@ USER ${container_username}
 # default.
 ADD scripts/container.Makefile /home/${container_username}/makefile
 
-# Grab whole-program-llvm
-RUN git clone --depth 1 https://github.com/travitch/whole-program-llvm.git /home/${container_username}/whole-program-llvm && echo "PATH=\$PATH:/home/${container_username}/whole-program-llvm" >> /home/${container_username}/.bashrc
-
 # Copy in KLEE sources to where the should be
 ADD / /home/${container_username}/klee/
 # Fix permissions
@@ -49,8 +46,3 @@ WORKDIR /home/${container_username}/
 RUN make klee
 # Install
 RUN cd /home/${container_username}/klee/build && sudo make install && sudo ldconfig -n /usr/local/lib
-
-# Setup environment for shell so fp-bench is easy to build
-RUN echo "export KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/" >> /home/user/.bashrc && \
-    echo "export KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/" >> /home/user/.bashrc
-
