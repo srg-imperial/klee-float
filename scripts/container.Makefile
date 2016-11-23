@@ -1,3 +1,5 @@
+NPROC := $(shell nproc)
+
 llvm/build/Makefile :
 	rm -rf llvm/build
 	mkdir -p llvm/build
@@ -36,13 +38,25 @@ uclibc/ready:
 uclibc: uclibc/ready
 	cd uclibc && $(MAKE)
 
-klee/build/Makefile:
+gtest:
+	wget https://github.com/google/googletest/archive/release-1.7.0.zip
+	unzip release-1.7.0.zip
+
+klee/build/Makefile: gtest
 	rm -rf klee/build
 	mkdir -p klee/build
-	cd klee/build && ../configure "--with-z3=/usr" "--with-uclibc=${PWD}/uclibc" --enable-posix-runtime
+	cd klee/build && cmake \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DENABLE_KLEE_ASSERTS=ON \
+		-DENABLE_KLEE_UCLIBC=ON \
+		-DKLEE_UCLIBC_PATH=${PWD}/uclibc \
+		-DENABLE_POSIX_RUNTIME=ON \
+		-DENABLE_SOLVER_Z3=ON \
+		-DGTEST_SRC_DIR=${PWD}/googletest-release-1.7.0 \
+		../
 
 klee: klee/build/Makefile
-	cd klee/build && $(MAKE) DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 ENABLE_SHARED=0 || $(MAKE) -j1 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 ENABLE_SHARED=0
+	cd klee/build && $(MAKE) -j$(NPROC) && make check
 
 dist-clean:
 	rm -rf llvm/build
@@ -159,5 +173,5 @@ unshallow:
 	cd klee && git fetch --unshallow
 	cd whole-program-llvm && git fetch --unshallow
 
-.PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee fp_bench_clone fp_bench_build_O0 fp_bench_build_O2
+.PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee fp_bench_clone fp_bench_build_O0 fp_bench_build_O2 gtest
 .DEFAULT_GOAL := all
