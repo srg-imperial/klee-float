@@ -93,7 +93,11 @@ def main(args):
                   help='convert 4-byte sequences to integers')
     op.add_option('','--write-floats', dest='writeFloats', action='store_true',
                   default=False,
-                  help='convert 4-byte and 8-bytes sequences to floats')
+                  help='convert 4-byte sequences to floats')
+    op.add_option('','--write-doubles', dest='writeDoubles', action='store_true',
+                  default=False,
+                  help='convert 8-bytes sequences to doubles')
+    op.add_option('','--assume-array', dest='assume_array', action='store_true')
     
     opts,args = op.parse_args()
     if not args:
@@ -113,16 +117,57 @@ def main(args):
 
             print('object %4d: name: %r' % (i, name))
             print('object %4d: size: %r' % (i, len(data)))
-            if opts.writeInts and len(data) == 4:
-                print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
-            elif opts.writeFloats and len(data) == 4:
-                print('object %4d: data: %r' % (i, struct.unpack('f',str)[0]))
-            elif opts.writeFloats and len(data) == 8:
-                print('object %4d: data: %r' % (i, struct.unpack('d',str)[0]))
-            else:
+            if opts.assume_array:
+              print('object %4d:' %i)
+              if opts.writeDoubles and len(data) % 8 == 0:
+                # Gather bytes into 8-byte chunks
+                doubles = split(data, 8)
+                # Print the doubles
+                print('Displaying as array of doubles')
+                for double_index, d in enumerate(doubles):
+                  print('object%4d[%d]: %r' % (i, double_index, struct.unpack('d', d)[0]))
+              elif opts.writeFloats and len(data) % 4 == 0:
+                # Gather bytes into 4-byte chunks
+                floats = split(data, 4)
+                # Print the floats
+                for float_index, d in enumerate(floats):
+                  print('object%4d[%d]: %r' % (i, float_index, struct.unpack('f', d)[0]))
+              elif opts.writeInts and len(data) % 4 == 0:
+                # Gather bytes into 4-byte chunks
+                int32s = split(data, 4)
+                # Print the floats
+                for int_index, int32 in enumerate(int32s):
+                  print('object%4d[%d]: %r' % (i, int_index, struct.unpack('i', int32)[0]))
+              else:
                 print('object %4d: data: %r' % (i, str))
+            else:
+              if opts.writeInts and len(data) == 4:
+                  print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
+              elif opts.writeFloats and len(data) == 4:
+                  print('object %4d: data: %r' % (i, struct.unpack('f',str)[0]))
+              elif opts.writeDoubles and len(data) == 8:
+                  print('object %4d: data: %r' % (i, struct.unpack('d',str)[0]))
+              else:
+                  print('object %4d: data: %r' % (i, str))
         if file != args[-1]:
             print()
+
+def split(data, chunk_size):
+  assert chunk_size > 0
+  assert len(data) % chunk_size == 0
+  # Gather bytes into 8-byte chunks
+  chunks = []
+  chunk_bytes = None
+  for byte_index, byte_value in enumerate(data):
+    if byte_index % chunk_size == 0:
+      chunk_bytes = [ byte_value ]
+    else:
+      chunk_bytes.append(byte_value)
+    # if this is the last byte store the chunk
+    if byte_index % chunk_size == (chunk_size -1):
+      chunks.append(bytes(chunk_bytes))
+
+  return chunks
 
 if __name__=='__main__':
     main(sys.argv)
