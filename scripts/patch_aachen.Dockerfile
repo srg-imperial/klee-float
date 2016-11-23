@@ -6,6 +6,9 @@ ARG host_user_id=1000
 # that we can use in the Dockerfile.
 ARG container_username=user
 
+ARG wllvm_url=https://github.com/travitch/whole-program-llvm.git
+ARG wllvm_revision=915e2240dc130fbefe3c98e6b30e2e894a629129
+
 # Remove old KLEE code
 RUN rm -rf /home/${container_username}/klee && mkdir /home/${container_username}/klee
 
@@ -13,7 +16,7 @@ RUN rm -rf /home/${container_username}/klee && mkdir /home/${container_username}
 USER root
 
 # Install python dependencies for fp-bench
-RUN pip install PyYAML==3.12 jsonschema==2.5.1 wllvm==1.0.16
+RUN pip install PyYAML==3.12 jsonschema==2.5.1
 
 # Change the UID of the user "user" to have the specified UID.
 # The usermod  manual claims that it will fix permissions of
@@ -33,12 +36,23 @@ USER ${container_username}
 # default.
 ADD scripts/container.Makefile /home/${container_username}/makefile
 
+# Grab wllvm. Don't use PyPi package due to
+# https://github.com/SRI-CSL/whole-program-llvm/issues/16
+RUN git clone ${wllvm_url} /home/${container_username}/whole-program-llvm && \
+    cd /home/${container_username}/whole-program-llvm && \
+    git checkout ${wllvm_revision}
+
 # Copy in KLEE sources to where the should be
 ADD / /home/${container_username}/klee/
 # Fix permissions
 USER root
 RUN chown -R ${container_username}: /home/${container_username}/klee/ && \
     chown ${container_username}: /home/${container_username}/makefile
+
+# Install wllvm as a development version
+RUN cd /home/${container_username}/whole-program-llvm && \
+    pip install -e .
+
 USER ${container_username}
 
 # Build KLEE
