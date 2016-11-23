@@ -103,8 +103,8 @@ fp_bench_clone:
 fp_bench_build_O0:
 	mkdir -p build_O0
 	cd build_O0 && \
-		CC=/home/user/whole-program-llvm/wllvm \
-		CXX=/home/user/whole-program-llvm/wllvm++ \
+		CC=wllvm \
+		CXX=wllvm++ \
 		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
 		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
 		LLVM_COMPILER=clang \
@@ -121,8 +121,8 @@ fp_bench_build_O0:
 fp_bench_build_O2:
 	mkdir -p build_O2
 	cd build_O2 && \
-		CC=/home/user/whole-program-llvm/wllvm \
-		CXX=/home/user/whole-program-llvm/wllvm++ \
+		CC=wllvm \
+		CXX=wllvm++ \
 		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
 		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
 		LLVM_COMPILER=clang \
