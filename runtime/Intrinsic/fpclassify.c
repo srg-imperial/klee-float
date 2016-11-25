@@ -22,6 +22,8 @@ int klee_internal_isnan(double d) {
   return klee_is_nan_double(d);
 }
 
+/*
+ * These are now implemented in klee_internal_is_inf.ll
 // __isinff
 // returns 1 if +inf, 0 is not infinite, -1 if -inf
 int klee_internal_isinff(float f) {
@@ -35,6 +37,8 @@ int klee_internal_isinf(double d) {
   _Bool isinf = klee_is_infinite_double(d);
   return isinf ? (d > 0 ? 1 : -1) : 0;
 }
+*/
+
 
 // HACK: Taken from ``math.h``. I don't want
 // include all of ``math.h`` just for this enum
