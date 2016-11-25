@@ -68,3 +68,5 @@ clean::
 install-local::
 	$(MKDIR) $(DESTDIR)$(PROJ_includedir)/klee
 	$(DataInstall) $(PROJ_SRC_ROOT)/include/klee/klee.h $(DESTDIR)$(PROJ_includedir)/klee/klee.h
+
+$(error DO NOT USE THIS BUILD SYSTEM. USE CMAKE INSTEAD!)
