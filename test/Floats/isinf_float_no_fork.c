@@ -3,8 +3,6 @@
 // RUN: %klee --output-dir=%t.klee-out %t1.bc > %t-output.txt 2>&1
 // RUN: FileCheck -input-file=%t-output.txt %s
 
-// FIXME: KLEE needs to be fixed to make this test pass
-// XFAIL: *
 #include "klee/klee.h"
 #include <stdio.h>
 #include <math.h>
