@@ -23,8 +23,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-#include<cassert>
-
 using namespace llvm;
 
 namespace llvm {
@@ -44,9 +42,6 @@ typedef std::map<Value *, ValueVector> ScatterMap;
 // Lists Instructions that have been replaced with scalar implementations,
 // along with a pointer to their scattered forms.
 typedef SmallVector<std::pair<Instruction *, ValueVector *>, 16> GatherList;
-
-// Lists all InsertElementInsts, we can delete these after scalarizing their uses
-typedef SmallVector<InsertElementInst *, 16> IEIVector;
 
 // Provides a very limited vector-like interface for lazily accessing one
 // component of a scattered vector or vector pointer.
@@ -164,8 +159,6 @@ public:
   bool visitLoadInst(LoadInst &);
   bool visitStoreInst(StoreInst &);
 
-  bool visitInsertElementInst(InsertElementInst &);
-
 private:
   Scatterer scatter(Instruction *, Value *);
   void gather(Instruction *, const ValueVector &);
@@ -180,8 +173,6 @@ private:
   GatherList Gathered;
   unsigned ParallelLoopAccessMDKind;
   const DataLayout *TDL;
-
-  IEIVector InsertInsts;
 };
 
 char Scalarizer::ID = 0;
@@ -634,17 +625,6 @@ bool Scalarizer::visitStoreInst(StoreInst &SI) {
   return true;
 }
 
-bool Scalarizer::visitInsertElementInst(InsertElementInst &IEI) {
-  InsertInsts.push_back(&IEI);
-  return true;
-}
-
-struct IsEVIorIEI {
-  bool operator()(User* I) {
-    return isa<ExtractValueInst>(I) || isa<InsertElementInst>(I);
-  }
-};
-
 // Delete the instructions that we scalarized.  If a full vector result
 // is still needed, recreate it using InsertElements.
 bool Scalarizer::finish() {
@@ -673,19 +653,8 @@ bool Scalarizer::finish() {
     Op->eraseFromParent();
   }
 
-  // Delete all InsertElementInstructions - they're not used for anything anymore
-  // and this way we don't have to deal with them inside KLEE
-  for (IEIVector::iterator i = InsertInsts.begin(), end = InsertInsts.end(); i != end; ++i) {
-    assert(std::all_of((**i).use_begin(), (**i).use_end(), IsEVIorIEI()));
-    // Resolve dependencies before erasing
-    if (next(i) != end)
-      (**i).replaceAllUsesWith(InsertInsts.back());
-    (**i).eraseFromParent();
-  }
-
   Gathered.clear();
   Scattered.clear();
-  InsertInsts.clear();
   return true;
 }
 
