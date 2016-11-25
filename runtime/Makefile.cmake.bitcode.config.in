@@ -41,6 +41,7 @@ USE_MODULE_INSTEAD_OF_BCA := @USE_RUNTIME_BINARY_TYPE_HACK@
 MKDIR := mkdir
 RM := rm
 CMP := cmp
+CP := cp
 
 # Compiler flags
 LLVMCC.Flags += $(LLVMCC.ExtraFlags) \
