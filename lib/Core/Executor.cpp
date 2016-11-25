@@ -937,20 +937,37 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
 
+static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
+  switch(width) {
+  case Expr::Fl32:
+    return &llvm::APFloat::IEEEsingle;
+  case Expr::Fl64:
+    return &llvm::APFloat::IEEEdouble;
+  case Expr::Fl80:
+    return &llvm::APFloat::x87DoubleExtended;
+  default:
+    return 0;
+  }
+}
+
 ref<klee::Expr> Executor::evalConstant(const Constant *c) {
   if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
     return evalConstantExpr(ce);
   } else {
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
-    } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {      
+    } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {
       return FConstantExpr::alloc(cf->getValueAPF());
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
       return globalAddresses.find(gv)->second;
     } else if (isa<ConstantPointerNull>(c)) {
       return Expr::createPointer(0);
     } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
-      return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
+      if (c->getType()->isFloatingPointTy()) {
+        return FConstantExpr::alloc(APFloat(*fpWidthToSemantics(getWidthForLLVMType(c->getType()))));
+      } else {
+        return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
+      }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
     } else if (const ConstantDataSequential *cds =
                  dyn_cast<ConstantDataSequential>(c)) {
@@ -1395,19 +1412,6 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 /// TODO remove?
 static bool isDebugIntrinsic(const Function *f, KModule *KM) {
   return false;
-}
-
-static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
-  switch(width) {
-  case Expr::Fl32:
-    return &llvm::APFloat::IEEEsingle;
-  case Expr::Fl64:
-    return &llvm::APFloat::IEEEdouble;
-  case Expr::Fl80:
-    return &llvm::APFloat::x87DoubleExtended;
-  default:
-    return 0;
-  }
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
