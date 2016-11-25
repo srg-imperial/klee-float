@@ -53,6 +53,7 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/../../lib/Transforms/InstCombine/InstCombine.h"
 
 #include <llvm/Transforms/Utils/Cloning.h>
 
@@ -305,6 +306,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   pm.add(new RaiseAsmPass());
   pm.add(createFunctionScalarizerPass());
   pm.add(createScalarizerPass());
+  pm.add(new InstCombiner());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
   // FIXME: This false here is to work around a bug in
