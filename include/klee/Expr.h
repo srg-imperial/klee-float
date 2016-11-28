@@ -1035,6 +1035,14 @@ ARITHMETIC_EXPR_CLASS(AShr)
       return E->getKind() == Expr::_class_kind;                                \
     }                                                                          \
     static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  protected:                                                                   \
+    virtual int compareContents(const Expr &b) const {                         \
+      const _class_kind##Expr &eb = static_cast<const _class_kind##Expr &>(b); \
+      if (roundingMode != eb.roundingMode)                                     \
+        return roundingMode < eb.roundingMode ? -1 : 1;                        \
+      return 0;                                                                \
+    }                                                                          \
   };
 
 FLOAT_ARITHMETIC_EXPR_CLASS(FAdd)
