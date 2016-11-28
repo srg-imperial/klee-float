@@ -950,6 +950,16 @@ CAST_EXPR_CLASS(FPExt)
       return E->getKind() == Expr::_class_kind;                                \
     }                                                                          \
     static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  protected:                                                                   \
+    virtual int compareContents(const Expr &b) const {                         \
+      const _class_kind##Expr &eb = static_cast<const _class_kind##Expr &>(b); \
+      if (width != eb.width)                                                   \
+        return width < eb.width ? -1 : 1;                                      \
+      if (roundingMode != eb.roundingMode)                                     \
+        return roundingMode < eb.roundingMode ? -1 : 1;                        \
+      return 0;                                                                \
+    }                                                                          \
   };
 FP_CAST_EXPR_CLASS(FPTrunc)
 FP_CAST_EXPR_CLASS(FPToUI)
