@@ -20,6 +20,7 @@
 // Core. If we need to do arithmetic, we probably want to use APInt.
 #include "klee/Internal/Support/IntEvaluation.h"
 
+#include "klee/util/APFloatEval.h"
 #include "klee/util/ExprPPrinter.h"
 
 #include <sstream>
@@ -178,6 +179,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FOLe);
     X(FOGt);
     X(FOGe);
+    X(FSqrt);
 #undef X
   default:
     assert(0 && "invalid kind");
@@ -254,6 +256,11 @@ unsigned IsNormalExpr::computeHash() {
 
 unsigned IsSubnormalExpr::computeHash() {
   hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::IsSubnormal;
+  return hashValue;
+}
+
+unsigned FSqrtExpr::computeHash() {
+  hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::FSqrt;
   return hashValue;
 }
 
@@ -732,6 +739,12 @@ ref<ConstantExpr> ConstantExpr::SIToFP(Width W,
   // Should we use the status?
   asF.convertFromAPInt(value, /*isSigned=*/true, rm);
   return ConstantExpr::alloc(asF);
+}
+
+ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) const {
+  APFloat arg(this->getAPFloatValue());
+  llvm::APFloat result = klee::evalSqrt(arg, rm);
+  return ConstantExpr::alloc(result);
 }
 
 /***/
@@ -1549,6 +1562,14 @@ ref<Expr> IsSubnormalExpr::create(const ref<Expr> &e) {
     return ConstantExpr::alloc(ce->getAPFloatValue().isDenormal(), Expr::Bool);
   }
   return IsSubnormalExpr::alloc(e);
+}
+
+ref<Expr> FSqrtExpr::create(klee::ref<klee::Expr> const &e,
+                            llvm::APFloat::roundingMode rm) {
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {
+    return ce->FSqrt(rm);
+  }
+  return FSqrtExpr::alloc(e, rm);
 }
 
 ref<Expr> IsNaNExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {

@@ -136,6 +136,9 @@ public:
     // Bit
     Not,
 
+    // Floating point unary arithmetic
+    FSqrt,
+
     // Floating point predicates
     IsNaN,
     IsInfinite,
@@ -1151,6 +1154,53 @@ FP_PRED_EXPR_CLASS(IsNormal)
 FP_PRED_EXPR_CLASS(IsSubnormal)
 #undef FP_PRED_EXPR_CLASS
 
+// Floating unary arithmetic functions
+#define FP_UNARY_ARITHMETIC_EXPR_CLASS(_class_kind)                            \
+  class _class_kind##Expr : public NonConstantExpr {                           \
+  public:                                                                      \
+    static const Kind kind = Expr::_class_kind;                                \
+    static const unsigned numKids = 1;                                         \
+    const llvm::APFloat::roundingMode roundingMode;                            \
+    ref<Expr> expr;                                                            \
+    static ref<Expr> alloc(const ref<Expr> &e,                                 \
+                           const llvm::APFloat::roundingMode rm) {             \
+      ref<Expr> r(new _class_kind##Expr(e, rm));                               \
+      r->computeHash();                                                        \
+      return r;                                                                \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &e,                                \
+                            const llvm::APFloat::roundingMode rm);             \
+                                                                               \
+    Width getWidth() const { return Expr::Bool; }                              \
+    Kind getKind() const { return Expr::_class_kind; }                         \
+                                                                               \
+    unsigned getNumKids() const { return numKids; }                            \
+    ref<Expr> getKid(unsigned i) const { return expr; }                        \
+                                                                               \
+    int compareContents(const Expr &b) const {                                 \
+      const _class_kind##Expr &eb = static_cast<const _class_kind##Expr &>(b); \
+      if (roundingMode != eb.roundingMode)                                     \
+        return roundingMode < eb.roundingMode ? -1 : 1;                        \
+      return 0;                                                                \
+    }                                                                          \
+    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+      return create(kids[0], roundingMode);                                    \
+    }                                                                          \
+    virtual unsigned computeHash();                                            \
+    static ref<Expr> either(const ref<Expr> &e0, const ref<Expr> &e1);         \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+                                                                               \
+  private:                                                                     \
+    _class_kind##Expr(const ref<Expr> &e,                                      \
+                      const llvm::APFloat::roundingMode rm)                    \
+        : roundingMode(rm), expr(e) {}                                         \
+  };
+FP_UNARY_ARITHMETIC_EXPR_CLASS(FSqrt)
+#undef FP_UNARY_ARITHMETIC_EXPR_CLASS
+
 // Terminal Exprs
 
 class ConstantExpr : public Expr {
@@ -1318,6 +1368,7 @@ public:
                          llvm::APFloat::roundingMode rm) const;
   ref<ConstantExpr> FDiv(const ref<ConstantExpr> &RHS,
                          llvm::APFloat::roundingMode rm) const;
+  ref<ConstantExpr> FSqrt(llvm::APFloat::roundingMode rm) const;
   // Comparisons return a constant expression of width 1.
 
   ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);
