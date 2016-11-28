@@ -143,6 +143,9 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::FDiv:
       res = visitFDiv(static_cast<FDivExpr &>(ep));
       break;
+    case Expr::FSqrt:
+      res = visitFSqrt(static_cast<FSqrtExpr &>(ep));
+      break;
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -386,5 +389,9 @@ ExprVisitor::Action ExprVisitor::visitUIToFP(const UIToFPExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitSIToFP(const SIToFPExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFSqrt(const FSqrtExpr &) {
   return Action::doChildren();
 }

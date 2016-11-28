@@ -1094,6 +1094,14 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
                                      left, right),
                        ctx);
   }
+  case Expr::FSqrt: {
+    FSqrtExpr *fsqrt = cast<FSqrtExpr>(e);
+    Z3ASTHandle arg = castToFloat(construct(fsqrt->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FSqrt");
+    return Z3ASTHandle(
+        Z3_mk_fpa_sqrt(ctx, getRoundingModeSort(fsqrt->roundingMode), arg),
+        ctx);
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
