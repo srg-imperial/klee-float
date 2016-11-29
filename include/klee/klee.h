@@ -185,4 +185,7 @@ enum KleeRoundingMode {
 void klee_set_rounding_mode(enum KleeRoundingMode rm);
 enum KleeRoundingMode klee_get_rounding_mode();
 
+float klee_sqrt_float(float f);
+double klee_sqrt_double(double d);
+
 #endif /* __KLEE_H__ */

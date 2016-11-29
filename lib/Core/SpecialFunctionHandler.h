@@ -143,6 +143,7 @@ namespace klee {
     HANDLER(handleIsSubnormal);
     HANDLER(handleGetRoundingMode);
     HANDLER(handleSetConcreteRoundingMode);
+    HANDLER(handleSqrt);
 #undef HANDLER
   };
 } // End klee namespace
