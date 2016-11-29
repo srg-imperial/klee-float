@@ -904,6 +904,7 @@ public:                                                          \
 public:                                                          \
     _class_kind ## Expr(ref<Expr> e, Width w) : CastExpr(e,w) {} \
     static ref<Expr> alloc(const ref<Expr> &e, Width w) {        \
+      assert(w > e->getWidth());                                 \
       ref<Expr> r(new _class_kind ## Expr(e, w));                \
       r->computeHash();                                          \
       return r;                                                  \
