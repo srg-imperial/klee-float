@@ -621,6 +621,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     if (srcWidth == 1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
+      assert(*width_out > srcWidth && "Invalid width_out");
       return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - srcWidth),
                                       castToBitVector(src)),
                          ctx);
@@ -808,6 +809,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
           if (bits == 0) {
             return bvZero(*width_out);
           } else {
+            assert(*width_out > bits && "invalid width_out");
             return Z3ASTHandle(Z3_mk_concat(ctx, bvZero(*width_out - bits),
                                             bvExtract(left, bits - 1, 0)),
                                ctx);
