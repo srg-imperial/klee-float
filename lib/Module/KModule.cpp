@@ -104,6 +104,11 @@ namespace {
       "internal-float-classify",
       cl::desc("Use KLEE internal functions for classifying floats"),
       cl::init(true));
+
+  cl::opt<bool> UseKleeInternalSqrt(
+      "internal-sqrt",
+      cl::desc("Use KLEE internal sqrt"),
+      cl::init(true));
 }
 
 KModule::KModule(Module *_module) 
@@ -385,6 +390,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
                              "klee_internal_fpclassify");
     replaceFunctionIfPresent(module, "__finitef", "klee_internal_finitef");
     replaceFunctionIfPresent(module, "__finite", "klee_internal_finite");
+  }
+  if (UseKleeInternalSqrt) {
+    replaceFunctionIfPresent(module, "sqrt", "klee_internal_sqrt");
+    replaceFunctionIfPresent(module, "sqrtf", "klee_internal_sqrtf");
   }
   replaceFunctionIfPresent(module, "fegetround", "klee_internal_fegetround");
   replaceFunctionIfPresent(module, "fesetround", "klee_internal_fesetround");

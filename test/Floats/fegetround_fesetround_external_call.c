@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc 0.5 > %t-output.txt 2>&1
+// RUN: %klee --output-dir=%t.klee-out --internal-sqrt=false ---exit-on-error %t1.bc 0.5 > %t-output.txt 2>&1
 #include "klee/klee.h"
 #include <assert.h>
 #include <fenv.h>
