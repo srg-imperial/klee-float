@@ -159,6 +159,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     // square root
     add("klee_sqrt_float", handleSqrt, true),
     add("klee_sqrt_double", handleSqrt, true),
+
+    // floating point absolute
+    add("klee_abs_float", handleFAbs, true),
+    add("klee_abs_double", handleFAbs, true),
 #undef addDNR
 #undef add
 };
@@ -906,5 +910,13 @@ void SpecialFunctionHandler::handleSqrt(ExecutionState &state,
                                         std::vector<ref<Expr> > &arguments) {
   assert(arguments.size() == 1 && "invalid number of arguments to sqrt");
   ref<Expr> result = FSqrtExpr::create(arguments[0], state.roundingMode);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleFAbs(ExecutionState &state,
+                                        KInstruction *target,
+                                        std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to fabs");
+  ref<Expr> result = FAbsExpr::create(arguments[0]);
   executor.bindLocal(target, state, result);
 }
