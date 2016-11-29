@@ -180,6 +180,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(FOGt);
     X(FOGe);
     X(FSqrt);
+    X(FAbs);
 #undef X
   default:
     assert(0 && "invalid kind");
@@ -261,6 +262,11 @@ unsigned IsSubnormalExpr::computeHash() {
 
 unsigned FSqrtExpr::computeHash() {
   hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::FSqrt;
+  return hashValue;
+}
+
+unsigned FAbsExpr::computeHash() {
+  hashValue = expr->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::FAbs;
   return hashValue;
 }
 
@@ -744,6 +750,13 @@ ref<ConstantExpr> ConstantExpr::SIToFP(Width W,
 ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) const {
   APFloat arg(this->getAPFloatValue());
   llvm::APFloat result = klee::evalSqrt(arg, rm);
+  return ConstantExpr::alloc(result);
+}
+
+ref<ConstantExpr> ConstantExpr::FAbs() const {
+  APFloat result(this->getAPFloatValue());
+  if (result.isNegative())
+    result.changeSign();
   return ConstantExpr::alloc(result);
 }
 
@@ -1583,6 +1596,13 @@ ref<Expr> FSqrtExpr::create(klee::ref<klee::Expr> const &e,
     return ce->FSqrt(rm);
   }
   return FSqrtExpr::alloc(e, rm);
+}
+
+ref<Expr> FAbsExpr::create(klee::ref<klee::Expr> const &e) {
+  if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e)) {
+    return ce->FAbs();
+  }
+  return FAbsExpr::alloc(e);
 }
 
 ref<Expr> IsNaNExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
