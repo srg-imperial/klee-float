@@ -138,6 +138,7 @@ public:
 
     // Floating point unary arithmetic
     FSqrt,
+    FAbs,
 
     // Floating point predicates
     IsNaN,
@@ -1202,6 +1203,42 @@ FP_PRED_EXPR_CLASS(IsSubnormal)
 FP_UNARY_ARITHMETIC_EXPR_CLASS(FSqrt)
 #undef FP_UNARY_ARITHMETIC_EXPR_CLASS
 
+// Note not using FP_UNARY_ARITHMETIC_EXPR_CLASS
+// because this takes no rounding mode.
+class FAbsExpr : public NonConstantExpr {
+public:
+  static const Kind kind = Expr::FAbs;
+  static const unsigned numKids = 1;
+  ref<Expr> expr;
+  static ref<Expr> alloc(const ref<Expr> &e) {
+    ref<Expr> r(new FAbsExpr(e));
+    r->computeHash();
+    return r;
+  }
+  static ref<Expr> create(const ref<Expr> &e);
+
+  Width getWidth() const { return expr->getWidth(); }
+  Kind getKind() const { return Expr::FAbs; }
+
+  unsigned getNumKids() const { return numKids; }
+  ref<Expr> getKid(unsigned i) const { return expr; }
+
+  int compareContents(const Expr &b) const {
+    // No attributes
+    return 0;
+  }
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+    return create(kids[0]);
+  }
+  virtual unsigned computeHash();
+  static ref<Expr> either(const ref<Expr> &e0, const ref<Expr> &e1);
+  static bool classof(const Expr *E) { return E->getKind() == Expr::FAbs; }
+  static bool classof(const FAbsExpr *) { return true; }
+
+private:
+  FAbsExpr(const ref<Expr> &e) : expr(e) {}
+};
+
 // Terminal Exprs
 
 class ConstantExpr : public Expr {
@@ -1370,6 +1407,7 @@ public:
   ref<ConstantExpr> FDiv(const ref<ConstantExpr> &RHS,
                          llvm::APFloat::roundingMode rm) const;
   ref<ConstantExpr> FSqrt(llvm::APFloat::roundingMode rm) const;
+  ref<ConstantExpr> FAbs() const;
   // Comparisons return a constant expression of width 1.
 
   ref<ConstantExpr> Eq(const ref<ConstantExpr> &RHS);

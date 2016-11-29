@@ -1104,6 +1104,12 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
         Z3_mk_fpa_sqrt(ctx, getRoundingModeSort(fsqrt->roundingMode), arg),
         ctx);
   }
+  case Expr::FAbs: {
+    FAbsExpr *fabsExpr = cast<FAbsExpr>(e);
+    Z3ASTHandle arg = castToFloat(construct(fabsExpr->expr, width_out));
+    assert(*width_out != 1 && "uncanonicalized FAbs");
+    return Z3ASTHandle(Z3_mk_fpa_abs(ctx, arg), ctx);
+  }
 // unused due to canonicalization
 #if 0
   case Expr::Ne:
