@@ -155,6 +155,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     // Rounding mode intrinsics
     add("klee_get_rounding_mode", handleGetRoundingMode, true),
     add("klee_set_rounding_mode_internal", handleSetConcreteRoundingMode, false),
+
+    // square root
+    add("klee_sqrt_float", handleSqrt, true),
+    add("klee_sqrt_double", handleSqrt, true),
 #undef addDNR
 #undef add
 };
@@ -895,4 +899,12 @@ void SpecialFunctionHandler::handleSetConcreteRoundingMode(
       return;
   }
   state.roundingMode = newRoundingMode;
+}
+
+void SpecialFunctionHandler::handleSqrt(ExecutionState &state,
+                                        KInstruction *target,
+                                        std::vector<ref<Expr> > &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to sqrt");
+  ref<Expr> result = FSqrtExpr::create(arguments[0], state.roundingMode);
+  executor.bindLocal(target, state, result);
 }
