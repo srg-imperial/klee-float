@@ -1171,7 +1171,7 @@ FP_PRED_EXPR_CLASS(IsSubnormal)
     static ref<Expr> create(const ref<Expr> &e,                                \
                             const llvm::APFloat::roundingMode rm);             \
                                                                                \
-    Width getWidth() const { return Expr::Bool; }                              \
+    Width getWidth() const { return expr->getWidth(); }                        \
     Kind getKind() const { return Expr::_class_kind; }                         \
                                                                                \
     unsigned getNumKids() const { return numKids; }                            \
