@@ -109,6 +109,11 @@ namespace {
       "internal-sqrt",
       cl::desc("Use KLEE internal sqrt"),
       cl::init(true));
+
+  cl::opt<bool> UseKleeInternalFabs(
+      "internal-fabs",
+      cl::desc("Use KLEE internal fabs"),
+      cl::init(true));
 }
 
 KModule::KModule(Module *_module) 
@@ -394,6 +399,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (UseKleeInternalSqrt) {
     replaceFunctionIfPresent(module, "sqrt", "klee_internal_sqrt");
     replaceFunctionIfPresent(module, "sqrtf", "klee_internal_sqrtf");
+  }
+  if (UseKleeInternalFabs) {
+    replaceFunctionIfPresent(module, "fabs", "klee_internal_fabs");
+    replaceFunctionIfPresent(module, "fabsf", "klee_internal_fabsf");
   }
   replaceFunctionIfPresent(module, "fegetround", "klee_internal_fegetround");
   replaceFunctionIfPresent(module, "fesetround", "klee_internal_fesetround");
