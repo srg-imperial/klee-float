@@ -110,6 +110,7 @@ $(BC_FILES) : $(ADDITIONAL_BUILD_DEPS)
 
 # Pattern rule to copy source LLVM assembly files into build directory
 $(LOCAL_BUILD_DIR)/%.ll : $(SRC_DIR)/%.ll
+	$(Verb) $(MKDIR) -p $(LOCAL_BUILD_DIR)
 	$(Verb) $(CP) $< $@
 
 # Pattern rule to build LLVM assembly files from C source files
