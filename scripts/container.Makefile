@@ -87,11 +87,11 @@ all:
 	$(MAKE) llvm && $(MAKE) minisat && $(MAKE) stp && $(MAKE) z3 && $(MAKE) uclibc && $(MAKE) klee
 
 FPBENCH_URL := https://github.com/delcypher/fp-bench.git
-FPBENCH_COMMIT := 44e73517c8df2057b847e261567f0f1a440cf811
+FPBENCH_COMMIT := 440b9a2402acfe5bd110f871c208808289606103
 IMPERIAL_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-imperial.git
-IMPERIAL_BENCHMARKS_COMMIT := c5b34b7f0204f12cb3a7cf84f0b7559a9d217c04
+IMPERIAL_BENCHMARKS_COMMIT := 79e5e4d88d29772d21b16b0db1996e5d0248de81
 AACHEN_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-aachen.git
-AACHEN_BENCHMARKS_COMMIT := 3ed511d7d6786bda5ce4fc2a67e7a9e62dc22407
+AACHEN_BENCHMARKS_COMMIT := c7be00b3ffb9fb08624b33d6e992e0bb66e65486
 
 fp_bench_clone:
 	git clone  $(FPBENCH_URL) && cd fp-bench && git checkout $(FPBENCH_COMMIT)
