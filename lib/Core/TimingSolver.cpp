@@ -14,15 +14,95 @@
 #include "klee/Solver.h"
 #include "klee/Statistics.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/Internal/Support/Debug.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "CoreStats.h"
+#include "Executor.h"
+#include "ExecutorTimerInfo.h"
 
 #include "llvm/Support/TimeValue.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace klee;
 using namespace llvm;
 
+namespace {
+cl::opt<bool>
+DynamicSolverTimeout("dynamic-solver-timeout",
+        cl::desc("Use dynamic solver timeout"),
+        cl::init(false));
+
+// HACK: This really belongs in the Executor
+// but it doesn't seem completely consistent
+// in the way in the way it sets the timeout
+// so we hack setting it here instead.
+void setDynamicTimeout(TimingSolver *s) {
+  if (!DynamicSolverTimeout)
+    return;
+
+  // HACK: Try to get the HaltTimer
+  static const Executor::TimerInfo *ht = NULL;
+  static double htNextFireTime = 0.0;
+  if (!ht) {
+    ht = s->executor->getHaltTimer();
+    // HACK: Only grab the next fire time once
+    // because when it fire KLEE will increment the
+    // next fire time.
+    htNextFireTime = ht->nextFireTime;
+  }
+  double timeoutToUse = 0.0;
+  double executorCoreSolverTimeout = s->executor->getCoreSolverTimeout();
+  if (!ht) {
+    // No halt timer so just use the core solver timeout
+    timeoutToUse = executorCoreSolverTimeout;
+    KLEE_DEBUG_WITH_TYPE(
+        "dynamic_solver_timeout",
+        llvm::errs() << "No halt timer using Executor's core solver timeout\n");
+  } else {
+    double currentWallTime = util::getWallTime();
+    double timeLeftUntilExecutorToHalt = htNextFireTime - currentWallTime;
+    assert(isinf(timeLeftUntilExecutorToHalt) == 0);
+    assert(!isnan(timeLeftUntilExecutorToHalt));
+    if (timeLeftUntilExecutorToHalt < 0) {
+      // Executor should have already halted so just use
+      // core solver timeout from now on.
+      timeoutToUse = executorCoreSolverTimeout;
+      KLEE_DEBUG_WITH_TYPE("dynamic_solver_timeout",
+                           llvm::errs() << "Looks like Executor already "
+                                           "halted. Using Executor's core "
+                                           "solver timeout.\n");
+    } else {
+      // Use the max of the remaining executor time and core solver timeout.
+      // This tries to prevents terminating really early due to solver timeout
+      // but with lots of global execution time left.
+      timeoutToUse =
+          std::max(executorCoreSolverTimeout, timeLeftUntilExecutorToHalt);
+      KLEE_DEBUG_WITH_TYPE(
+          "dynamic_solver_timeout",
+          llvm::errs() << "Using the max of Executor's core solver timeout ("
+                       << executorCoreSolverTimeout
+                       << ") and time left to Executor halt ("
+                       << timeLeftUntilExecutorToHalt << ")\n");
+    }
+  }
+  assert(isinf(timeoutToUse) == 0);
+  assert(!isnan(timeoutToUse));
+  s->solver->setCoreSolverTimeout(timeoutToUse);
+  KLEE_DEBUG_WITH_TYPE("dynamic_solver_timeout",
+                       llvm::errs() << "Using dynamic solver timeout of "
+                                    << timeoutToUse << " seconds\n");
+}
+}
+
 /***/
+void TimingSolver::setTimeout(double t) {
+  if (DynamicSolverTimeout) {
+    klee_warning_once(0, "Ignoring set solver timeout request. Using dynamic timeout instead.");
+  } else {
+    solver->setCoreSolverTimeout(t);
+  }
+}
 
 bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
                             Solver::Validity &result) {
@@ -37,6 +117,7 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
+  setDynamicTimeout(this);
   bool success = solver->evaluate(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();
@@ -60,6 +141,7 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
+  setDynamicTimeout(this);
   bool success = solver->mustBeTrue(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();
@@ -106,6 +188,7 @@ bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
+  setDynamicTimeout(this);
   bool success = solver->getValue(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();
@@ -127,6 +210,7 @@ TimingSolver::getInitialValues(const ExecutionState& state,
 
   sys::TimeValue now = util::getWallTimeVal();
 
+  setDynamicTimeout(this);
   bool success = solver->getInitialValues(Query(state.constraints,
                                                 ConstantExpr::alloc(0, Expr::Bool)), 
                                           objects, result);
@@ -141,5 +225,6 @@ TimingSolver::getInitialValues(const ExecutionState& state,
 
 std::pair< ref<Expr>, ref<Expr> >
 TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
+  setDynamicTimeout(this);
   return solver->getRange(Query(state.constraints, expr));
 }

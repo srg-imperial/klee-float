@@ -116,10 +116,10 @@ public:
     Unhandled
   };
 
+  class TimerInfo; // HACK: Make public
 private:
   static const char *TerminateReasonNames[];
 
-  class TimerInfo;
 
   KModule *kmodule;
   InterpreterHandler *interpreterHandler;
@@ -507,6 +507,10 @@ public:
                                std::map<const std::string*, std::set<unsigned> > &res);
 
   Expr::Width getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const;
+
+  // Return the halt timer if it exists.
+  virtual const TimerInfo* getHaltTimer() const;
+  virtual double getCoreSolverTimeout() const;
 };
   
 } // End klee namespace

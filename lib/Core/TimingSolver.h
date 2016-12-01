@@ -16,6 +16,7 @@
 #include <vector>
 
 namespace klee {
+  class Executor;
   class ExecutionState;
   class Solver;  
 
@@ -24,6 +25,7 @@ namespace klee {
   class TimingSolver {
   public:
     Solver *solver;
+    Executor* executor;
     bool simplifyExprs;
 
   public:
@@ -32,15 +34,13 @@ namespace klee {
     /// \param _simplifyExprs - Whether expressions should be
     /// simplified (via the constraint manager interface) prior to
     /// querying.
-    TimingSolver(Solver *_solver, bool _simplifyExprs = true) 
-      : solver(_solver), simplifyExprs(_simplifyExprs) {}
+    TimingSolver(Solver *_solver, Executor* _executor, bool _simplifyExprs = true)
+      : solver(_solver), executor(_executor), simplifyExprs(_simplifyExprs) {}
     ~TimingSolver() {
       delete solver;
     }
 
-    void setTimeout(double t) {
-      solver->setCoreSolverTimeout(t);
-    }
+    void setTimeout(double t);
     
     char *getConstraintLog(const Query& query) {
       return solver->getConstraintLog(query);

@@ -360,7 +360,7 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
       interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
 
-  this->solver = new TimingSolver(solver, EqualitySubstitution);
+  this->solver = new TimingSolver(solver, this, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 
   if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
@@ -3722,6 +3722,11 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
 
 Expr::Width Executor::getWidthForLLVMType(LLVM_TYPE_Q llvm::Type *type) const {
   return kmodule->targetData->getTypeSizeInBits(type);
+}
+
+
+double Executor::getCoreSolverTimeout() const {
+  return coreSolverTimeout;
 }
 
 ///
