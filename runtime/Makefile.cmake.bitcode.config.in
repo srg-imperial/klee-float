@@ -43,7 +43,7 @@ RM := rm
 CP := cp
 
 # Compiler flags
-LLVMCC.Flags += \
+LLVMCC.Flags += $(LLVMCC.ExtraFlags) \
 	-I@CMAKE_SOURCE_DIR@/include \
 	-I@CMAKE_BINARY_DIR@/include \
 	-emit-llvm \
