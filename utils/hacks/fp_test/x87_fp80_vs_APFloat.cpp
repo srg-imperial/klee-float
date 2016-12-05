@@ -137,7 +137,7 @@ void CheckBitsAreEqual(long double a, long double b) {
 
 void PositivePseudoNaNsQuiet()
 {
-  // Positive Pseduo-NaNs quiet
+  // Positive Pseuduo-NaNs quiet
   const uint64_t lowBits = 0x7fffffffffffffff;
   const uint16_t highBits = 0x7fff;
   bool result = false;
@@ -145,11 +145,12 @@ void PositivePseudoNaNsQuiet()
   llvm::errs() << "Native:\n";
   ClearExceptions();
   long double ldv = MakeX86FP80FromBits(highBits, lowBits);
+  printf("printf: %Lf\n", ldv);
   CHECK(ldv != ldv);
   bool nativeCompareNotEqual = result;
   CheckInvalidOperationException();
   ClearExceptions();
-  CHECK(isnanl(ldv));
+  CHECK(isnanl(ldv)); // BUG in glibc?: This should probably be false even though glibc says true!
   CheckInvalidOperationException();
   ClearExceptions();
 
@@ -170,9 +171,9 @@ void PositivePseudoNaNsQuiet()
       LLVMAPFloatCompare(ldvLLVMAPFloat, ldvLLVMAPFloat);
   bool apFloatCompareNotEqual = (cmpResult != llvm::APFloat::cmpEqual);
 
-  CHECK(apFloatCompareNotEqual == nativeCompareNotEqual); 
+  CHECK(apFloatCompareNotEqual == nativeCompareNotEqual);
 
-  CHECK(ldvLLVMAPFloat.isNaN());
+  CHECK(ldvLLVMAPFloat.isNaN()); // BUG?: This isn't really a NaN
   CHECK(!ldvLLVMAPFloat.isSignaling());
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
@@ -197,7 +198,7 @@ void PositivePseudoNaNsQuiet()
 
 void PositivePseudoNaNsSignaling()
 {
-  // Positive Pseduo-NaNs Signaling
+  // Positive Pseudo-NaNs Signaling
   const uint64_t lowBits = 0x3fffffffffffffff;
   const uint16_t highBits = 0x7fff;
   bool result = false;
@@ -206,14 +207,15 @@ void PositivePseudoNaNsSignaling()
   llvm::errs() << "Native:\n";
   ClearExceptions();
   long double ldv = MakeX86FP80FromBits(highBits, lowBits);
+  printf("printf: %Lf\n", ldv);
 
   // Compare equal to itself.
   CHECK(ldv != ldv);
   bool nativeCompareNotEqual = result;
   CheckInvalidOperationException();
   ClearExceptions();
-  // Is a NaN
-  CHECK(isnanl(ldv));
+  // Is a NaN?
+  CHECK(isnanl(ldv)); // BUG in glibc? This should probably be false even though glibc says true!
   CheckInvalidOperationException();
   ClearExceptions();
 
@@ -236,11 +238,11 @@ void PositivePseudoNaNsSignaling()
       LLVMAPFloatCompare(ldvLLVMAPFloat, ldvLLVMAPFloat);
   bool apFloatCompareNotEqual = (cmpResult != llvm::APFloat::cmpEqual);
 
-  CHECK(apFloatCompareNotEqual == nativeCompareNotEqual); 
+  CHECK(apFloatCompareNotEqual == nativeCompareNotEqual);
 
   // Is a NaN
-  CHECK(ldvLLVMAPFloat.isNaN());
-  CHECK(ldvLLVMAPFloat.isSignaling());
+  CHECK(ldvLLVMAPFloat.isNaN()); // BUG? This should probably be false.
+  CHECK(ldvLLVMAPFloat.isSignaling()); // BUG? This should probably be false.
   // Add 1
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
@@ -259,6 +261,151 @@ void PositivePseudoNaNsSignaling()
   // though.
   // ldvLLMAPFloatAsNative: 0x7fff 3fffffffffffffff (+ve pseudo signaling NaN)
   // nativeAdd:             0xffff c000000000000000 (-ve quiet NaN)
+  CheckBitsAreEqual(ldvLLMAPFloatAsNative, nativeAdd);
+}
+
+void PositivePseudoInfinity()
+{
+  // Positive Pseudo-infinity
+  const uint64_t lowBits = 0x0000000000000000;
+  const uint16_t highBits = 0x7fff;
+  bool result = false;
+  banner();
+  llvm::errs() << "Positive Pseudo-infinity\n";
+  llvm::errs() << "Native:\n";
+  ClearExceptions();
+  long double ldv = MakeX86FP80FromBits(highBits, lowBits);
+  printf("printf: %Lf\n", ldv);
+
+  // Compare equal to itself.
+  CHECK(ldv != ldv);
+  bool nativeCompareNotEqual = result;
+  CheckInvalidOperationException();
+  ClearExceptions();
+  // Is inf?
+  CHECK(isinfl(ldv) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+
+  llvm::errs() << "Performing addition:\n";
+  // Add 1
+  long double nativeAdd = ldv + 1.0l;
+  CheckInvalidOperationException();
+  ClearExceptions();
+  CHECK(isinfl(nativeAdd) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  llvm::errs() << "\n";
+
+  llvm::errs() << "APFloat:\n";
+  llvm::APFloat ldvLLVMAPFloat =
+      MakeLLVMAPFloatFromBits(highBits, lowBits);
+
+  // Compare equal to itself.
+  llvm::APFloat::cmpResult cmpResult =
+      LLVMAPFloatCompare(ldvLLVMAPFloat, ldvLLVMAPFloat);
+  bool apFloatCompareNotEqual = (cmpResult != llvm::APFloat::cmpEqual);
+
+  CHECK(apFloatCompareNotEqual == nativeCompareNotEqual);
+
+  // Is inf?
+  CHECK(!ldvLLVMAPFloat.isInfinity());
+  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG: This is not a NaN.
+  // Add 1
+  llvm::errs() << "Performing addition:\n";
+  llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
+  llvm::APFloat::opStatus opStat =
+      ldvLLVMAPFloat.add(oneLLVMAPFloat, llvm::APFloat::rmNearestTiesToEven);
+  llvm::errs() << "Operation status:" << LLVMAPFloatOpToString(opStat) << "\n";
+  // BUG:`ldvLLVMAPFloat` is an invalid operand an invalid operation
+  // exception should be raised.
+  CHECK(opStat == llvm::APFloat::opInvalidOp);
+
+  // Check their bit representation
+  long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
+  // BUG? : This fails but given the operands where invalid I think it's reasonable
+  // for the results to differ. It would be nice if we matched the hardware behaviour
+  // though.
+  // ldvLLMAPFloatAsNative: 0x7fff 3fffffffffffffff (+ve pseudo infinity)
+  // nativeAdd:             0xffff c000000000000000 (-ve quiet NaN)
+  CheckBitsAreEqual(ldvLLMAPFloatAsNative, nativeAdd);
+}
+
+void PositiveUnnormal()
+{
+  // Positive un-normal (not the same as denormal)
+  const uint64_t lowBits = 0x7fffffffffffffff;
+  const uint16_t highBits = 0x7ffe;
+  bool result = false;
+  banner();
+  llvm::errs() << "Positive unnormal\n";
+  llvm::errs() << "Native:\n";
+  ClearExceptions();
+  long double ldv = MakeX86FP80FromBits(highBits, lowBits);
+  printf("printf: %Lf\n", ldv);
+
+  // Compare equal to itself.
+  CHECK(ldv != ldv);
+  bool nativeCompareNotEqual = result;
+  CheckInvalidOperationException();
+  ClearExceptions();
+  // Is inf?
+  CHECK(isinfl(ldv) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  // Is nan?
+  CHECK(isnanl(ldv) == 0); // BUG in glibc? This isn't a nan but glibc says isnanl(ldv) is true.
+  CheckInvalidOperationException();
+  ClearExceptions();
+
+  llvm::errs() << "Performing addition:\n";
+  // Add 1
+  long double nativeAdd = ldv + 1.0l;
+  CheckInvalidOperationException();
+  ClearExceptions();
+  CHECK(isinfl(nativeAdd) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  CHECK(isnanl(nativeAdd)); // Expected?
+  CheckInvalidOperationException();
+  ClearExceptions();
+  llvm::errs() << "\n";
+
+  llvm::errs() << "APFloat:\n";
+  llvm::APFloat ldvLLVMAPFloat =
+      MakeLLVMAPFloatFromBits(highBits, lowBits);
+
+  // Compare equal to itself.
+  llvm::APFloat::cmpResult cmpResult =
+      LLVMAPFloatCompare(ldvLLVMAPFloat, ldvLLVMAPFloat);
+  bool apFloatCompareNotEqual = (cmpResult != llvm::APFloat::cmpEqual);
+
+  CHECK(apFloatCompareNotEqual == nativeCompareNotEqual);
+
+  // Is inf?
+  CHECK(!ldvLLVMAPFloat.isInfinity());
+  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG: This is not a NaN.
+  // Add 1
+  llvm::errs() << "Performing addition:\n";
+  llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
+
+  // BUG: This causes an assertion failure to be hit inside LLVM 3.4.2
+  // TODO: Check LLVM upstream. Can we hit this same assertion in clang
+  // when it does constant folding?
+  llvm::APFloat::opStatus opStat =
+      ldvLLVMAPFloat.add(oneLLVMAPFloat, llvm::APFloat::rmNearestTiesToEven);
+
+  llvm::errs() << "Operation status:" << LLVMAPFloatOpToString(opStat) << "\n";
+
+  // Can't get this far so I don't know what APFloat will do but it'll probably
+  // do the wrong thing.
+  // BUG:`ldvLLVMAPFloat` is an invalid operand an invalid operation
+  // exception should be raised.
+  CHECK(opStat == llvm::APFloat::opInvalidOp);
+
+  // Check their bit representation
+  long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
+  // BUG? : This will probably fail.
   CheckBitsAreEqual(ldvLLMAPFloatAsNative, nativeAdd);
 }
 
@@ -295,6 +442,10 @@ IA-32 processors (as described here) to support legacy code.
   PositivePseudoNaNsQuiet();
   banner();
   PositivePseudoNaNsSignaling();
+  banner();
+  PositivePseudoInfinity();
+  banner();
+  PositiveUnnormal();
 
   return 0;
 }
