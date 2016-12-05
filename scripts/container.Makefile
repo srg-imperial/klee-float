@@ -118,6 +118,24 @@ fp_bench_build_O2:
 	cd build_O2 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
 	cd build_O2 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
 
+fp_bench_build_O0:
+	mkdir -p build_O0
+	cd build_O0 && \
+		CC=wllvm \
+		CXX=wllvm++ \
+		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
+		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
+		LLVM_COMPILER=clang \
+		PATH="$$PATH:/home/user/whole-program-llvm" \
+		cmake \
+		-DCMAKE_BUILD_TYPE=Debug \
+		-DBUILD_IMPERIAL_BENCHMARKS=ON \
+		-DBUILD_AACHEN_BENCHMARKS=ON \
+		../fp-bench/
+	cd build_O0 && LLVM_COMPILER=clang make all create-augmented-spec-file-list
+	cd build_O0 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
+	cd build_O0 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
+
 
 pull:
 	cd llvm && git pull
