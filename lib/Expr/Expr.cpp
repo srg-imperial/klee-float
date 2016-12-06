@@ -14,6 +14,7 @@
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 1)
 #include "llvm/ADT/Hashing.h"
 #endif
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 // FIXME: We shouldn't need this once fast constant support moves into
@@ -610,7 +611,74 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value.sge(RHS->value), Expr::Bool);
 }
 
+namespace {
+bool shouldTryNativex87Eval(const ConstantExpr *lhs, const ConstantExpr *rhs) {
+  if (lhs && rhs && lhs->getWidth() == 80 && rhs->getWidth() == 80) {
+    return true;
+  }
+  return false;
+};
+
+#ifdef __x86_64__
+long double GetNativeX87FP80FromLLVMAPInt(const llvm::APInt &apint) {
+  assert(apint.getBitWidth() == 80);
+  long double value = 0.0l;
+  // Dont use sizeof(long double) here as the value is 16 on x86_64
+  // we only want 80 bits (10 bytes).
+  memcpy(&value, apint.getRawData(), 10);
+  return value;
+}
+#endif
+
+// WORKAROUND: A bug in llvm::APFloat means long doubles aren't evaluated
+// properly in some cases ( https://llvm.org/bugs/show_bug.cgi?id=31292 ).
+// Workaround this by evaulating natively if possible.
+ref<ConstantExpr> TryNativeX87FP80EvalCmp(const ConstantExpr *lhs,
+                                          const ConstantExpr *rhs,
+                                          Expr::Kind op) {
+  if (!shouldTryNativex87Eval(lhs, rhs))
+    return NULL;
+
+#ifdef __x86_64__
+  // Use APInt directly because making an APFloat might change the bit pattern.
+  long double lhsAsNative = GetNativeX87FP80FromLLVMAPInt(lhs->getAPValue());
+  long double rhsAsNative = GetNativeX87FP80FromLLVMAPInt(rhs->getAPValue());
+  bool nativeResult = false;
+  switch (op) {
+  case Expr::FOEq:
+    nativeResult = (lhsAsNative == rhsAsNative);
+    break;
+  case Expr::FOLt:
+    nativeResult = (lhsAsNative < rhsAsNative);
+    break;
+  case Expr::FOLe:
+    nativeResult = (lhsAsNative <= rhsAsNative);
+    break;
+  case Expr::FOGt:
+    nativeResult = (lhsAsNative > rhsAsNative);
+    break;
+  case Expr::FOGe:
+    nativeResult = (lhsAsNative >= rhsAsNative);
+    break;
+  default:
+    llvm_unreachable("Unhandled Expr kind");
+  }
+
+  return ConstantExpr::alloc(nativeResult, Expr::Bool);
+#else
+  klee_warning_once(0, "Trying to evaluate x87 fp80 constant non natively."
+                       "Results may be wrong");
+  return NULL;
+#endif
+}
+}
+
 ref<ConstantExpr> ConstantExpr::FOEq(const ref<ConstantExpr> &RHS) {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCmp(this, RHS.get(), Expr::FOEq);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat lhsF = this->getAPFloatValue();
   APFloat rhsF = RHS->getAPFloatValue();
   APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
@@ -619,6 +687,11 @@ ref<ConstantExpr> ConstantExpr::FOEq(const ref<ConstantExpr> &RHS) {
 }
 
 ref<ConstantExpr> ConstantExpr::FOLt(const ref<ConstantExpr> &RHS) {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCmp(this, RHS.get(), Expr::FOLt);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat lhsF = this->getAPFloatValue();
   APFloat rhsF = RHS->getAPFloatValue();
   APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
@@ -627,6 +700,11 @@ ref<ConstantExpr> ConstantExpr::FOLt(const ref<ConstantExpr> &RHS) {
 }
 
 ref<ConstantExpr> ConstantExpr::FOLe(const ref<ConstantExpr> &RHS) {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCmp(this, RHS.get(), Expr::FOLe);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat lhsF = this->getAPFloatValue();
   APFloat rhsF = RHS->getAPFloatValue();
   APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
@@ -636,6 +714,11 @@ ref<ConstantExpr> ConstantExpr::FOLe(const ref<ConstantExpr> &RHS) {
 }
 
 ref<ConstantExpr> ConstantExpr::FOGt(const ref<ConstantExpr> &RHS) {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCmp(this, RHS.get(), Expr::FOGt);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat lhsF = this->getAPFloatValue();
   APFloat rhsF = RHS->getAPFloatValue();
   APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
@@ -644,6 +727,11 @@ ref<ConstantExpr> ConstantExpr::FOGt(const ref<ConstantExpr> &RHS) {
 }
 
 ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCmp(this, RHS.get(), Expr::FOGe);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat lhsF = this->getAPFloatValue();
   APFloat rhsF = RHS->getAPFloatValue();
   APFloat::cmpResult cmpRes = lhsF.compare(rhsF);
