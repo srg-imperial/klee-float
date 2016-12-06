@@ -383,7 +383,7 @@ void PositiveUnnormal()
   CheckInvalidOperationException();
   ClearExceptions();
   // Is nan?
-  CHECK(!isnanl(ldv)); // BUG in glibc? This isn't a nan but glibc says isnanl(ldv) is true.
+  CHECK(!isnanl(ldv));
   CheckInvalidOperationException();
   ClearExceptions();
 
@@ -414,7 +414,7 @@ void PositiveUnnormal()
 
   // Is inf?
   CHECK(!ldvLLVMAPFloat.isInfinity());
-  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG?: This is not a IEEE754 NaN.
+  CHECK(!ldvLLVMAPFloat.isNaN());
   // Add 1
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
@@ -430,6 +430,7 @@ void PositiveUnnormal()
 
   // Check their bit representation
   long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
+  printf("ldvLLMAPFloatAsNative: %Lf\n", ldvLLMAPFloatAsNative);
   // BUG? : This fails but given the operands were invalid I think it's reasonable
   // for the results to differ. It would be nice if we matched the hardware behaviour
   // though.
