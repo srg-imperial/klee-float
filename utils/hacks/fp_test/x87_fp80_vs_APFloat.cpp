@@ -1,4 +1,12 @@
+// Compile as:
+// ```
+// clang++ x87_fp80_vs_APFloat.cpp -Wall $(llvm-config --cxxflags) $(llvm-config --libs Support) $(llvm-config --system-libs Support) -O0
+// ```
+// Or with `g++`.
+// NOTE: Be very careful without `-O0` at the end Clang produces a binary that behaves differently.
+// It's probably doing constant folding with it's buggy APFloat...
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <fenv.h>
 #include <inttypes.h>
@@ -109,6 +117,22 @@ const char* LLVMAPFloatOpToString(llvm::APFloat::opStatus status) {
   }
 }
 
+const char* fpclassifyString(long double ld) {
+  switch(fpclassify(ld)) {
+    #define CASE(X) \
+      case X: \
+        return #X;
+    CASE(FP_NAN)
+    CASE(FP_INFINITE)
+    CASE(FP_ZERO)
+    CASE(FP_SUBNORMAL)
+    CASE(FP_NORMAL)
+#undef CASE
+      default:
+    return "Unknown classification!";
+  }
+}
+
 #define CHECK(X) \
   result = X ;\
   if (!result) llvm::errs() << "[FAILURE] "; \
@@ -130,8 +154,8 @@ void CheckBitsAreEqual(long double a, long double b) {
   bool oldResult = result;
   CHECK(aBits[1] == bBits[1]);
   if (!result || !oldResult) {
-    printf("a: 0x%.4" PRIx16 " %.16" PRIx64 "\n", aBits[1], aBits[0]);
-    printf("b: 0x%.4" PRIx16 " %.16" PRIx64 "\n", bBits[1], bBits[0]);
+    printf("a: 0x%.4" PRIx16 " %.16" PRIx64 "\n", (uint16_t) aBits[1], aBits[0]);
+    printf("b: 0x%.4" PRIx16 " %.16" PRIx64 "\n", (uint16_t) bBits[1], bBits[0]);
   }
 }
 
@@ -150,7 +174,7 @@ void PositivePseudoNaNsQuiet()
   bool nativeCompareNotEqual = result;
   CheckInvalidOperationException();
   ClearExceptions();
-  CHECK(isnanl(ldv)); // BUG in glibc?: This should probably be false even though glibc says true!
+  CHECK(!isnanl(ldv)); // BUG in glibc?: This should probably be false even though glibc says true!
   CheckInvalidOperationException();
   ClearExceptions();
 
@@ -173,7 +197,7 @@ void PositivePseudoNaNsQuiet()
 
   CHECK(apFloatCompareNotEqual == nativeCompareNotEqual);
 
-  CHECK(ldvLLVMAPFloat.isNaN()); // BUG?: This isn't really a NaN
+  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG?: This isn't a IEEE754 NaN.
   CHECK(!ldvLLVMAPFloat.isSignaling());
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
@@ -188,7 +212,7 @@ void PositivePseudoNaNsQuiet()
 
   // Check their bit representation
   long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
-  // BUG? : This fails but given the operands where invalid I think it's reasonable
+  // BUG? : This fails but given the operands were invalid I think it's reasonable
   // for the results to differ. It would be nice if we matched the hardware behaviour
   // though.
   // ldvLLMAPFloatAsNative: 0x7fff 7fffffffffffffff (+ve pseudo quiet NaN)
@@ -215,7 +239,7 @@ void PositivePseudoNaNsSignaling()
   CheckInvalidOperationException();
   ClearExceptions();
   // Is a NaN?
-  CHECK(isnanl(ldv)); // BUG in glibc? This should probably be false even though glibc says true!
+  CHECK(!isnanl(ldv)); // BUG in glibc? This should probably be false even though glibc says true!
   CheckInvalidOperationException();
   ClearExceptions();
 
@@ -241,8 +265,8 @@ void PositivePseudoNaNsSignaling()
   CHECK(apFloatCompareNotEqual == nativeCompareNotEqual);
 
   // Is a NaN
-  CHECK(ldvLLVMAPFloat.isNaN()); // BUG? This should probably be false.
-  CHECK(ldvLLVMAPFloat.isSignaling()); // BUG? This should probably be false.
+  CHECK(ldvLLVMAPFloat.isNaN()); // BUG? This isn't a IEEE754 NaN.
+  CHECK(ldvLLVMAPFloat.isSignaling()); // BUG? This isn't a IEEE754 signaling NaN.
   // Add 1
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
@@ -256,7 +280,7 @@ void PositivePseudoNaNsSignaling()
 
   // Check their bit representation
   long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
-  // BUG? : This fails but given the operands where invalid I think it's reasonable
+  // BUG? : This fails but given the operands were invalid I think it's reasonable
   // for the results to differ. It would be nice if we matched the hardware behaviour
   // though.
   // ldvLLMAPFloatAsNative: 0x7fff 3fffffffffffffff (+ve pseudo signaling NaN)
@@ -286,6 +310,11 @@ void PositivePseudoInfinity()
   CHECK(isinfl(ldv) == 0);
   CheckInvalidOperationException();
   ClearExceptions();
+  // Is nan?
+  CHECK(!isnanl(ldv)); // BUG in glibc? This should probably be false even though glibc says true!
+
+  CheckInvalidOperationException();
+  ClearExceptions();
 
   llvm::errs() << "Performing addition:\n";
   // Add 1
@@ -310,7 +339,7 @@ void PositivePseudoInfinity()
 
   // Is inf?
   CHECK(!ldvLLVMAPFloat.isInfinity());
-  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG: This is not a NaN.
+  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG?: This is not a IEEE754 NaN.
   // Add 1
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
@@ -323,10 +352,10 @@ void PositivePseudoInfinity()
 
   // Check their bit representation
   long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
-  // BUG? : This fails but given the operands where invalid I think it's reasonable
+  // BUG? : This fails but given the operands were invalid I think it's reasonable
   // for the results to differ. It would be nice if we matched the hardware behaviour
   // though.
-  // ldvLLMAPFloatAsNative: 0x7fff 3fffffffffffffff (+ve pseudo infinity)
+  // ldvLLMAPFloatAsNative: 0x7fff 0000000000000000 (+ve pseudo infinity)
   // nativeAdd:             0xffff c000000000000000 (-ve quiet NaN)
   CheckBitsAreEqual(ldvLLMAPFloatAsNative, nativeAdd);
 }
@@ -334,8 +363,8 @@ void PositivePseudoInfinity()
 void PositiveUnnormal()
 {
   // Positive un-normal (not the same as denormal)
-  const uint64_t lowBits = 0x7fffffffffffffff;
-  const uint16_t highBits = 0x7ffe;
+  const uint64_t lowBits = 0x0000000000000001;
+  const uint16_t highBits = 0x0001;
   bool result = false;
   banner();
   llvm::errs() << "Positive unnormal\n";
@@ -354,7 +383,7 @@ void PositiveUnnormal()
   CheckInvalidOperationException();
   ClearExceptions();
   // Is nan?
-  CHECK(isnanl(ldv) == 0); // BUG in glibc? This isn't a nan but glibc says isnanl(ldv) is true.
+  CHECK(!isnanl(ldv)); // BUG in glibc? This isn't a nan but glibc says isnanl(ldv) is true.
   CheckInvalidOperationException();
   ClearExceptions();
 
@@ -376,6 +405,7 @@ void PositiveUnnormal()
       MakeLLVMAPFloatFromBits(highBits, lowBits);
 
   // Compare equal to itself.
+  // BUG: Invalid operand (unnormal) shouldn't compare equal to itself.
   llvm::APFloat::cmpResult cmpResult =
       LLVMAPFloatCompare(ldvLLVMAPFloat, ldvLLVMAPFloat);
   bool apFloatCompareNotEqual = (cmpResult != llvm::APFloat::cmpEqual);
@@ -384,28 +414,122 @@ void PositiveUnnormal()
 
   // Is inf?
   CHECK(!ldvLLVMAPFloat.isInfinity());
-  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG: This is not a NaN.
+  CHECK(!ldvLLVMAPFloat.isNaN()); // BUG?: This is not a IEEE754 NaN.
   // Add 1
   llvm::errs() << "Performing addition:\n";
   llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
 
-  // BUG: This causes an assertion failure to be hit inside LLVM 3.4.2
-  // TODO: Check LLVM upstream. Can we hit this same assertion in clang
-  // when it does constant folding?
   llvm::APFloat::opStatus opStat =
       ldvLLVMAPFloat.add(oneLLVMAPFloat, llvm::APFloat::rmNearestTiesToEven);
 
   llvm::errs() << "Operation status:" << LLVMAPFloatOpToString(opStat) << "\n";
 
-  // Can't get this far so I don't know what APFloat will do but it'll probably
-  // do the wrong thing.
   // BUG:`ldvLLVMAPFloat` is an invalid operand an invalid operation
   // exception should be raised.
   CHECK(opStat == llvm::APFloat::opInvalidOp);
 
   // Check their bit representation
   long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
-  // BUG? : This will probably fail.
+  // BUG? : This fails but given the operands were invalid I think it's reasonable
+  // for the results to differ. It would be nice if we matched the hardware behaviour
+  // though.
+  // ldvLLMAPFloatAsNative: 0x3fff 8000000000000000 (+ve normal)
+  // nativeAdd:             0xffff c000000000000000 (-ve quiet NaN)
+  CheckBitsAreEqual(ldvLLMAPFloatAsNative, nativeAdd);
+}
+
+void PositivePseudoDenormal()
+{
+  // Positive pseudo denormal.
+  // On x86_64 it seems (at least for this value) that these "unsupported" values
+  // are handled.
+  // 8.2.2 says
+  // ```
+  // Beginning with the Intel 387 math coprocessor, the encodings formerly known
+  // as pseudo-denormal numbers are
+  // not generated by IA-32 processors. When encountered as operands, however,
+  // they are handled correctly; that is,
+  // they are treated as denormals and a denormal exception is generated.
+  // Pseudo-denormal numbers should not be
+  // used as operand values. They are supported by current IA-32 processors (as
+  // described here) to support legacy
+  // code.
+  // ```
+  //
+  // The text above doesn't say anything about x86_64 but it looks like it too
+  // treats these as denormals.
+  const uint64_t lowBits = 0x8000000000000001;
+  const uint16_t highBits = 0x0000;
+  bool result = false;
+  banner();
+  llvm::errs() << "Positive pseudo denormal\n";
+  llvm::errs() << "Native:\n";
+  ClearExceptions();
+  long double ldv = MakeX86FP80FromBits(highBits, lowBits);
+  printf("printf: %Lf\n", ldv);
+
+  // Compare equal to itself.
+  CHECK(ldv == ldv);
+  bool nativeCompareEqual = result;
+  CheckInvalidOperationException();
+  ClearExceptions();
+  // Is inf?
+  CHECK(isinfl(ldv) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  // Is nan?
+  CHECK(isnanl(ldv) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  CHECK(ldv != 0.0l);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  // Is denormal?
+  CHECK(fpclassify(ldv) == FP_SUBNORMAL); // BUG in glibc? Not sure what this should be classifed as.
+  CheckInvalidOperationException();
+  ClearExceptions();
+  llvm::errs() << "ldv classified as " << fpclassifyString(ldv) << "\n";
+
+  llvm::errs() << "Performing addition:\n";
+  // Add 1
+  long double nativeAdd = ldv + 1.0l;
+  CheckInvalidOperationException();
+  ClearExceptions();
+  CHECK(isinfl(nativeAdd) == 0);
+  CheckInvalidOperationException();
+  ClearExceptions();
+  CHECK(!isnanl(nativeAdd));
+  CheckInvalidOperationException();
+  ClearExceptions();
+  llvm::errs() << "\n";
+
+  llvm::errs() << "APFloat:\n";
+  llvm::APFloat ldvLLVMAPFloat =
+      MakeLLVMAPFloatFromBits(highBits, lowBits);
+
+  // Compare equal to itself.
+  llvm::APFloat::cmpResult cmpResult =
+      LLVMAPFloatCompare(ldvLLVMAPFloat, ldvLLVMAPFloat);
+  bool apFloatCompareEqual = (cmpResult == llvm::APFloat::cmpEqual);
+
+  CHECK(apFloatCompareEqual == nativeCompareEqual);
+
+  // Is inf?
+  CHECK(!ldvLLVMAPFloat.isInfinity());
+  CHECK(!ldvLLVMAPFloat.isNaN());
+  // Add 1
+  llvm::errs() << "Performing addition:\n";
+  llvm::APFloat oneLLVMAPFloat = MakeLLVMAPFloatFromLongDouble(1.0l);
+
+  llvm::APFloat::opStatus opStat =
+      ldvLLVMAPFloat.add(oneLLVMAPFloat, llvm::APFloat::rmNearestTiesToEven);
+
+  llvm::errs() << "Operation status:" << LLVMAPFloatOpToString(opStat) << "\n";
+
+  CHECK(opStat != llvm::APFloat::opInvalidOp);
+
+  // Check their bit representation
+  long double ldvLLMAPFloatAsNative = MakeLongDoubleFromLLVMAPFloat(ldvLLVMAPFloat);
   CheckBitsAreEqual(ldvLLMAPFloatAsNative, nativeAdd);
 }
 
@@ -446,6 +570,10 @@ IA-32 processors (as described here) to support legacy code.
   PositivePseudoInfinity();
   banner();
   PositiveUnnormal();
+  banner();
+  PositivePseudoDenormal();
+
+  // TODO: Check negative variants of the above.
 
   return 0;
 }
