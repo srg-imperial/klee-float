@@ -744,33 +744,61 @@ ref<ConstantExpr> TryNativeX87FP80EvalArith(const ConstantExpr *lhs,
 }
 
 ref<ConstantExpr> TryNativeX87FP80EvalCast(const ConstantExpr *ce,
-                                           Expr::Width outWidth,
-                                           Expr::Kind op) {
+                                           Expr::Width outWidth, Expr::Kind op,
+                                           llvm::APFloat::roundingMode rm) {
   if (!shouldTryNativex87Eval(ce, ce))
     return NULL;
 #ifdef __x86_64__
+  int roundingMode = LLVMRoundingModeToCRoundingMode(rm);
+  if (roundingMode == -1) {
+    klee_warning_once(
+        0, "Cannot eval x87 fp80 constant natively due to rounding mode"
+           "Results may be wrong");
+    return NULL;
+  }
   // Use APInt directly because making an APFloat might change the bit pattern.
   long double argAsNative = GetNativeX87FP80FromLLVMAPInt(ce->getAPValue());
+  // Save the floating point environment.
+  fenv_t fpEnv;
+  if (fegetenv(&fpEnv)) {
+    llvm::errs() << "Failed to save floating point environment\n";
+    abort();
+  }
+  if (fesetround(roundingMode)) {
+    llvm::errs() << "Failed to set new rounding mode\n";
+    abort();
+  }
+  llvm::APInt apint;
   switch (op) {
   case Expr::FPTrunc: {
     switch (outWidth) {
     case 64: {
       assert(sizeof(double) * 8 == 64);
       double resultAsDouble = (double)argAsNative;
-      return ConstantExpr::alloc(APInt::doubleToBits(resultAsDouble));
+      apint = APInt::doubleToBits(resultAsDouble);
+      assert(apint.getBitWidth() == 64);
+      break;
     }
     case 32: {
       assert(sizeof(float) * 8 == 32);
       float resultAsFloat = (float)argAsNative;
-      return ConstantExpr::alloc(APInt::floatToBits(resultAsFloat));
+      apint = APInt::floatToBits(resultAsFloat);
+      assert(apint.getBitWidth() == 32);
+      break;
     }
     default:
       llvm_unreachable("Unhandled Expr width");
     }
-  }
+  } break;
   default:
     llvm_unreachable("Unhandled Expr kind");
   }
+  // Restore the floating point environment
+  if (fesetenv(&fpEnv)) {
+    llvm::errs() << "Failed to restore floating point environment\n";
+    abort();
+  }
+  return ConstantExpr::alloc(apint);
 #else
   klee_warning_once(0, "Trying to evaluate x87 fp80 constant non natively."
                        "Results may be wrong");
@@ -916,7 +944,7 @@ ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
   assert(W < this->getWidth() && "Invalid FPTrunc");
 
   ref<ConstantExpr> nativeEval =
-      TryNativeX87FP80EvalCast(this, W, Expr::FPTrunc);
+      TryNativeX87FP80EvalCast(this, W, Expr::FPTrunc, rm);
   if (nativeEval.get())
     return nativeEval;
 
