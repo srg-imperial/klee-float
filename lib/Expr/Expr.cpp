@@ -715,6 +715,41 @@ ref<ConstantExpr> TryNativeX87FP80EvalArith(const ConstantExpr *lhs,
   return NULL;
 #endif
 }
+
+ref<ConstantExpr> TryNativeX87FP80EvalCast(const ConstantExpr *ce,
+                                           Expr::Width outWidth,
+                                           Expr::Kind op) {
+  if (!shouldTryNativex87Eval(ce, ce))
+    return NULL;
+#ifdef __x86_64__
+  // Use APInt directly because making an APFloat might change the bit pattern.
+  long double argAsNative = GetNativeX87FP80FromLLVMAPInt(ce->getAPValue());
+  switch (op) {
+  case Expr::FPTrunc: {
+    switch (outWidth) {
+    case 64: {
+      assert(sizeof(double) * 8 == 64);
+      double resultAsDouble = (double)argAsNative;
+      return ConstantExpr::alloc(APInt::doubleToBits(resultAsDouble));
+    }
+    case 32: {
+      assert(sizeof(float) * 8 == 32);
+      float resultAsFloat = (float)argAsNative;
+      return ConstantExpr::alloc(APInt::floatToBits(resultAsFloat));
+    }
+    default:
+      llvm_unreachable("Unhandled Expr width");
+    }
+  }
+  default:
+    llvm_unreachable("Unhandled Expr kind");
+  }
+#else
+  klee_warning_once(0, "Trying to evaluate x87 fp80 constant non natively."
+                       "Results may be wrong");
+  return NULL;
+#endif
+}
 }
 
 ref<ConstantExpr> ConstantExpr::FOEq(const ref<ConstantExpr> &RHS) {
@@ -852,6 +887,12 @@ ref<ConstantExpr> ConstantExpr::FPExt(Width W) const {
 ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
                                         llvm::APFloat::roundingMode rm) const {
   assert(W < this->getWidth() && "Invalid FPTrunc");
+
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCast(this, W, Expr::FPTrunc);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat result(this->getAPFloatValue());
   const llvm::fltSemantics &newType = widthToFloatSemantics(W);
   bool losesInfo = false;
