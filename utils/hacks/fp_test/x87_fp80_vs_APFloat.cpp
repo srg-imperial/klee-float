@@ -1,6 +1,6 @@
 // Compile as:
 // ```
-// clang++ x87_fp80_vs_APFloat.cpp -Wall $(llvm-config --cxxflags) $(llvm-config --libs Support) $(llvm-config --system-libs Support) -O0
+// clang++ x87_fp80_vs_APFloat.cpp -Wall $(llvm-config --cxxflags) -L$(llvm-config --libdir) $(llvm-config --libs Support) $(llvm-config --system-libs Support) -O0
 // ```
 // Or with `g++`.
 // NOTE: Be very careful without `-O0` at the end Clang produces a binary that behaves differently.
