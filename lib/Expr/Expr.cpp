@@ -628,6 +628,14 @@ long double GetNativeX87FP80FromLLVMAPInt(const llvm::APInt &apint) {
   memcpy(&value, apint.getRawData(), 10);
   return value;
 }
+
+llvm::APInt GetAPIntFromLongDouble(long double ld) {
+  uint64_t data[] = {0, 0};
+  assert(sizeof(ld) <= sizeof(data));
+  memcpy(data, &ld, 10);
+  llvm::APInt apint(/*numBits=*/80, data);
+  return apint;
+}
 #endif
 
 // WORKAROUND: A bug in llvm::APFloat means long doubles aren't evaluated
@@ -665,6 +673,42 @@ ref<ConstantExpr> TryNativeX87FP80EvalCmp(const ConstantExpr *lhs,
   }
 
   return ConstantExpr::alloc(nativeResult, Expr::Bool);
+#else
+  klee_warning_once(0, "Trying to evaluate x87 fp80 constant non natively."
+                       "Results may be wrong");
+  return NULL;
+#endif
+}
+
+ref<ConstantExpr> TryNativeX87FP80EvalArith(const ConstantExpr *lhs,
+                                            const ConstantExpr *rhs,
+                                            Expr::Kind op) {
+  if (!shouldTryNativex87Eval(lhs, rhs))
+    return NULL;
+#ifdef __x86_64__
+  // Use APInt directly because making an APFloat might change the bit pattern.
+  long double lhsAsNative = GetNativeX87FP80FromLLVMAPInt(lhs->getAPValue());
+  long double rhsAsNative = GetNativeX87FP80FromLLVMAPInt(rhs->getAPValue());
+  long double nativeResult = false;
+  switch (op) {
+  case Expr::FAdd:
+    nativeResult = lhsAsNative + rhsAsNative;
+    break;
+  case Expr::FSub:
+    nativeResult = lhsAsNative - rhsAsNative;
+    break;
+  case Expr::FMul:
+    nativeResult = lhsAsNative * rhsAsNative;
+    break;
+  case Expr::FDiv:
+    nativeResult = lhsAsNative / rhsAsNative;
+    break;
+  default:
+    llvm_unreachable("Unhandled Expr kind");
+  }
+  llvm::APInt apint = GetAPIntFromLongDouble(nativeResult);
+  assert(apint.getBitWidth() == 80);
+  return ConstantExpr::alloc(apint);
 #else
   klee_warning_once(0, "Trying to evaluate x87 fp80 constant non natively."
                        "Results may be wrong");
@@ -742,6 +786,11 @@ ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
 
 ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FAdd);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat result(this->getAPFloatValue());
   // Should we use the status?
   result.add(RHS->getAPFloatValue(), rm);
@@ -750,6 +799,11 @@ ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
 
 ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FSub);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat result(this->getAPFloatValue());
   // Should we use the status?
   result.subtract(RHS->getAPFloatValue(), rm);
@@ -758,6 +812,11 @@ ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
 
 ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FMul);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat result(this->getAPFloatValue());
   // Should we use the status?
   result.multiply(RHS->getAPFloatValue(), rm);
@@ -766,6 +825,11 @@ ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS,
 
 ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FDiv);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat result(this->getAPFloatValue());
   // Should we use the status?
   result.divide(RHS->getAPFloatValue(), rm);
