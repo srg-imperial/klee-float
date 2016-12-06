@@ -15,6 +15,7 @@
 #include "llvm/ADT/Hashing.h"
 #endif
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/RoundingModeUtil.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 // FIXME: We shouldn't need this once fast constant support moves into
@@ -24,6 +25,7 @@
 #include "klee/util/APFloatEval.h"
 #include "klee/util/ExprPPrinter.h"
 
+#include <fenv.h>
 #include <sstream>
 
 using namespace klee;
@@ -611,6 +613,8 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
   return ConstantExpr::alloc(value.sge(RHS->value), Expr::Bool);
 }
 
+// FIXME: We should probably move all this x87 fp80 stuff into some
+// utility file.
 namespace {
 bool shouldTryNativex87Eval(const ConstantExpr *lhs, const ConstantExpr *rhs) {
   if (lhs && rhs && lhs->getWidth() == 80 && rhs->getWidth() == 80) {
@@ -682,14 +686,31 @@ ref<ConstantExpr> TryNativeX87FP80EvalCmp(const ConstantExpr *lhs,
 
 ref<ConstantExpr> TryNativeX87FP80EvalArith(const ConstantExpr *lhs,
                                             const ConstantExpr *rhs,
-                                            Expr::Kind op) {
+                                            Expr::Kind op, llvm::APFloat::roundingMode rm) {
   if (!shouldTryNativex87Eval(lhs, rhs))
     return NULL;
 #ifdef __x86_64__
+  int roundingMode = LLVMRoundingModeToCRoundingMode(rm);
+  if (roundingMode == -1) {
+    klee_warning_once(0, "Cannot eval x87 fp80 constant natively due to rounding mode"
+                         "Results may be wrong");
+    return NULL;
+  }
+
   // Use APInt directly because making an APFloat might change the bit pattern.
   long double lhsAsNative = GetNativeX87FP80FromLLVMAPInt(lhs->getAPValue());
   long double rhsAsNative = GetNativeX87FP80FromLLVMAPInt(rhs->getAPValue());
   long double nativeResult = false;
+  // Save the floating point environment.
+  fenv_t fpEnv;;
+  if (fegetenv(&fpEnv)) {
+    llvm::errs() << "Failed to save floating point environment\n";
+    abort();
+  }
+  if (fesetround(roundingMode)) {
+    llvm::errs() << "Failed to set new rounding mode\n";
+    abort();
+  }
   switch (op) {
   case Expr::FAdd:
     nativeResult = lhsAsNative + rhsAsNative;
@@ -706,6 +727,12 @@ ref<ConstantExpr> TryNativeX87FP80EvalArith(const ConstantExpr *lhs,
   default:
     llvm_unreachable("Unhandled Expr kind");
   }
+  // Restore the floating point environment
+  if (fesetenv(&fpEnv)) {
+    llvm::errs() << "Failed to restore floating point environment\n";
+    abort();
+  }
+
   llvm::APInt apint = GetAPIntFromLongDouble(nativeResult);
   assert(apint.getBitWidth() == 80);
   return ConstantExpr::alloc(apint);
@@ -822,7 +849,7 @@ ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
 ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   ref<ConstantExpr> nativeEval =
-      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FAdd);
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FAdd, rm);
   if (nativeEval.get())
     return nativeEval;
 
@@ -835,7 +862,7 @@ ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
 ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   ref<ConstantExpr> nativeEval =
-      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FSub);
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FSub, rm);
   if (nativeEval.get())
     return nativeEval;
 
@@ -848,7 +875,7 @@ ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
 ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   ref<ConstantExpr> nativeEval =
-      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FMul);
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FMul, rm);
   if (nativeEval.get())
     return nativeEval;
 
@@ -861,7 +888,7 @@ ref<ConstantExpr> ConstantExpr::FMul(const ref<ConstantExpr> &RHS,
 ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
   ref<ConstantExpr> nativeEval =
-      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FDiv);
+      TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FDiv, rm);
   if (nativeEval.get())
     return nativeEval;
 

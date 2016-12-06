@@ -28,4 +28,5 @@ set(LLVM_COMPONENTS
   support
 )
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleaverExpr PUBLIC ${LLVM_LIBS})
+# FIXME: Refactor some of this x87 fp80 stuff out into kleeSupport so we don't need to depend on kleeSupport.
+target_link_libraries(kleaverExpr PUBLIC kleeSupport ${LLVM_LIBS})
