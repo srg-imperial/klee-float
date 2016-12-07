@@ -17,6 +17,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Instructions.h" // For Alloca
+
 #include <sys/mman.h>
 using namespace klee;
 
@@ -49,6 +52,15 @@ llvm::cl::opt<unsigned long long> DeterministicStartAddress(
     llvm::cl::desc("Start address for deterministic allocation. Has to be page "
                    "aligned (default=0x7ff30000000)."),
     llvm::cl::init(0x7ff30000000));
+
+size_t getAlignmentFromAllocSite(const llvm::Value *v) {
+  if (const llvm::GlobalValue *GV = dyn_cast<llvm::GlobalValue>(v)) {
+    return GV->getAlignment();
+  } else if (const llvm::AllocaInst *AI = dyn_cast<llvm::AllocaInst>(v)) {
+    return AI->getAlignment();
+  }
+  return 0;
+}
 }
 
 /***/
@@ -89,11 +101,27 @@ MemoryManager::~MemoryManager() {
     munmap(deterministicSpace, spaceSize);
 }
 
+// FIXME: Why aren't we just getting the alignment from the allocation site?
 MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       bool isGlobal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
   assert(alignment != 0 && "alignment cannot be zero");
+
+  // Just have a warning for now when the alignments don't match
+  if (allocSite) {
+    size_t allocSiteAlignment = getAlignmentFromAllocSite(allocSite);
+    if (allocSiteAlignment) {
+      if (allocSiteAlignment != alignment) {
+        klee_warning_once(0, "Mismatched alignment during allocation. "
+                             "The allocation site \"%s\" wants %zd but the "
+                             "alignment used was %zd",
+                          allocSite->getName().str().c_str(),
+                          allocSiteAlignment, alignment);
+      }
+    }
+  }
+
   if (size > 10 * 1024 * 1024)
     klee_warning_once(0, "Large alloc: %lu bytes.  KLEE may run out of memory.",
                       size);
@@ -144,7 +172,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
 
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
-                                       allocSite, this);
+                                       allocSite, this, alignment);
   objects.insert(res);
   return res;
 }
@@ -161,8 +189,10 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
 #endif
 
   ++stats::allocations;
+
+  // FIXME: Bogus alignment.
   MemoryObject *res =
-      new MemoryObject(address, size, false, true, true, allocSite, this);
+      new MemoryObject(address, size, false, true, true, allocSite, this, 0);
   objects.insert(res);
   return res;
 }
