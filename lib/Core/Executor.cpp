@@ -583,6 +583,17 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
+    // Try to determine the alignment for the global
+    size_t globalAlignment = i->getAlignment();
+    if (globalAlignment == 0 || !llvm::isPowerOf2_64(globalAlignment)) {
+      // Only warn when globalAlignment was non zero because
+      // a value of zero is used when no alignment is specified.
+      if (globalAlignment)
+        klee_warning("Global \"%s\" requested alignment %zd but this is not "
+                     "supported. Using 8 instead",
+                     i->getName().str().c_str(), globalAlignment);
+      globalAlignment = 8;
+    }
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
@@ -614,7 +625,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
 			(int)i->getName().size(), i->getName().data());
       }
 
-      MemoryObject *mo = memory->allocate(size, false, true, i);
+      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
+                                          /*isGloba=*/true, i, globalAlignment);
       ObjectState *os = bindObjectInState(state, mo, false);
       globalObjects.insert(std::make_pair(i, mo));
       globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
@@ -638,7 +650,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
-      MemoryObject *mo = memory->allocate(size, false, true, &*i);
+      MemoryObject *mo = memory->allocate(
+          size, /*isLocal=*/false, /*isGlobal=*/true, &*i, globalAlignment);
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
