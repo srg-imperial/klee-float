@@ -30,9 +30,9 @@ int main() {
   //
   //                          Significand
   // Sign   Exponent       Integer  Fraction
-  // [0] [000000000000001] [0]     [0000...1]
-  const uint64_t lowBits = 0x0000000000000001;
-  const uint16_t highBits = 0x0001;
+  // [1] [100000000000001] [0]     [00100000...]
+  const uint64_t lowBits = 0x2000000000000000;
+  const uint16_t highBits = 0xc001;
   long double v = 0.0l;
   memcpy(&v, &lowBits, sizeof(lowBits));       // 64 bits
   memcpy(((uint8_t *)(&v)) + 8, &highBits, 2); // 16 bits
@@ -41,5 +41,24 @@ int main() {
   // TODO: Find out where this behaviour is documented.
   assert(isnan((float)v));
   assert(isnan((double)v));
+
+  // Check signed casts
   assert(((int8_t)v) == 0);
+  // FIXME: This assert below doesn't work properly. When we compile this
+  // program natively with Clang the casted value is zero and when we compile
+  // natively with gcc is -32768. We should report this!
+  int16_t temp = (int16_t)v;
+  assert((temp == 0) | (temp == -32768));
+  assert(((int32_t)v) == -2147483648);
+  assert(((int64_t)v) == INT64_MIN);
+
+  // Check signed casts
+  assert(((uint8_t)v) == 0);
+  assert(((uint16_t)v) == 0);
+  assert(((uint32_t)v) == 0);
+  uint64_t temp2 = (uint64_t)v;
+  // FIXME: This assert below doesn't work properly. When we compile this
+  // program natively with Clang the casted value is 0 and when we compile
+  // natively with gcc it is 0x8000000000000000. We should report this!
+  assert(temp2 == 0 || temp2 == 0x8000000000000000);
 }

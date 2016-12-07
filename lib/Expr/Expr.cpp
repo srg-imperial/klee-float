@@ -790,6 +790,52 @@ ref<ConstantExpr> TryNativeX87FP80EvalCast(const ConstantExpr *ce,
       llvm_unreachable("Unhandled Expr width");
     }
   } break;
+  case Expr::FPToSI: {
+    uint64_t data = 0;
+    unsigned numBits = 0;
+    switch (outWidth) {
+#define CASE(WIDTH)                                                            \
+  case WIDTH: {                                                                \
+    int##WIDTH##_t toSI = (int##WIDTH##_t)argAsNative;                         \
+    memcpy(&data, &toSI, sizeof(toSI));                                        \
+    numBits = WIDTH;                                                           \
+    break;                                                                     \
+  }
+      CASE(8)
+      CASE(16)
+      CASE(32)
+      CASE(64)
+#undef CASE
+    default:
+      llvm_unreachable("Unhandled Expr cast width");
+    }
+    assert(numBits > 0);
+    apint = llvm::APInt(numBits, data, /*signed=*/true);
+    assert(apint.getBitWidth() == numBits);
+  } break;
+  case Expr::FPToUI: {
+    uint64_t data = 0;
+    unsigned numBits = 0;
+    switch (outWidth) {
+#define CASE(WIDTH)                                                            \
+  case WIDTH: {                                                                \
+    uint##WIDTH##_t toUI = (uint##WIDTH##_t)argAsNative;                       \
+    memcpy(&data, &toUI, sizeof(toUI));                                        \
+    numBits = WIDTH;                                                           \
+    break;                                                                     \
+  }
+      CASE(8)
+      CASE(16)
+      CASE(32)
+      CASE(64)
+#undef CASE
+    default:
+      llvm_unreachable("Unhandled Expr cast width");
+    }
+    assert(numBits > 0);
+    apint = llvm::APInt(numBits, data, /*signed=*/false);
+    assert(apint.getBitWidth() == numBits);
+  } break;
   default:
     llvm_unreachable("Unhandled Expr kind");
   }
@@ -958,6 +1004,11 @@ ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
 
 ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
                                        llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCast(this, W, Expr::FPToUI, rm);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat asF(this->getAPFloatValue());
   // Should we use the status?
   APSInt result(/*BitWidth=*/W, /*isUnsigned=*/true);
@@ -969,6 +1020,11 @@ ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
 
 ref<ConstantExpr> ConstantExpr::FPToSI(Width W,
                                        llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nativeEval =
+      TryNativeX87FP80EvalCast(this, W, Expr::FPToSI, rm);
+  if (nativeEval.get())
+    return nativeEval;
+
   APFloat asF(this->getAPFloatValue());
   // Should we use the status?
   APSInt result(/*BitWidth=*/W, /*isUnsigned=*/false);
