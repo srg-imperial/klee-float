@@ -3118,8 +3118,16 @@ void Executor::executeAlloc(ExecutionState &state,
                             const ObjectState *reallocFrom) {
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
-    MemoryObject *mo = memory->allocate(CE->getZExtValue(), isLocal, false, 
-                                        state.prevPC->inst);
+    llvm::Instruction* allocSite = state.prevPC->inst;
+    size_t alignment = 8;
+    if (llvm::AllocaInst *allocaInst = dyn_cast<llvm::AllocaInst>(allocSite)) {
+      // Alloca's seem to return 0 if no alignment is specified.
+      if (allocaInst->getAlignment() != 0) {
+        alignment = allocaInst->getAlignment();
+      }
+    }
+    MemoryObject *mo = memory->allocate(CE->getZExtValue(), isLocal, false,
+                                        allocSite, alignment);
     if (!mo) {
       bindLocal(target, state, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));

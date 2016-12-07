@@ -93,6 +93,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       bool isGlobal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
+  assert(alignment != 0 && "alignment cannot be zero");
   if (size > 10 * 1024 * 1024)
     klee_warning_once(0, "Large alloc: %lu bytes.  KLEE may run out of memory.",
                       size);
@@ -102,7 +103,8 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
     return 0;
 
   if (!llvm::isPowerOf2_64(alignment)) {
-    klee_warning("Only alignment of power of two is supported");
+    klee_warning("Only alignment of power of two is supported. Requested %zd",
+                 alignment);
     return 0;
   }
 
