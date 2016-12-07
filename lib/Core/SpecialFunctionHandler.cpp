@@ -749,8 +749,25 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
                                                  mo->getSizeExpr()),
                                   res);
     assert(success && "FIXME: Unhandled solver failure");
-    
-    if (res) {
+
+    bool isAlignedSize = false;
+    if (!res && mo->alignment != 0 && mo->alignment > mo->size) {
+      // klee_make_symboic might be passed `sizeof(long double)`.
+      // On x86_64 that is 16 even though the `long double` is actually
+      // 10 bytes. This can lead the above solver query to fail.
+
+      // Try the query again to see if the alignment is the size requested.
+      ref<ConstantExpr> alignmentExpr =
+          ConstantExpr::create(mo->alignment, Context::get().getPointerWidth());
+      bool success __attribute__((unused)) = executor.solver->mustBeTrue(
+          *s, EqExpr::create(ZExtExpr::create(arguments[1],
+                                              Context::get().getPointerWidth()),
+                             alignmentExpr),
+          isAlignedSize);
+      assert(success && "FIXME: Unhandled solver failure");
+    }
+
+    if (res || isAlignedSize) {
       executor.executeMakeSymbolic(*s, mo, name);
     } else {      
       executor.terminateStateOnError(*s, 
