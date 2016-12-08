@@ -402,6 +402,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (UseKleeInternalSqrt) {
     replaceFunctionIfPresent(module, "sqrt", "klee_internal_sqrt");
     replaceFunctionIfPresent(module, "sqrtf", "klee_internal_sqrtf");
+    replaceFunctionIfPresent(module, "sqrtl", "klee_internal_sqrtl");
   }
   if (UseKleeInternalFabs) {
     replaceFunctionIfPresent(module, "fabs", "klee_internal_fabs");

@@ -194,6 +194,9 @@ enum KleeRoundingMode klee_get_rounding_mode();
 
 float klee_sqrt_float(float f);
 double klee_sqrt_double(double d);
+#if defined(__x86_64__) || defined(__i386__)
+long double klee_sqrt_long_double(long double d);
+#endif
 float klee_abs_float(float);
 double klee_abs_double(double);
 
