@@ -170,6 +170,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     // floating point absolute
     add("klee_abs_float", handleFAbs, true),
     add("klee_abs_double", handleFAbs, true),
+    // FIXME: Guard based on target
+    add("klee_abs_long_double", handleFAbs, true),
 #undef addDNR
 #undef add
 };
