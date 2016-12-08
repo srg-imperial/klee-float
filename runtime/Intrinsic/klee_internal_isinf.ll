@@ -17,6 +17,7 @@
 
 declare zeroext i1 @klee_is_infinite_float(float) #2
 declare zeroext i1 @klee_is_infinite_double(double) #2
+declare zeroext i1 @klee_is_infinite_long_double(x86_fp80) #2
 
 define i32 @klee_internal_isinff(float %f) #1 #0 {
 entry:
@@ -35,6 +36,17 @@ entry:
   %result = select i1 %isinf, i32 %posOrNeg, i32 0
   ret i32 %result
 }
+
+define i32 @klee_internal_isinfl(x86_fp80 %d) #0 {
+entry:
+  %isinf = tail call zeroext i1 @klee_is_infinite_long_double(x86_fp80 %d) #3
+  %cmp = fcmp ogt x86_fp80 %d, 0xK00000000000000000000
+  %posOrNeg = select i1 %cmp, i32 1, i32 -1
+  %result = select i1 %isinf, i32 %posOrNeg, i32 0
+  ret i32 %result
+}
+
+
 
 ; NOTE: Use of optnone and noinline here are important so that the KLEE
 ; internal functions remain non-forking, even under optimization.

@@ -168,6 +168,13 @@ extern "C" {
   KLEE_BOOL_TYPE klee_is_normal_double(double d);
   KLEE_BOOL_TYPE klee_is_subnormal_float(float f);
   KLEE_BOOL_TYPE klee_is_subnormal_double(double d);
+#if defined(__x86_64__) || defined(__i386__)
+  KLEE_BOOL_TYPE klee_is_nan_long_double(long double f);
+  KLEE_BOOL_TYPE klee_is_infinite_long_double(long double d);
+  KLEE_BOOL_TYPE klee_is_normal_long_double(long double d);
+  KLEE_BOOL_TYPE klee_is_subnormal_long_double(long double f);
+#endif
+
 #undef KLEE_BOOL_TYPE
 #ifdef __cplusplus
 }
