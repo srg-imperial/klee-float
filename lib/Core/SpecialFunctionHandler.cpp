@@ -145,12 +145,16 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     // float classification instrinsics
     add("klee_is_nan_float", handleIsNaN, true),
     add("klee_is_nan_double", handleIsNaN, true),
+    add("klee_is_nan_long_double", handleIsNaN, true),
     add("klee_is_infinite_float", handleIsInfinite, true),
     add("klee_is_infinite_double", handleIsInfinite, true),
+    add("klee_is_infinite_long_double", handleIsInfinite, true),
     add("klee_is_normal_float", handleIsNormal, true),
     add("klee_is_normal_double", handleIsNormal, true),
+    add("klee_is_normal_long_double", handleIsNormal, true),
     add("klee_is_subnormal_float", handleIsSubnormal, true),
     add("klee_is_subnormal_double", handleIsSubnormal, true),
+    add("klee_is_subnormal_long_double", handleIsSubnormal, true),
 
     // Rounding mode intrinsics
     add("klee_get_rounding_mode", handleGetRoundingMode, true),

@@ -385,16 +385,22 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // Use KLEE's internal float classification functions if requested.
   if (UseKleeInternalFloatClassificationFunctions) {
     // Note these are internal glibc/uclibc names
+    // FIXME: Guard the long double replacements based on the target.
     replaceFunctionIfPresent(module, "__isnanf", "klee_internal_isnanf");
     replaceFunctionIfPresent(module, "__isnan", "klee_internal_isnan");
+    replaceFunctionIfPresent(module, "__isnanl", "klee_internal_isnanl");
     replaceFunctionIfPresent(module, "__isinff", "klee_internal_isinff");
     replaceFunctionIfPresent(module, "__isinf", "klee_internal_isinf");
+    replaceFunctionIfPresent(module, "__isinfl", "klee_internal_isinfl");
     replaceFunctionIfPresent(module, "__fpclassifyf",
                              "klee_internal_fpclassifyf");
     replaceFunctionIfPresent(module, "__fpclassify",
                              "klee_internal_fpclassify");
+    replaceFunctionIfPresent(module, "__fpclassifyl",
+                             "klee_internal_fpclassifyl");
     replaceFunctionIfPresent(module, "__finitef", "klee_internal_finitef");
     replaceFunctionIfPresent(module, "__finite", "klee_internal_finite");
+    replaceFunctionIfPresent(module, "__finitel", "klee_internal_finitel");
   }
   if (UseKleeInternalSqrt) {
     replaceFunctionIfPresent(module, "sqrt", "klee_internal_sqrt");
