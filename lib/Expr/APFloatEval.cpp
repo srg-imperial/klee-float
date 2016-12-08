@@ -47,6 +47,25 @@ void restore_fenv(const fenv_t *oldEnv) {
 
 namespace klee {
 
+#ifdef __x86_64__
+long double GetNativeX87FP80FromLLVMAPInt(const llvm::APInt &apint) {
+  assert(apint.getBitWidth() == 80);
+  long double value = 0.0l;
+  // Dont use sizeof(long double) here as the value is 16 on x86_64
+  // we only want 80 bits (10 bytes).
+  memcpy(&value, apint.getRawData(), 10);
+  return value;
+}
+
+llvm::APInt GetAPIntFromLongDouble(long double ld) {
+  uint64_t data[] = {0, 0};
+  assert(sizeof(ld) <= sizeof(data));
+  memcpy(data, &ld, 10);
+  llvm::APInt apint(/*numBits=*/80, data);
+  return apint;
+}
+#endif
+
 llvm::APFloat evalSqrt(llvm::APFloat v, llvm::APFloat::roundingMode rm) {
   // FIXME: This is such a hack.
   // llvm::APFloat doesn't implement sqrt so evaluate it natively if we
@@ -86,7 +105,23 @@ llvm::APFloat evalSqrt(llvm::APFloat v, llvm::APFloat::roundingMode rm) {
     restore_fenv(&oldEnv);
     resultAPF = llvm::APFloat(evaluatedValue);
 
-  } else {
+  }
+#if defined(__x86_64__) || defined(__i386__)
+  else if (sem == &(llvm::APFloat::x87DoubleExtended)) {
+    llvm::APInt apint = v.bitcastToAPInt();
+    assert(apint.getBitWidth() == 80);
+    long double asLD = klee::GetNativeX87FP80FromLLVMAPInt(apint);
+
+    change_to_rounding_mode(rm);
+    long double evaluatedValue = sqrtl(asLD); // Calculate natively
+    // Restore floating point environment
+    restore_fenv(&oldEnv);
+
+    llvm::APInt resultApint = klee::GetAPIntFromLongDouble(evaluatedValue);
+    resultAPF = llvm::APFloat(llvm::APFloat::x87DoubleExtended, resultApint);
+  }
+#endif
+  else {
     llvm::errs() << "Float semantics not supported\n";
     abort();
   }

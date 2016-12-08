@@ -623,24 +623,6 @@ bool shouldTryNativex87Eval(const ConstantExpr *lhs, const ConstantExpr *rhs) {
   return false;
 };
 
-#ifdef __x86_64__
-long double GetNativeX87FP80FromLLVMAPInt(const llvm::APInt &apint) {
-  assert(apint.getBitWidth() == 80);
-  long double value = 0.0l;
-  // Dont use sizeof(long double) here as the value is 16 on x86_64
-  // we only want 80 bits (10 bytes).
-  memcpy(&value, apint.getRawData(), 10);
-  return value;
-}
-
-llvm::APInt GetAPIntFromLongDouble(long double ld) {
-  uint64_t data[] = {0, 0};
-  assert(sizeof(ld) <= sizeof(data));
-  memcpy(data, &ld, 10);
-  llvm::APInt apint(/*numBits=*/80, data);
-  return apint;
-}
-#endif
 
 // WORKAROUND: A bug in llvm::APFloat means long doubles aren't evaluated
 // properly in some cases ( https://llvm.org/bugs/show_bug.cgi?id=31292 ).

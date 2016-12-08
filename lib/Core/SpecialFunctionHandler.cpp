@@ -158,11 +158,14 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 
     // Rounding mode intrinsics
     add("klee_get_rounding_mode", handleGetRoundingMode, true),
-    add("klee_set_rounding_mode_internal", handleSetConcreteRoundingMode, false),
+    add("klee_set_rounding_mode_internal", handleSetConcreteRoundingMode,
+        false),
 
     // square root
     add("klee_sqrt_float", handleSqrt, true),
     add("klee_sqrt_double", handleSqrt, true),
+    // FIXME: Guard based on target
+    add("klee_sqrt_long_double", handleSqrt, true),
 
     // floating point absolute
     add("klee_abs_float", handleFAbs, true),
