@@ -407,6 +407,7 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   if (UseKleeInternalFabs) {
     replaceFunctionIfPresent(module, "fabs", "klee_internal_fabs");
     replaceFunctionIfPresent(module, "fabsf", "klee_internal_fabsf");
+    replaceFunctionIfPresent(module, "fabsl", "klee_internal_fabsl");
   }
   replaceFunctionIfPresent(module, "fegetround", "klee_internal_fegetround");
   replaceFunctionIfPresent(module, "fesetround", "klee_internal_fesetround");

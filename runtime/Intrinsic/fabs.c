@@ -15,3 +15,9 @@ double klee_internal_fabs(double d) {
 float klee_internal_fabsf(float f) {
   return klee_abs_float(f);
 }
+
+#if defined(__x86_64__) || defined(__i386__)
+long double klee_internal_fabsl(long double f) {
+  return klee_abs_long_double(f);
+}
+#endif
