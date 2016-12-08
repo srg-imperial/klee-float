@@ -1,6 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc > %t-output.txt 2>&1
+// RUN: FileCheck -input-file=%t-output.txt %s
 // REQUIRES: x86_64
 #include "klee/klee.h"
 #include <assert.h>
@@ -22,5 +23,18 @@ int main() {
   long double x = 1.0l;
   klee_make_symbolic(&x, sizeof(x), "x"); // Local
   klee_make_symbolic(&globalLongDouble, sizeof(globalLongDouble), "globalLongDouble");
+
+  if (x > 0.0l) {
+    printf("Greater than 0.0l\n");
+  } else {
+    printf("Not greater than 0.0l\n");
+  }
+
+  if (x == globalLongDouble) {
+    printf("globalLongDouble equal\n");
+  } else {
+    printf("globalLongDouble not equal\n");
+  }
   return 0;
 }
+// CHECK: KLEE: done: generated tests = 4
