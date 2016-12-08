@@ -266,6 +266,7 @@ bool Z3SolverImpl::internalRunSolver(
        it != ie; ++it) {
     Z3_solver_assert(builder->ctx, theSolver, builder->construct(*it));
   }
+
   ++stats::queries;
   if (objects)
     ++stats::queryCounterexamples;
@@ -281,6 +282,15 @@ bool Z3SolverImpl::internalRunSolver(
   Z3_solver_assert(
       builder->ctx, theSolver,
       Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx));
+
+  // Assert an generated side constraints we have to this last so that all other
+  // constraints have been traversed so we have all the side constraints needed.
+  for (std::vector<Z3ASTHandle>::iterator it = builder->sideConstraints.begin(),
+                                          ie = builder->sideConstraints.end();
+       it != ie; ++it) {
+    Z3ASTHandle sideConstraint = *it;
+    Z3_solver_assert(builder->ctx, theSolver, sideConstraint);
+  }
 
   if (dumpedQueriesFile) {
     *dumpedQueriesFile << "; start Z3 query\n";
@@ -308,6 +318,10 @@ bool Z3SolverImpl::internalRunSolver(
   // ``Query`` rather than only sharing within a single call to
   // ``builder->construct()``.
   builder->clearConstructCache();
+
+  // Clear any generated side constraints could break subsequent queries
+  // if we assert them in the future.
+  builder->clearSideConstraints();
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
       runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {

@@ -1134,8 +1134,115 @@ Z3ASTHandle Z3Builder::castToFloat(Z3ASTHandle e) {
     return e;
   case Z3_BV_SORT: {
     unsigned bitWidth = Z3_get_bv_sort_size(ctx, currentSort);
-    return Z3ASTHandle(
-        Z3_mk_fpa_to_fp_bv(ctx, e, getFloatSortFromBitWidth(bitWidth)), ctx);
+    switch (bitWidth) {
+    case Expr::Int32:
+    case Expr::Int64:
+    case 128:
+      return Z3ASTHandle(
+          Z3_mk_fpa_to_fp_bv(ctx, e, getFloatSortFromBitWidth(bitWidth)), ctx);
+    case Expr::Fl80: {
+      // The bit pattern used by x87 fp80 and what we use in Z3 are different
+      //
+      // x87 fp80
+      //
+      // Sign Exponent Significand
+      // [1]    [15]   [1] [63]
+      //
+      // The exponent has bias 16383 and the significand has the integer portion
+      // as an explicit bit
+      //
+      // 79-bit IEEE-754 encoding used in Z3
+      //
+      // Sign Exponent [Significand]
+      // [1]    [15]       [63]
+      //
+      // Exponent has bias 16383 (2^(15-1) -1) and the significand has
+      // the integer portion as an implicit bit.
+      //
+      // We need to provide the mapping here and also emit a side constraint
+      // to make sure the explicit bit is appropriately constrained so when
+      // Z3 generates a model we get the correct bit pattern back.
+      //
+      // Note we try very hard here to avoid calling into our functions
+      // here that do implicit casting so we can never recursively call
+      // into this function.
+      Z3ASTHandle signBit =
+          Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/79, /*low=*/79, e), ctx);
+      Z3ASTHandle exponentBits =
+          Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/78, /*low=*/64, e), ctx);
+      Z3ASTHandle significandIntegerBit =
+          Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/63, /*low=*/63, e), ctx);
+      Z3ASTHandle significandFractionBits =
+          Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/62, /*low=*/0, e), ctx);
+
+      Z3ASTHandle ieeeBitPattern =
+          Z3ASTHandle(Z3_mk_concat(ctx, signBit, exponentBits), ctx);
+      ieeeBitPattern = Z3ASTHandle(
+          Z3_mk_concat(ctx, ieeeBitPattern, significandFractionBits), ctx);
+#ifndef NDEBUG
+      Z3SortHandle ieeeBitPatternSort =
+          Z3SortHandle(Z3_get_sort(ctx, ieeeBitPattern), ctx);
+      assert(Z3_get_sort_kind(ctx, ieeeBitPatternSort) == Z3_BV_SORT);
+      assert(Z3_get_bv_sort_size(ctx, ieeeBitPatternSort) == 79);
+#endif
+
+      Z3ASTHandle ieeeBitPatternAsFloat =
+          Z3ASTHandle(Z3_mk_fpa_to_fp_bv(ctx, ieeeBitPattern,
+                                         getFloatSortFromBitWidth(bitWidth)),
+                      ctx);
+
+      // Generate side constraint on the significand integer bit. It is not
+      // used in `ieeeBitPatternAsFloat` so we need to constrain that bit to
+      // have the correct value so that when Z3 gives a model the bit pattern
+      // has the right value for x87 fp80.
+      //
+      // If the number is a denormal or zero then the implicit integer bit is
+      // zero otherwise it is one.
+      Z3ASTHandle isDenormal =
+          Z3ASTHandle(Z3_mk_fpa_is_subnormal(ctx, ieeeBitPatternAsFloat), ctx);
+      Z3ASTHandle isZero =
+          Z3ASTHandle(Z3_mk_fpa_is_zero(ctx, ieeeBitPatternAsFloat), ctx);
+
+      // FIXME: Cache these constants somewhere
+      Z3SortHandle oneBitBvSort =
+          Z3SortHandle(Z3_get_sort(ctx, significandIntegerBit), ctx);
+#ifndef NDEBUG
+      assert(Z3_get_sort_kind(ctx, oneBitBvSort) == Z3_BV_SORT);
+      assert(Z3_get_bv_sort_size(ctx, oneBitBvSort) == 1);
+#endif
+      Z3ASTHandle oneBvOne =
+          Z3ASTHandle(Z3_mk_unsigned_int64(ctx, 1, oneBitBvSort), ctx);
+      Z3ASTHandle zeroBvOne =
+          Z3ASTHandle(Z3_mk_unsigned_int64(ctx, 0, oneBitBvSort), ctx);
+      Z3ASTHandle significandIntegerBitCondition = orExpr(isDenormal, isZero);
+      Z3ASTHandle significandIntegerBitConstrainedValue = Z3ASTHandle(
+          Z3_mk_ite(ctx, significandIntegerBitCondition, zeroBvOne, oneBvOne),
+          ctx);
+      Z3ASTHandle significandIntegerBitConstraint =
+          Z3ASTHandle(Z3_mk_eq(ctx, significandIntegerBit,
+                               significandIntegerBitConstrainedValue),
+                      ctx);
+#ifndef NDEBUG
+      // We will generate side constraints for constants too so we
+      // need to be really careful not to generate false! Check this
+      // by trying to simplify the side constraint.
+      Z3ASTHandle simplifiedSignificandIntegerBitConstraint =
+          Z3ASTHandle(Z3_simplify(ctx, significandIntegerBitConstraint), ctx);
+      Z3_lbool simplifiedValue =
+          Z3_get_bool_value(ctx, simplifiedSignificandIntegerBitConstraint);
+      if (simplifiedValue == Z3_L_FALSE) {
+        llvm::errs() << "Generated side constraint:\n";
+        significandIntegerBitConstraint.dump();
+        llvm::errs() << "\nSimplifies to false.";
+        abort();
+      }
+#endif
+      sideConstraints.push_back(significandIntegerBitConstraint);
+      return ieeeBitPatternAsFloat;
+    } break;
+    default:
+      llvm_unreachable("Unhandled width when casting bitvector to float");
+    }
   }
   default:
     assert(0 && "Sort cannot be cast to float");
@@ -1152,7 +1259,26 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
   case Z3_FLOATING_POINT_SORT: {
     // Note this picks a single representation for NaN which means
     // `castToBitVector(castToFloat(e))` might not equal `e`.
-    return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+    unsigned exponentBits = Z3_fpa_get_ebits(ctx, currentSort);
+    unsigned significandBits =
+        Z3_fpa_get_sbits(ctx, currentSort); // Includes implicit bit
+    unsigned floatWidth = exponentBits + significandBits;
+    switch (floatWidth) {
+    case Expr::Int32:
+    case Expr::Int64:
+    case 128:
+      return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+    case 79: {
+      // This is Expr::Fl80 (64 bit exponent, 15 bit significand) but due to
+      // the "implicit" bit actually being implicit in x87 fp80 the sum of
+      // the exponent and significand bitwidth is 79 not 80.
+
+      // TODO:
+      abort();
+    }
+    default:
+      llvm_unreachable("Unhandled width when casting float to bitvector");
+    }
   }
   default:
     assert(0 && "Sort cannot be cast to float");
@@ -1171,6 +1297,18 @@ Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
   }
   case Expr::Int64: {
     return Z3SortHandle(Z3_mk_fpa_sort_64(ctx), ctx);
+  }
+  case Expr::Fl80: {
+    // Note this is an IEEE754 with a 15 bit exponent
+    // and 64 bit significand. This is not the same
+    // as x87 fp80 which has a different binary encoding.
+    // We can use this Z3 type to get the appropriate
+    // amount of precision. We just have to be very
+    // careful which casting between floats and bitvectors.
+    //
+    // Note that the number of significand bits includes the "implicit"
+    // bit (which is not implicit for x87 fp80).
+    return Z3SortHandle(Z3_mk_fpa_sort(ctx, /*ebits=*/15, /*sbits=*/64), ctx);
   }
   case 128: {
     return Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);

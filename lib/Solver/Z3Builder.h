@@ -105,6 +105,10 @@ class Z3Builder {
   ExprHashMap<std::pair<Z3ASTHandle, unsigned> > constructed;
   Z3ArrayExprHash _arr_hash;
   ExprHashMap<Z3ASTHandle> replaceWithVariable;
+  // These are additional constraints that are generated during the
+  // translation to Z3's constraint language. Clients should assert
+  // these.
+  std::vector<Z3ASTHandle> sideConstraints;
 
 private:
   Z3ASTHandle bvOne(unsigned width);
@@ -195,6 +199,7 @@ public:
   }
 
   void clearConstructCache() { constructed.clear(); }
+  void clearSideConstraints() { sideConstraints.clear(); }
   void closeInteractionLog(); // Should be called before aborting
 
   // Create a fresh variable of bitvector type that has the width
