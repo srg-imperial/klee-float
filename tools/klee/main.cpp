@@ -736,6 +736,8 @@ static const char *modelledExternals[] = {
   "_ZTVN10__cxxabiv120__si_class_type_infoE",
   "_ZTVN10__cxxabiv121__vmi_class_type_infoE",
 
+  // FIXME: We should just iterate through the SpecialFunctionHandler
+  // iterator to avoid duplicating information.
   // special functions
   "_assert",
   "__assert_fail",
@@ -790,6 +792,27 @@ static const char *modelledExternals[] = {
   "__ubsan_handle_sub_overflow",
   "__ubsan_handle_mul_overflow",
   "__ubsan_handle_divrem_overflow",
+  // Floating point intrinstics
+  "klee_is_nan_float",
+  "klee_is_nan_double",
+  "klee_is_nan_long_double",
+  "klee_is_infinite_float",
+  "klee_is_infinite_double",
+  "klee_is_infinite_long_double",
+  "klee_is_normal_float",
+  "klee_is_normal_double",
+  "klee_is_normal_long_double",
+  "klee_is_subnormal_float",
+  "klee_is_subnormal_double",
+  "klee_is_subnormal_long_double",
+  "klee_get_rounding_mode",
+  "klee_set_rounding_mode_internal",
+  "klee_sqrt_float",
+  "klee_sqrt_double",
+  "klee_sqrt_long_double",
+  "klee_abs_float",
+  "klee_abs_double",
+  "klee_abs_long_double",
 };
 // Symbols we aren't going to warn about
 static const char *dontCareExternals[] = {
