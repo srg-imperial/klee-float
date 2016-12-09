@@ -28,6 +28,9 @@ RUN usermod --uid ${host_user_id} ${container_username}
 # a different user id to the user id for "user" in the container.
 RUN chmod 0755 /home/${container_username}/
 
+# Install tcmalloc so we can enforce a memory limit
+RUN pacman -Syy && pacman -S --noconfirm gperftools
+
 # Switch back to "user"
 USER ${container_username}
 
