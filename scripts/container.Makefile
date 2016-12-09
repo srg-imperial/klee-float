@@ -52,6 +52,7 @@ klee/build/Makefile: gtest
 		-DKLEE_UCLIBC_PATH=${PWD}/uclibc \
 		-DENABLE_POSIX_RUNTIME=ON \
 		-DENABLE_SOLVER_Z3=ON \
+		-DENABLE_TCMALLOC=ON \
 		-DGTEST_SRC_DIR=${PWD}/googletest-release-1.7.0 \
 		../
 
