@@ -19,7 +19,7 @@ namespace klee {
     // @pre(0 <= N <= 32)
     // @post(retval = max([truncateToNBits(i,N) for i in naturals()]))
     inline unsigned maxValueOfNBits(unsigned N) {
-      assert(0 <= N && N <= 32);
+      assert(/*0 <= N &&*/ N <= 32);
       if (N==0)
         return 0;
       return ((unsigned) -1) >> (32 - N);
@@ -55,7 +55,7 @@ namespace klee {
       if (x&0xCCCCCCCC) res += 2;
       if (x&0xAAAAAAAA) res += 1;
       assert(res < 64);
-      assert((1 << res) == x);
+      assert((UINT64_C(1) << res) == x);
       return res;
     }
 
@@ -68,7 +68,7 @@ namespace klee {
   // @pre(0 <= N <= 64)
   // @post(retval = max([truncateToNBits(i,N) for i in naturals()]))
   inline uint64_t maxValueOfNBits(unsigned N) {
-    assert(0 <= N && N <= 64);
+    assert(/*0 <= N &&*/ N <= 64);
     if (N == 0)
       return 0;
     return ((uint64_t)(int64_t)-1) >> (64 - N);
@@ -102,7 +102,7 @@ namespace klee {
         res += 32;
 
       assert(res < 64);
-      assert((1 << res) == x);
+      assert((UINT64_C(1) << res) == x);
       return res;
     }
 
