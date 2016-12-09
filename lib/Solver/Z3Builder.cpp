@@ -803,7 +803,9 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
         uint64_t divisor = CE->getZExtValue();
 
         if (bits64::isPowerOfTwo(divisor)) {
-          unsigned bits = bits64::indexOfSingleBit(divisor);
+          int bits = bits64::indexOfSingleBit(divisor);
+          assert(bits >= 0 && "bit index cannot be negative");
+          assert(bits64::indexOfSingleBit(divisor) < INT32_MAX);
 
           // special case for modding by 1 or else we bvExtract -1:0
           if (bits == 0) {
