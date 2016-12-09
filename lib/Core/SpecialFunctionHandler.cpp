@@ -758,7 +758,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
                                                  mo->getSizeExpr()),
                                   res);
     assert(success && "FIXME: Unhandled solver failure");
-    
+
     if (res) {
       executor.executeMakeSymbolic(*s, mo, name);
     } else {      

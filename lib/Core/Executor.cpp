@@ -605,10 +605,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
       uint64_t size = 0;
       if (ty->isSized()) {
-	size = kmodule->targetData->getTypeStoreSize(ty);
+        // size includes padding
+        size = kmodule->targetData->getTypeAllocSize(ty);
       } else {
         klee_warning("Type for %.*s is not sized", (int)i->getName().size(),
-			i->getName().data());
+                     i->getName().data());
       }
 
       // XXX - DWD - hardcode some things until we decide how to fix.
@@ -652,7 +653,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
+      uint64_t size = kmodule->targetData->getTypeAllocSize(ty); // Includes padding
       MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
                                           /*isGlobal=*/true, /*allocSite=*/v,
                                           /*alignment=*/globalObjectAlignment);
@@ -2121,8 +2122,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // Memory instructions...
   case Instruction::Alloca: {
     AllocaInst *ai = cast<AllocaInst>(i);
-    unsigned elementSize = 
-      kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
+    // FIXME: should we provide an option to switch between getTypeAllocSize()
+    // and getTypeStoreSize()? That way we could optionally treat reading
+    // outside the memory of a type as an out of bounds access. Unfortunately
+    // it isn't always desirable to do this because of padding (e.g. `long
+    // double` has `getTypeStoreSize()` == 80 but `getTypeAllocSize()` == 128
+    // on x86_64) and it may be legimitate in some cases to access that padding
+    // (e.g. with `memcpy(dest,src, sizeof(long double))`.
+
+    // elementSize includes padding
+    unsigned elementSize =
+        kmodule->targetData->getTypeAllocSize(ai->getAllocatedType());
     ref<Expr> size = Expr::createPointer(elementSize);
     if (ai->isArrayAllocation()) {
       ref<Expr> count = eval(ki, 0, state).value;
