@@ -1274,7 +1274,7 @@ Z3ASTHandle Z3Builder::castToFloat(Z3ASTHandle e) {
     }
   }
   default:
-    assert(0 && "Sort cannot be cast to float");
+    llvm_unreachable("Sort cannot be cast to float");
   }
 }
 
@@ -1334,7 +1334,7 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
     }
   }
   default:
-    assert(0 && "Sort cannot be cast to float");
+    llvm_unreachable("Sort cannot be cast to float");
   }
 }
 
