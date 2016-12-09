@@ -3,8 +3,6 @@
 // RUN: %klee --output-dir=%t.klee-out -internal-fabs=true --exit-on-error %t1.bc > %t-output.txt 2>&1
 // RUN: FileCheck -input-file=%t-output.txt %s
 // REQUIRES: x86_64
-// FIXME: Need to finish long double support
-// XFAIL: *
 #include "klee/klee.h"
 #include <assert.h>
 #include <float.h>
