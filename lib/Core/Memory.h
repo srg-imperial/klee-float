@@ -67,26 +67,40 @@ public:
   /// should sensibly be only at creation time).
   mutable std::vector< ref<Expr> > cexPreferences;
 
-  // FIXME: We should probably get this from the allocSite.
-  const size_t alignment;
-
   // DO NOT IMPLEMENT
   MemoryObject(const MemoryObject &b);
   MemoryObject &operator=(const MemoryObject &b);
 
 public:
   // XXX this is just a temp hack, should be removed
-  explicit MemoryObject(uint64_t _address)
-      : refCount(0), id(counter++), address(_address), size(0), isFixed(true),
-        parent(NULL), allocSite(0), alignment(0) {}
+  explicit
+  MemoryObject(uint64_t _address) 
+    : refCount(0),
+      id(counter++), 
+      address(_address),
+      size(0),
+      isFixed(true),
+      parent(NULL),
+      allocSite(0) {
+  }
 
-  MemoryObject(uint64_t _address, unsigned _size, bool _isLocal, bool _isGlobal,
-               bool _isFixed, const llvm::Value *_allocSite,
-               MemoryManager *_parent, size_t _alignment)
-      : refCount(0), id(counter++), address(_address), size(_size),
-        name("unnamed"), isLocal(_isLocal), isGlobal(_isGlobal),
-        isFixed(_isFixed), fake_object(false), isUserSpecified(false),
-        parent(_parent), allocSite(_allocSite), alignment(_alignment) {}
+  MemoryObject(uint64_t _address, unsigned _size, 
+               bool _isLocal, bool _isGlobal, bool _isFixed,
+               const llvm::Value *_allocSite,
+               MemoryManager *_parent)
+    : refCount(0), 
+      id(counter++),
+      address(_address),
+      size(_size),
+      name("unnamed"),
+      isLocal(_isLocal),
+      isGlobal(_isGlobal),
+      isFixed(_isFixed),
+      fake_object(false),
+      isUserSpecified(false),
+      parent(_parent), 
+      allocSite(_allocSite) {
+  }
 
   ~MemoryObject();
 
