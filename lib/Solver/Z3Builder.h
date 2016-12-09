@@ -178,6 +178,7 @@ private:
   Z3ASTHandle castToBitVector(Z3ASTHandle e);
 
   Z3ASTHandle getRoundingModeSort(llvm::APFloat::roundingMode);
+  Z3ASTHandle getx87FP80ExplicitSignificandIntegerBit(Z3ASTHandle);
 
   bool autoClearConstructCache;
 
