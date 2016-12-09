@@ -91,7 +91,7 @@ FPBENCH_COMMIT := 440b9a2402acfe5bd110f871c208808289606103
 IMPERIAL_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-imperial.git
 IMPERIAL_BENCHMARKS_COMMIT := f2c7c17dd9727233819a7d8598cbffd7ad4a29e0
 AACHEN_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-aachen.git
-AACHEN_BENCHMARKS_COMMIT := c7be00b3ffb9fb08624b33d6e992e0bb66e65486
+AACHEN_BENCHMARKS_COMMIT := 265b1195e3734dec7c12054bea9919d8d38f0b07
 
 fp_bench_clone:
 	git clone  $(FPBENCH_URL) && cd fp-bench && git checkout $(FPBENCH_COMMIT)
