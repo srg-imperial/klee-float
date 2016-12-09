@@ -730,6 +730,11 @@ ref<ConstantExpr> FConstantExpr::FOrd(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return ConstantExpr::alloc(false, Expr::Bool);
+  }
+
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
   bool Result = CmpRes != APFloat::cmpUnordered;
@@ -739,6 +744,11 @@ ref<ConstantExpr> FConstantExpr::FOrd(const ref<FConstantExpr> &RHS) {
 ref<ConstantExpr> FConstantExpr::FUno(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
+
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
+  {
+    return ConstantExpr::alloc(true, Expr::Bool);
+  }
 
   APFloat::cmpResult CmpRes = value.compare(RHS->getAPValue());
 
@@ -750,7 +760,7 @@ ref<ConstantExpr> FConstantExpr::FUeq(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -765,7 +775,11 @@ ref<ConstantExpr> FConstantExpr::FOeq(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  llvm::outs() << ref<Expr>(this) << RHS;
+  RHS->dump();
+
+
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -780,7 +794,7 @@ ref<ConstantExpr> FConstantExpr::FUgt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -795,7 +809,7 @@ ref<ConstantExpr> FConstantExpr::FOgt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -810,7 +824,7 @@ ref<ConstantExpr> FConstantExpr::FUge(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -825,7 +839,7 @@ ref<ConstantExpr> FConstantExpr::FOge(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -840,7 +854,7 @@ ref<ConstantExpr> FConstantExpr::FUlt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -855,7 +869,7 @@ ref<ConstantExpr> FConstantExpr::FOlt(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -870,7 +884,7 @@ ref<ConstantExpr> FConstantExpr::FUle(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -885,7 +899,7 @@ ref<ConstantExpr> FConstantExpr::FOle(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
   }
@@ -900,7 +914,7 @@ ref<ConstantExpr> FConstantExpr::FUne(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(true, Expr::Bool);
   }
@@ -915,7 +929,7 @@ ref<ConstantExpr> FConstantExpr::FOne(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  if (getWidth() == Fl80 && !correctHiddenBit)
+  if (getWidth() == Fl80 && !correctHiddenBit && !(RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(true, Expr::Bool);
   }
@@ -991,7 +1005,10 @@ ref<FConstantExpr> ConstantExpr::SToF(Width W, llvm::APFloat::roundingMode rm) {
 ref<FConstantExpr> FConstantExpr::FAbs() {
   APFloat Res = value;
   Res.clearSign();
-  return FConstantExpr::alloc(Res);
+  ref<FConstantExpr> ret = FConstantExpr::alloc(Res);
+  ret->correctHiddenBit = correctHiddenBit;
+
+  return ret;
 }
 
 ref<FConstantExpr> FConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) {
