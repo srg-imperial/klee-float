@@ -5,7 +5,7 @@
 
 set -e
 
-EXPECTED_COMSYS_IMG_SHA256="sha256:8a6ecc967eed8583b9600685a3ddffd97006747a0960c21d0e5fb44b2c0dbab9"
+EXPECTED_COMSYS_IMG_SHA256="sha256:c83f50ae1271b17b1eeb27a0e3ebf4f659bfdb96134d35358df0355e3ce26d2f"
 
 # Check the base image version
 BASE_IMG="comsys/klee-dev-fpbench-prebuilt:latest"
