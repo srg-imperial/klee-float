@@ -157,3 +157,9 @@ TEST(ExprSolverConsistencyTest, FMulWithNaNResult) {
     testBinaryFPArithWithNaNResult(widthsToTest[i], Expr::FMul);
   }
 }
+
+TEST(ExprSolverConsistencyTest, FDivWithNaNResult) {
+  for (unsigned i= 0; i < sizeof(widthsToTest)/sizeof(Expr::Width); ++i) {
+    testBinaryFPArithWithNaNResult(widthsToTest[i], Expr::FDiv);
+  }
+}
