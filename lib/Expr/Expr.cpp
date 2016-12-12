@@ -775,10 +775,6 @@ ref<ConstantExpr> FConstantExpr::FOeq(const ref<FConstantExpr> &RHS) {
   if (!getWidth() || !RHS->getWidth())
     klee_error("Unsupported FCmp operation");
 
-  llvm::outs() << ref<Expr>(this) << RHS;
-  RHS->dump();
-
-
   if (getWidth() == Fl80 && !(correctHiddenBit && RHS->correctHiddenBit))
   {
     return ConstantExpr::alloc(false, Expr::Bool);
