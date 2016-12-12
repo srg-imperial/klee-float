@@ -1171,7 +1171,7 @@ Z3ASTHandle Z3Builder::castToFloat(Z3ASTHandle e) {
     switch (bitWidth) {
     case Expr::Int32:
     case Expr::Int64:
-    case 128:
+    case Expr::Int128:
       return Z3ASTHandle(
           Z3_mk_fpa_to_fp_bv(ctx, e, getFloatSortFromBitWidth(bitWidth)), ctx);
     case Expr::Fl80: {
@@ -1296,7 +1296,7 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
     switch (floatWidth) {
     case Expr::Int32:
     case Expr::Int64:
-    case 128:
+    case Expr::Int128:
       return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
     case 79: {
       // This is Expr::Fl80 (64 bit exponent, 15 bit significand) but due to
@@ -1364,7 +1364,7 @@ Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
     // bit (which is not implicit for x87 fp80).
     return Z3SortHandle(Z3_mk_fpa_sort(ctx, /*ebits=*/15, /*sbits=*/64), ctx);
   }
-  case 128: {
+  case Expr::Int128: {
     return Z3SortHandle(Z3_mk_fpa_sort_128(ctx), ctx);
   }
   default:
