@@ -1081,6 +1081,7 @@ ref<ConstantExpr> ConstantExpr::FDiv(const ref<ConstantExpr> &RHS,
 }
 
 ref<ConstantExpr> ConstantExpr::FPExt(Width W) const {
+  // FIXME: Make the semantics here consistent with Z3.
   assert(W > this->getWidth() && "Invalid FPExt");
   APFloat result(this->getAPFloatValue());
   const llvm::fltSemantics &newType = widthToFloatSemantics(W);
@@ -1096,7 +1097,7 @@ ref<ConstantExpr> ConstantExpr::FPExt(Width W) const {
 ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
                                         llvm::APFloat::roundingMode rm) const {
   assert(W < this->getWidth() && "Invalid FPTrunc");
-
+  // FIXME: Make the semantics here consistent with Z3.
   ref<ConstantExpr> nativeEval =
       TryNativeX87FP80EvalCast(this, W, Expr::FPTrunc, rm);
   if (nativeEval.get())
@@ -1112,6 +1113,7 @@ ref<ConstantExpr> ConstantExpr::FPTrunc(Width W,
 
 ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
                                        llvm::APFloat::roundingMode rm) const {
+  // FIXME: Make the semantics here consistent with Z3.
   ref<ConstantExpr> nativeEval =
       TryNativeX87FP80EvalCast(this, W, Expr::FPToUI, rm);
   if (nativeEval.get())
@@ -1128,6 +1130,7 @@ ref<ConstantExpr> ConstantExpr::FPToUI(Width W,
 
 ref<ConstantExpr> ConstantExpr::FPToSI(Width W,
                                        llvm::APFloat::roundingMode rm) const {
+  // FIXME: Make the semantics here consistent with Z3.
   ref<ConstantExpr> nativeEval =
       TryNativeX87FP80EvalCast(this, W, Expr::FPToSI, rm);
   if (nativeEval.get())
@@ -1160,12 +1163,14 @@ ref<ConstantExpr> ConstantExpr::SIToFP(Width W,
 }
 
 ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) const {
+  // FIXME: Make the semantics here consistent with Z3.
   APFloat arg(this->getAPFloatValue());
   llvm::APFloat result = klee::evalSqrt(arg, rm);
   return ConstantExpr::alloc(result);
 }
 
 ref<ConstantExpr> ConstantExpr::FAbs() const {
+  // FIXME: Make the semantics here consistent with Z3.
   APFloat result(this->getAPFloatValue());
   if (result.isNegative())
     result.changeSign();
