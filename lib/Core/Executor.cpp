@@ -2082,7 +2082,16 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FAddExpr::create(left, right, state.roundingMode));
+    ref<Expr> sum = FAddExpr::create(left, right, state.roundingMode);
+
+    ref<Expr> left_negative = FOleExpr::create(left, FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(sum->getWidth()), 1)));
+    ref<Expr> right_negative = FOleExpr::create(right, FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(sum->getWidth()), 1)));
+    ref<Expr> different_signs = XorExpr::create(left_negative, right_negative);
+
+    ref<Expr> sum_is_zero = OrExpr::create(FOeqExpr::create(FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(sum->getWidth()), 1)), sum),
+                                           FOeqExpr::create(FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(sum->getWidth()), 0)), sum));
+    ref<Expr> result = FSelectExpr::create(AndExpr::create(sum_is_zero, different_signs), FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(sum->getWidth()), (state.roundingMode == llvm::APFloat::rmTowardNegative))), sum);
+    bindLocal(ki, state, result);
     break;
   }
 
@@ -2106,10 +2115,19 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   } else {
     ref<Expr> left = eval(ki, 0, state).value;
     ref<Expr> right = eval(ki, 1, state).value;
-    bindLocal(ki, state, FSubExpr::create(left, right, state.roundingMode));
+    ref<Expr> difference = FSubExpr::create(left, right, state.roundingMode);
+
+    ref<Expr> left_negative = FOleExpr::create(left, FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(difference->getWidth()), 1)));
+    ref<Expr> right_negative = FOleExpr::create(right, FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(difference->getWidth()), 1)));
+    ref<Expr> same_signs = EqExpr::create(left_negative, right_negative);
+
+    ref<Expr> difference_is_zero = OrExpr::create(FOeqExpr::create(FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(difference->getWidth()), 1)), difference),
+                                                  FOeqExpr::create(FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(difference->getWidth()), 0)), difference));
+    ref<Expr> result = FSelectExpr::create(AndExpr::create(difference_is_zero, same_signs), FConstantExpr::alloc(APFloat::getZero(*fpWidthToSemantics(difference->getWidth()), (state.roundingMode == llvm::APFloat::rmTowardNegative))), difference);
+    bindLocal(ki, state, result);
     break;
   }
- 
+
   case Instruction::FMul: if(CoreSolverToUse != Z3_SOLVER) {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
                                         "floating point");
