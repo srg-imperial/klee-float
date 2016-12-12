@@ -1445,6 +1445,11 @@ public:
 
   ref<ConstantExpr> Neg();
   ref<ConstantExpr> Not();
+
+  // Get the representation of NaN that should be used. There are multiple
+  // binary representations for NaN but we need try to use the same
+  // representation for consistency with the solver.
+  static ref<ConstantExpr> GetNaN(Expr::Width w);
 };
 
 // Implementations
