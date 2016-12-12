@@ -1169,6 +1169,7 @@ Z3ASTHandle Z3Builder::castToFloat(Z3ASTHandle e) {
   case Z3_BV_SORT: {
     unsigned bitWidth = Z3_get_bv_sort_size(ctx, currentSort);
     switch (bitWidth) {
+    case Expr::Int16:
     case Expr::Int32:
     case Expr::Int64:
     case Expr::Int128:
@@ -1294,6 +1295,7 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
         Z3_fpa_get_sbits(ctx, currentSort); // Includes implicit bit
     unsigned floatWidth = exponentBits + significandBits;
     switch (floatWidth) {
+    case Expr::Int16:
     case Expr::Int32:
     case Expr::Int64:
     case Expr::Int128:
