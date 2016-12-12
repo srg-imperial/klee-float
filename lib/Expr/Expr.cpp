@@ -320,7 +320,19 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
 
       CAST_EXPR_CASE(ZExt);
       CAST_EXPR_CASE(SExt);
-      
+      CAST_EXPR_CASE(FPExt);
+#define FP_CAST_EXPR_CASE(T)                                                   \
+  case T:                                                                      \
+    assert(numArgs == 3 && args[0].isExpr() && args[1].isWidth() &&            \
+           args[2].isRoundingMode() && "invalid args array for given opcode"); \
+    return T##Expr::create(args[0].expr, args[1].width, args[2].rm);
+      FP_CAST_EXPR_CASE(FPTrunc);
+      FP_CAST_EXPR_CASE(FPToUI);
+      FP_CAST_EXPR_CASE(FPToSI);
+      FP_CAST_EXPR_CASE(UIToFP);
+      FP_CAST_EXPR_CASE(SIToFP);
+#undef FP_CAST_EXPR_CASE
+
       BINARY_EXPR_CASE(Add);
       BINARY_EXPR_CASE(Sub);
       BINARY_EXPR_CASE(Mul);
@@ -345,7 +357,41 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
       BINARY_EXPR_CASE(Sle);
       BINARY_EXPR_CASE(Sgt);
       BINARY_EXPR_CASE(Sge);
-  }
+      BINARY_EXPR_CASE(FOEq);
+      BINARY_EXPR_CASE(FOLt);
+      BINARY_EXPR_CASE(FOLe);
+      BINARY_EXPR_CASE(FOGt);
+      BINARY_EXPR_CASE(FOGe);
+#undef CAST_EXPR_CASE
+#undef BINARY_EXPR_CASE
+#define BINARY_FP_RM_EXPR_CASE(T)                                              \
+  case T:                                                                      \
+    assert(numArgs == 3 && args[0].isExpr() && args[1].isExpr() &&             \
+           args[2].isRoundingMode() &&                                         \
+           "invalid args array for given opccode");                            \
+    return T##Expr::create(args[0].expr, args[1].expr, args[2].rm);
+      BINARY_FP_RM_EXPR_CASE(FAdd)
+      BINARY_FP_RM_EXPR_CASE(FSub)
+      BINARY_FP_RM_EXPR_CASE(FMul)
+      BINARY_FP_RM_EXPR_CASE(FDiv)
+#undef BINARY_FP_EXPR_CASE
+    case FSqrt:
+      assert(numArgs == 2 && args[0].isExpr() && args[1].isRoundingMode() &&
+             "invalid args array for given opccode");
+      return FSqrtExpr::create(args[0].expr, args[1].rm);
+#define UNARY_EXPR_CASE(T)                                                     \
+  case T:                                                                      \
+    assert(numArgs == 1 && args[0].isExpr() &&                                 \
+           "invalid args array for given opccode");                            \
+    return T##Expr::create(args[0].expr);
+      UNARY_EXPR_CASE(Not);
+      UNARY_EXPR_CASE(FAbs);
+      UNARY_EXPR_CASE(IsNaN);
+      UNARY_EXPR_CASE(IsInfinite);
+      UNARY_EXPR_CASE(IsNormal);
+      UNARY_EXPR_CASE(IsSubnormal);
+#undef UNARY_EXPR_CASE
+    }
 }
 
 

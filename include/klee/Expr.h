@@ -317,12 +317,25 @@ private:
 struct Expr::CreateArg {
   ref<Expr> expr;
   Width width;
-  
-  CreateArg(Width w = Bool) : expr(0), width(w) {}
-  CreateArg(ref<Expr> e) : expr(e), width(Expr::InvalidWidth) {}
-  
-  bool isExpr() { return !isWidth(); }
+  llvm::APFloat::roundingMode rm;
+
+private:
+  // FIXME: `rm` has no sentinel value so we need this bool
+  bool _isRoundingMode;
+
+public:
+  CreateArg(Width w = Bool)
+      : expr(0), width(w), rm(llvm::APFloat::rmNearestTiesToEven),
+        _isRoundingMode(false) {}
+  CreateArg(ref<Expr> e)
+      : expr(e), width(Expr::InvalidWidth),
+        rm(llvm::APFloat::rmNearestTiesToEven), _isRoundingMode(false) {}
+  CreateArg(llvm::APFloat::roundingMode _rm)
+      : expr(0), width(Expr::InvalidWidth), rm(_rm), _isRoundingMode(true) {}
+
+  bool isExpr() { return !(isWidth() || isRoundingMode()); }
   bool isWidth() { return width != Expr::InvalidWidth; }
+  bool isRoundingMode() { return _isRoundingMode; }
 };
 
 // Comparison operators
