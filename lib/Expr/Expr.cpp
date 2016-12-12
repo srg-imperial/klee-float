@@ -896,6 +896,57 @@ ref<ConstantExpr> TryNativeX87FP80EvalCast(const ConstantExpr *ce,
   return NULL;
 #endif
 }
+
+// This is a hack to by-pass evaluation of NaN arguments by APFloat.  We need
+// to do this in-order to have the semantics of KLEE's Expr language co-incide
+// with Z3's. This is a delicate balencing act (native vs KLEE Expr vs Z3 Expr)
+// which I'm trying to get right but probably will fail in some places.
+ref<ConstantExpr> tryUnaryOpNaNArgs(const ConstantExpr *arg) {
+  Expr::Width width = arg->getWidth();
+  switch (width) {
+  case Expr::Int16:
+  case Expr::Int32:
+  case Expr::Int64:
+  case Expr::Int128: {
+    // For these cases llvm::APFloat behaves well so
+    // we can use it to test if the expression is a NaN
+    llvm::APFloat asF = arg->getAPFloatValue();
+    if (asF.isNaN())
+      return ConstantExpr::GetNaN(width);
+    break;
+  }
+  case Expr::Fl80: {
+    // For x87 fp80 we can't use llvm::APFloat directly
+    // if the values are "unsupported" values (see 8.2.2 Unsupported Double
+    // Extended-Precision Float-Point Encodings and Pseudo-Denormals" from the
+    // Intel(R) 64 and IA-32 Architectures Software Developer's Manual) because
+    // it incorreclty identifies these arguments as NaNs.
+    llvm::APInt api = arg->getAPValue();
+    assert(api.getBitWidth() == 80);
+    if (api[63]) {
+      // This can **only** be a IEEE754 NaN if the explicit significand integer
+      // bit is 1. It should be safe to use APFloat now to check if it's a NaN.
+      llvm::APFloat asF = arg->getAPFloatValue();
+      if (asF.isNaN())
+        return ConstantExpr::GetNaN(width);
+    }
+    break;
+  }
+  default:
+    llvm_unreachable("Unhandled width");
+  }
+  return NULL;
+}
+
+ref<ConstantExpr> tryBinaryOpNaNArgs(const ConstantExpr* lhs, const ConstantExpr *rhs) {
+  ref<ConstantExpr> lhsIsNaN = tryUnaryOpNaNArgs(lhs);
+  if (lhsIsNaN.get())
+    return lhsIsNaN;
+  ref<ConstantExpr> rhsIsNaN = tryUnaryOpNaNArgs(rhs);
+  if (rhsIsNaN.get())
+    return rhsIsNaN;
+  return NULL;
+}
 }
 
 ref<ConstantExpr> ConstantExpr::FOEq(const ref<ConstantExpr> &RHS) {
@@ -967,6 +1018,9 @@ ref<ConstantExpr> ConstantExpr::FOGe(const ref<ConstantExpr> &RHS) {
 
 ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nanEval = tryBinaryOpNaNArgs(this, RHS.get());
+  if (nanEval.get())
+    return nanEval;
   ref<ConstantExpr> nativeEval =
       TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FAdd, rm);
   if (nativeEval.get())
@@ -1956,4 +2010,49 @@ ref<Expr> IsNormalExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
 ref<Expr> IsSubnormalExpr::either(const ref<Expr> &e0, const ref<Expr> &e1) {
   return OrExpr::create(IsSubnormalExpr::create(e0),
                         IsSubnormalExpr::create(e1));
+}
+
+ref<ConstantExpr> ConstantExpr::GetNaN(Expr::Width w) {
+  // These values have been chosen to be consistent with Z3 when
+  // rewriter.hi_fp_unspecified=false
+  llvm::APInt apint;
+  const llvm::fltSemantics* sem;
+  switch(w) {
+    case Int16: {
+      apint = llvm::APInt(/*numBits=*/16, (uint64_t) 0x7c01, /*isSigned=*/false);
+      sem = &(llvm::APFloat::IEEEhalf);
+      break;
+    }
+    case Int32: {
+      apint = llvm::APInt(/*numBits=*/32, (uint64_t) 0x7f800001, /*isSigned=*/false);
+      sem = &(llvm::APFloat::IEEEsingle);
+      break;
+    }
+    case Int64: {
+      apint = llvm::APInt(/*numBits=*/64, (uint64_t) 0x7ff0000000000001, /*isSigned=*/false);
+      sem = &(llvm::APFloat::IEEEdouble);
+      break;
+    }
+    case Fl80: {
+      // 0x7FFF8000000000000001
+      uint64_t temp[] = { 0x8000000000000001, (uint64_t) 0x7FFF};
+      apint = llvm::APInt(/*numBits=*/80, temp);
+      sem = &(llvm::APFloat::x87DoubleExtended);
+      break;
+    }
+    case Int128: {
+      // 0x7FFF0000000000000000000000000001
+      uint64_t temp[] = { 0x0000000000000001, 0x7FFF000000000000};
+      apint = llvm::APInt(/*numBits=*/128, temp);
+      sem = &(llvm::APFloat::IEEEquad);
+      break;
+    }
+  }
+#ifndef NDEBUG
+  // Make an APFloat from the bits and check its a NaN
+  llvm::APFloat asF(*sem, apint);
+  assert(asF.isNaN() && "Failed to create a NaN");
+
+#endif
+  return ConstantExpr::alloc(apint);
 }
