@@ -36,6 +36,11 @@ namespace {
   ConstArrayOpt("const-array-opt",
 	 cl::init(false),
 	 cl::desc("Enable various optimizations involving all-constant arrays."));
+
+  cl::opt<bool>
+      SingleReprForNaN("single-repr-for-nan", cl::init(true),
+                       cl::desc("When constant folding produce a consistent "
+                                "bit pattern for NaN (default=true)."));
 }
 
 /***/
@@ -902,6 +907,9 @@ ref<ConstantExpr> TryNativeX87FP80EvalCast(const ConstantExpr *ce,
 // with Z3's. This is a delicate balencing act (native vs KLEE Expr vs Z3 Expr)
 // which I'm trying to get right but probably will fail in some places.
 ref<ConstantExpr> tryUnaryOpNaNArgs(const ConstantExpr *arg) {
+  if (!SingleReprForNaN)
+    return NULL;
+
   Expr::Width width = arg->getWidth();
   switch (width) {
   case Expr::Int16:
