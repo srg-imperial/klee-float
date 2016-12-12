@@ -1,10 +1,17 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -search=bfs -use-construct-hash-z3=1 -z3-validate-models --output-dir=%t.klee-out --exit-on-error %t1.bc
+// RUN: %klee --single-repr-for-nan=1 -search=dfs -use-construct-hash-z3=1 -debug-assignment-validating-solver -z3-validate-models --output-dir=%t.klee-out --exit-on-error %t1.bc
 #include "klee/klee.h"
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+// NOTE: --single-repr-for-nan is required for this test
+// because this benchmark branches on the lower bits
+// in a NaN whose value are not defined by IEEE754.
+// Without this option KLEE's Expr and Z3's Expr
+// do not agree and the evaluation of FAdd on a NaN
+// resulting in un-satisfiable constraints.
 
 int sink = 0;
 
