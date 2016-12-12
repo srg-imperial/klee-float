@@ -1163,7 +1163,9 @@ ref<ConstantExpr> ConstantExpr::SIToFP(Width W,
 }
 
 ref<ConstantExpr> ConstantExpr::FSqrt(llvm::APFloat::roundingMode rm) const {
-  // FIXME: Make the semantics here consistent with Z3.
+  ref<ConstantExpr> nanEval = tryUnaryOpNaNArgs(this);
+  if (nanEval.get())
+    return nanEval;
   APFloat arg(this->getAPFloatValue());
   llvm::APFloat result = klee::evalSqrt(arg, rm);
   return ConstantExpr::alloc(result);
