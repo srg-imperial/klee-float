@@ -1034,6 +1034,9 @@ ref<ConstantExpr> ConstantExpr::FAdd(const ref<ConstantExpr> &RHS,
 
 ref<ConstantExpr> ConstantExpr::FSub(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
+  ref<ConstantExpr> nanEval = tryBinaryOpNaNArgs(this, RHS.get());
+  if (nanEval.get())
+    return nanEval;
   ref<ConstantExpr> nativeEval =
       TryNativeX87FP80EvalArith(this, RHS.get(), Expr::FSub, rm);
   if (nativeEval.get())
