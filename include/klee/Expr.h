@@ -102,6 +102,7 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
+  static const Width Int128 = 128;
 
   enum Kind {
     InvalidKind = -1,

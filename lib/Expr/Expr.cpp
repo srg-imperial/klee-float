@@ -85,6 +85,13 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
                                                 ConstantExpr::alloc(1,Expr::Int32)),
                                ReadExpr::create(ul, 
                                                 ConstantExpr::alloc(0,Expr::Int32)));
+  case Expr::Int128: {
+    ref<Expr> bytes[16];
+    for (int i = 0; i < 16; ++i) {
+      bytes[i] = ReadExpr::create(ul, ConstantExpr::alloc(15 - i, Expr::Int32));
+    }
+    return ConcatExpr::createN(16, bytes);
+  }
   }
 }
 
@@ -403,6 +410,9 @@ void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   case Expr::Int32: os << "Expr::Int32"; break;
   case Expr::Int64: os << "Expr::Int64"; break;
   case Expr::Fl80: os << "Expr::Fl80"; break;
+  case Expr::Int128:
+    os << "Expr::128";
+    break;
   default: os << "<invalid type: " << (unsigned) width << ">";
   }
 }
