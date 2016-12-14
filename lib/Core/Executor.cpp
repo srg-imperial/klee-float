@@ -36,6 +36,7 @@
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FloatEvaluation.h"
+#include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/Support/RoundingModeUtil.h"
 #include "klee/Internal/System/MemoryUsage.h"
 #include "klee/Internal/System/Time.h"
@@ -581,17 +582,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
-    // Try to determine the alignment for the global
-    size_t globalAlignment = i->getAlignment();
-    if (globalAlignment == 0 || !llvm::isPowerOf2_64(globalAlignment)) {
-      // Only warn when globalAlignment was non zero because
-      // a value of zero is used when no alignment is specified.
-      if (globalAlignment)
-        klee_warning("Global \"%s\" requested alignment %zd but this is not "
-                     "supported. Using 8 instead",
-                     i->getName().str().c_str(), globalAlignment);
-      globalAlignment = 8;
-    }
+    size_t globalObjectAlignment = getAllocationAlignment(i);
     if (i->isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
@@ -624,7 +615,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
 
       MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGloba=*/true, i, globalAlignment);
+                                          /*isGlobal=*/true, /*allocSite=*/i,
+                                          /*alignment=*/globalObjectAlignment);
       ObjectState *os = bindObjectInState(state, mo, false);
       globalObjects.insert(std::make_pair(i, mo));
       globalAddresses.insert(std::make_pair(i, mo->getBaseExpr()));
@@ -647,10 +639,10 @@ void Executor::initializeGlobals(ExecutionState &state) {
       }
     } else {
       LLVM_TYPE_Q Type *ty = i->getType()->getElementType();
-      uint64_t size =
-          kmodule->targetData->getTypeAllocSize(ty); // Includes padding
-      MemoryObject *mo = memory->allocate(
-          size, /*isLocal=*/false, /*isGlobal=*/true, &*i, globalAlignment);
+      uint64_t size = kmodule->targetData->getTypeAllocSize(ty);
+      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
+                                          /*isGlobal=*/true, /*allocSite=*/&*i,
+                                          /*alignment=*/globalObjectAlignment);
       if (!mo)
         llvm::report_fatal_error("out of memory");
       ObjectState *os = bindObjectInState(state, mo, false);
@@ -3130,16 +3122,11 @@ void Executor::executeAlloc(ExecutionState &state,
                             const ObjectState *reallocFrom) {
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
-    llvm::Instruction* allocSite = state.prevPC->inst;
-    size_t alignment = 8;
-    if (llvm::AllocaInst *allocaInst = dyn_cast<llvm::AllocaInst>(allocSite)) {
-      // Alloca's seem to return 0 if no alignment is specified.
-      if (allocaInst->getAlignment() != 0) {
-        alignment = allocaInst->getAlignment();
-      }
-    }
-    MemoryObject *mo = memory->allocate(CE->getZExtValue(), isLocal, false,
-                                        allocSite, alignment);
+    const llvm::Value *allocSite = state.prevPC->inst;
+    size_t allocationAlignment = getAllocationAlignment(allocSite);
+    MemoryObject *mo =
+        memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
+                         allocSite, allocationAlignment);
     if (!mo) {
       bindLocal(target, state, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));
@@ -3527,10 +3514,11 @@ void Executor::runFunctionAsMain(Function *f,
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
   if (ai!=ae) {
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
-
     if (++ai!=ae) {
-      argvMO = memory->allocate((argc+1+envc+1+1) * NumPtrBytes, false, true,
-                                f->begin()->begin());
+      argvMO =
+          memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes,
+                           /*isLocal=*/false, /*isGlobal=*/true,
+                           /*allocSite=*/f->begin()->begin(), /*alignment=*/8);
 
       if (!argvMO)
         klee_error("Could not allocate memory for function arguments");
@@ -3572,8 +3560,10 @@ void Executor::runFunctionAsMain(Function *f,
       } else {
         char *s = i<argc ? argv[i] : envp[i-(argc+1)];
         int j, len = strlen(s);
-        
-        MemoryObject *arg = memory->allocate(len+1, false, true, state->pc->inst);
+
+        MemoryObject *arg =
+            memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
+                             /*allocSite=*/state->pc->inst, /*alignment=*/8);
         if (!arg)
           klee_error("Could not allocate memory for function arguments");
         ObjectState *os = bindObjectInState(*state, arg, false);
@@ -3757,6 +3747,69 @@ double Executor::getCoreSolverTimeout() const {
   return coreSolverTimeout;
 }
 
+size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
+  // FIXME: 8 was the previous default. We shouldn't hard code this
+  // and should fetch the default from elsewhere.
+  const size_t forcedAlignment = 8;
+  size_t alignment = 0;
+  llvm::Type *type = NULL;
+  std::string allocationSiteName("<unknown");
+  if (const GlobalValue *GV = dyn_cast<GlobalValue>(allocSite)) {
+    alignment = GV->getAlignment();
+    allocationSiteName = allocSite->getName().str();
+    if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GV)) {
+      // All GlobalVariables's have pointer type
+      llvm::Type *ptrType = globalVar->getType();
+      assert(isa<llvm::PointerType>(ptrType));
+      type = ptrType->getPointerElementType();
+    } else {
+      type = GV->getType();
+    }
+  } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(allocSite)) {
+    alignment = AI->getAlignment();
+    type = AI->getAllocatedType();
+  } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
+    // FIXME: Model the semantics of the call to use the right alignment
+    llvm::Value *allocSiteNonConst = const_cast<llvm::Value *>(allocSite);
+    const CallSite cs = (isa<InvokeInst>(allocSiteNonConst)
+                             ? CallSite(cast<InvokeInst>(allocSiteNonConst))
+                             : CallSite(cast<CallInst>(allocSiteNonConst)));
+    llvm::Function *fn =
+        klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
+    if (fn)
+      allocationSiteName = fn->getName().str();
+
+    klee_warning_once(allocSite, "Alignment of memory from call \"%s\" is not "
+                                 "modelled. Using alignment of %zu.",
+                      allocationSiteName.c_str(), forcedAlignment);
+    alignment = forcedAlignment;
+  } else {
+    llvm_unreachable("Unhandled allocation site");
+  }
+
+  if (alignment == 0) {
+    assert(type != NULL);
+    // No specified alignment. Get the alignment for the type.
+    if (type->isSized()) {
+      alignment = kmodule->targetData->getPrefTypeAlignment(type);
+    } else {
+      klee_warning_once(allocSite, "Cannot determine memory alignment for "
+                                   "\"%s\". Using alignment of %zu.",
+                        allocationSiteName.c_str(), forcedAlignment);
+      alignment = forcedAlignment;
+    }
+  }
+
+  // Currently we require alignment be a power of 2
+  if (!bits64::isPowerOfTwo(alignment)) {
+    klee_warning_once(allocSite, "Alignment of %zu requested for %s but this "
+                                 "not supported. Using alignment of %zu",
+                      alignment, allocSite->getName().str().c_str(),
+                      forcedAlignment);
+    alignment = forcedAlignment;
+  }
+  return alignment;
+}
 ///
 
 Interpreter *Interpreter::create(const InterpreterOptions &opts,
