@@ -80,18 +80,24 @@ void setDynamicTimeout(TimingSolver *s) {
           std::max(executorCoreSolverTimeout, timeLeftUntilExecutorToHalt);
       KLEE_DEBUG_WITH_TYPE(
           "dynamic_solver_timeout",
-          llvm::errs() << "Using the max of Executor's core solver timeout ("
+          llvm::errs() << "[TimingSolver]Using the max of Executor's core solver timeout ("
                        << executorCoreSolverTimeout
                        << ") and time left to Executor halt ("
                        << timeLeftUntilExecutorToHalt << ")\n");
     }
+    KLEE_DEBUG_WITH_TYPE("dynamic_solver_timeout",
+                         llvm::errs()
+                             << "[TimingSolver][" << ((uint64_t)currentWallTime)
+                             << "] Expected Executor half fire time is "
+                             << ((uint64_t) htNextFireTime) << "\n");
   }
   assert(isinf(timeoutToUse) == 0);
   assert(!isnan(timeoutToUse));
   s->solver->setCoreSolverTimeout(timeoutToUse);
-  KLEE_DEBUG_WITH_TYPE("dynamic_solver_timeout",
-                       llvm::errs() << "Using dynamic solver timeout of "
-                                    << timeoutToUse << " seconds\n");
+  KLEE_DEBUG_WITH_TYPE(
+      "dynamic_solver_timeout",
+      llvm::errs() << "[TimingSolver LAST] Using dynamic solver timeout of "
+                   << timeoutToUse << " seconds\n");
 }
 }
 

@@ -24,7 +24,7 @@ double util::getUserTime() {
 
 double util::getWallTime() {
   sys::TimeValue now = getWallTimeVal();
-  return (now.seconds() + ((double) now.nanoseconds() * 1e-9));
+  return (now.toEpochTime() + ((double) now.nanoseconds() * 1e-9));
 }
 
 sys::TimeValue util::getWallTimeVal() {

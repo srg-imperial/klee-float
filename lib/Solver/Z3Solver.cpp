@@ -11,6 +11,7 @@
 #ifdef ENABLE_Z3
 #include "Z3Builder.h"
 #include "klee/Constraints.h"
+#include "klee/Internal/System/Time.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
 #include "klee/util/Assignment.h"
@@ -214,7 +215,13 @@ bool Z3SolverImpl::computeInitialValues(
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
-
+  double currentWallTime = util::getWallTime();
+  double latestEndTime = currentWallTime + this->timeout;
+  llvm::errs() << "[Z3SolverImpl][" << ((uint64_t)currentWallTime) << "]"
+               << " Invoking Z3 solver with timeout "
+               << ((uint64_t)this->timeout)
+               << " seconds. Should have finished by "
+               << ((uint64_t)latestEndTime) << "\n";
 
   TimerStatIncrementer t(stats::queryTime);
   // TODO: Does making a new solver for each query have a performance
@@ -322,6 +329,12 @@ bool Z3SolverImpl::internalRunSolver(
   // Clear any generated side constraints could break subsequent queries
   // if we assert them in the future.
   builder->clearSideConstraints();
+  double newTime = util::getWallTime();
+  double timeTaken = newTime - currentWallTime;
+  currentWallTime = newTime;
+  llvm::errs() << "[Z3SolverImpl][" << ((uint64_t)currentWallTime)
+               << "] Solver done. Time taken " << ((uint64_t)timeTaken)
+               << " seconds\n";
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
       runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
