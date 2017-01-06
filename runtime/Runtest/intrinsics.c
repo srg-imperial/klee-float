@@ -80,6 +80,10 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
     }
   }
 
+	if(strcmp(name, testData->objects[testPosition].name) && !strcmp("model_version", testData->objects[testPosition].name)) {
+		++testPosition;
+	}
+
   if (testPosition >= testData->numObjects) {
     fprintf(stderr, "ERROR: out of inputs, using zero\n");
     memset(array, 0, nbytes);
