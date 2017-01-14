@@ -11,8 +11,9 @@
 
 #include <assert.h>
 #include <math.h>
-#include <stdlib.h>
+#include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/time.h>
@@ -30,6 +31,23 @@ static unsigned char rand_byte(void) {
   x ^= x>>16;
   x ^= x>>8;
   return x & 0xFF;
+}
+
+static void report_internal_error(const char *msg, ...)
+    __attribute__((format(printf, 1, 2)));
+static void report_internal_error(const char *msg, ...) {
+  fprintf(stderr, "KLEE_RUN_TEST_ERROR: ");
+  va_list ap;
+  va_start(ap, msg);
+  vfprintf(stderr, msg, ap);
+  va_end(ap);
+  fprintf(stderr, "\n");
+  char *testErrorsNonFatal = getenv("KLEE_RUN_TEST_ERRORS_NON_FATAL");
+  if (testErrorsNonFatal) {
+    fprintf(stderr, "KLEE_RUN_TEST_ERROR: Forcing execution to continue\n");
+  } else {
+    exit(1);
+  }
 }
 
 void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
@@ -83,7 +101,7 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
 
   for (;; ++testPosition) {
     if (testPosition >= testData->numObjects) {
-      fprintf(stderr, "ERROR: out of inputs, using zero\n");
+      report_internal_error("out of inputs. Will use zero if continuing.");
       memset(array, 0, nbytes);
       break;
     } else {
@@ -96,13 +114,14 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
         continue;
       }
       if (strcmp(name, o->name) != 0) {
-        fprintf(stderr, "ERROR: object name mismatch. Requesting \"%s\" but "
-                        "returning \"%s\"",
-                name, o->name);
+        report_internal_error(
+            "object name mismatch. Requesting \"%s\" but returning \"%s\"",
+            name, o->name);
       }
       memcpy(array, o->bytes, nbytes < o->numBytes ? nbytes : o->numBytes);
       if (nbytes != o->numBytes) {
-        fprintf(stderr, "ERROR: object sizes differ\n");
+        report_internal_error("object sizes differ. Expected %zu but got %u",
+                              nbytes, o->numBytes);
         if (o->numBytes < nbytes)
           memset((char *)array + o->numBytes, 0, nbytes - o->numBytes);
       }
@@ -120,14 +139,13 @@ uintptr_t klee_choose(uintptr_t n) {
   uintptr_t x;
   klee_make_symbolic(&x, sizeof x, "klee_choose");
   if(x >= n)
-    fprintf(stderr, "ERROR: max = %ld, got = %ld\n", n, x);
-  assert(x < n);
+    report_internal_error("klee_choose failure. max = %ld, got = %ld\n", n, x);
   return x;
 }
 
 void klee_assume(uintptr_t x) {
   if (!x) {
-    fprintf(stderr, "ERROR: invalid klee_assume\n");
+    report_internal_error("invalid klee_assume");
   }
 }
 
@@ -149,10 +167,8 @@ int klee_range(int begin, int end, const char* name) {
   int x;
   klee_make_symbolic(&x, sizeof x, name);
   if (x<begin || x>=end) {
-    fprintf(stderr, 
-            "KLEE: ERROR: invalid klee_range(%u,%u,%s) value, got: %u\n", 
-            begin, end, name, x);
-    abort();
+    report_internal_error("invalid klee_range(%u,%u,%s) value, got: %u\n",
+                          begin, end, name, x);
   }
   return x;
 }
