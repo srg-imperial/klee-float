@@ -32,7 +32,7 @@ llvm::cl::opt<bool> Z3ValidateModels(
 llvm::cl::opt<bool> Z3AckermannizeArrays(
     "z3-array-ackermannize", llvm::cl::init(true),
     llvm::cl::desc("Try to ackermannize arrays before building Z3 queries "
-                   "(experimental) (default false)"));
+                   "(experimental) (default true)"));
 }
 
 
