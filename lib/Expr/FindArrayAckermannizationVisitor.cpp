@@ -63,8 +63,8 @@ bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) c
 }
 
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
-    bool recursive, unsigned maxArrayWidth)
-    : ExprVisitor(recursive), maxArrayWidth(maxArrayWidth) {}
+    bool recursive)
+    : ExprVisitor(recursive) {}
 
 std::vector<ArrayAckermannizationInfo> *
 FindArrayAckermannizationVisitor::getOrInsertAckermannizationInfo(
@@ -121,12 +121,6 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
     ackInfos = getOrInsertAckermannizationInfo(theArray, &wasInsert);
     if (!wasInsert && ackInfos->size() == 0) {
       // We've seen this array before and it can't be ackermannized
-      goto failedMatch;
-    }
-
-    // FIXME: We should be able to handle no-overlapping contiguous
-    // reads from an array
-    if ((theArray->size * theArray->range) >= this->maxArrayWidth) {
       goto failedMatch;
     }
 
@@ -207,11 +201,6 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
 
     isFirst = false;
   }
-  // FIXME: We can probably support partially contiguous regions as different variables.
-  // Check that the width we are reading is the whole array
-  if (widthReadSoFar != (theArray->size * theArray->range)) {
-    goto failedMatch;
-  }
 
   // We found a match
   ackInfo.toReplace = ref<Expr>(const_cast<ConcatExpr *>(&ce));
@@ -255,11 +244,6 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
   // I'm sorry about the use of goto here but without having lambdas (we're
   // using C++03) it's kind of hard to have readable and efficient code that
   // handles the case when we fail to match without using gotos.
-
-  if ((theArray->size * theArray->range) > this->maxArrayWidth) {
-    // Array is too large for allowed ackermannization
-    goto failedMatch;
-  }
 
   if (!wasInsert && ackInfos->size() == 0) {
     // We've seen this array before and it can't be ackermannized.
