@@ -126,7 +126,7 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
 
     // FIXME: We should be able to handle no-overlapping contiguous
     // reads from an array
-    if ((theArray->size * theArray->range) >= this->maxArrayWidth) {
+    if ((theArray->size * theArray->range) > this->maxArrayWidth) {
       goto failedMatch;
     }
 
