@@ -29,15 +29,13 @@ struct ArrayAckermannizationInfo {
 
 /// This class looks for opportunities to perform ackermannization (ackermann's
 /// reduction) of array reads.  The reduction here is transforming array reads
-/// into uses of bitvector variables of bitwidth <= ``maxArrayWidth``. Note
-/// this visitor doesn't actually modify the expressions given to it, instead
-/// it just looks for opportunities to apply the reduction.
+/// into uses of bitvector variables. Note this visitor doesn't actually
+/// modify the expressions given to it, instead it just looks for
+/// opportunities to apply the reduction.
 class FindArrayAckermannizationVisitor : public ExprVisitor {
 public:
-  FindArrayAckermannizationVisitor(bool recursive, unsigned maxArrayWidth);
+  FindArrayAckermannizationVisitor(bool recursive);
   void clear();
-  const unsigned maxArrayWidth; // maxWidth of Arrays in bits to consider as
-                                // candidates for ackermannization
 
   // FIXME: Should we hide this behind an interface?
   /// The recorded Array's that can be ackermannized.

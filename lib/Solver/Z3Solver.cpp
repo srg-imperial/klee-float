@@ -229,7 +229,7 @@ bool Z3SolverImpl::internalRunSolver(
 
   // Try ackermannize the arrays
   std::map<const ArrayAckermannizationInfo*,Z3ASTHandle> arrayReplacements;
-  FindArrayAckermannizationVisitor faav(/*recursive=*/false, /*maxWidth=*/64);
+  FindArrayAckermannizationVisitor faav(/*recursive=*/false);
   if (Z3AckermannizeArrays) {
     for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                            ie = query.constraints.end();
