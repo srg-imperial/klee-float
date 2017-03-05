@@ -87,55 +87,6 @@ check:
 all:
 	$(MAKE) llvm && $(MAKE) minisat && $(MAKE) stp && $(MAKE) z3 && $(MAKE) uclibc && $(MAKE) klee
 
-FPBENCH_URL := https://github.com/delcypher/fp-bench.git
-FPBENCH_COMMIT := 440b9a2402acfe5bd110f871c208808289606103
-IMPERIAL_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-imperial.git
-IMPERIAL_BENCHMARKS_COMMIT := f2c7c17dd9727233819a7d8598cbffd7ad4a29e0
-AACHEN_BENCHMARKS_URL := https://github.com/delcypher/fp-benchmarks-aachen.git
-AACHEN_BENCHMARKS_COMMIT := 265b1195e3734dec7c12054bea9919d8d38f0b07
-
-fp_bench_clone:
-	git clone  $(FPBENCH_URL) && cd fp-bench && git checkout $(FPBENCH_COMMIT)
-	cd fp-bench/benchmarks/c/ && git clone $(IMPERIAL_BENCHMARKS_URL)  imperial && \
-		cd imperial && git checkout $(IMPERIAL_BENCHMARKS_COMMIT)
-	cd fp-bench/benchmarks/c/ && git clone $(AACHEN_BENCHMARKS_URL) aachen && \
-		cd aachen && git checkout $(AACHEN_BENCHMARKS_COMMIT)
-
-fp_bench_build_O2:
-	mkdir -p build_O2
-	cd build_O2 && \
-		CC=wllvm \
-		CXX=wllvm++ \
-		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
-		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
-		LLVM_COMPILER=clang \
-		cmake \
-		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
-		-DBUILD_IMPERIAL_BENCHMARKS=ON \
-		-DBUILD_AACHEN_BENCHMARKS=ON \
-		../fp-bench/
-	cd build_O2 && LLVM_COMPILER=clang make all create-augmented-spec-file-list -j$(NPROC)
-	cd build_O2 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
-	cd build_O2 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
-
-fp_bench_build_O0:
-	mkdir -p build_O0
-	cd build_O0 && \
-		CC=wllvm \
-		CXX=wllvm++ \
-		KLEE_NATIVE_RUNTIME_INCLUDE_DIR=/home/user/klee/include/ \
-		KLEE_NATIVE_RUNTIME_LIB_DIR=/home/user/klee/build/Release+Asserts/lib/ \
-		LLVM_COMPILER=clang \
-		cmake \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-DBUILD_IMPERIAL_BENCHMARKS=ON \
-		-DBUILD_AACHEN_BENCHMARKS=ON \
-		../fp-bench/
-	cd build_O0 && LLVM_COMPILER=clang make all create-augmented-spec-file-list -j$(NPROC)
-	cd build_O0 && ../fp-bench/svcb/tools/filter-augmented-spec-list.py --categories issta_2017 -- augmented_spec_files.txt > issta_augmented_spec_files.txt
-	cd build_O0 && ../fp-bench/svcb/tools/svcb-emit-klee-runner-invocation-info.py issta_augmented_spec_files.txt -o issta_invocation_info.yml
-
-
 pull:
 	cd llvm && git pull
 	cd llvm/tools/clang && git pull
@@ -172,5 +123,5 @@ unshallow:
 	cd klee && git fetch --unshallow
 	cd whole-program-llvm && git fetch --unshallow
 
-.PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee fp_bench_clone fp_bench_build_O0 fp_bench_build_O2 gtest
+.PHONY : all pull gc unshallow clean dist-clean check llvm minisat stp z3 uclibc klee
 .DEFAULT_GOAL := all
