@@ -129,7 +129,8 @@ STPSolverImpl::~STPSolverImpl() {
 
 /***/
 
-char *STPSolverImpl::getConstraintLog(const Query &query) {
+char *STPSolverImpl::getConstraintLog(const Query &query,
+                                      const char **fileExtension) {
   vc_push(vc);
   for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
                                                ie = query.constraints.end();
@@ -142,6 +143,10 @@ char *STPSolverImpl::getConstraintLog(const Query &query) {
   unsigned long length;
   vc_printQueryStateToBuffer(vc, builder->getFalse(), &buffer, &length, false);
   vc_pop(vc);
+
+  if (fileExtension) {
+    *fileExtension = "cvc";
+  }
 
   return buffer;
 }
