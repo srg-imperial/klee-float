@@ -1,7 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t1.bc
 // We disable the cex-cache to eliminate nondeterminism across different solvers, in particular when counting the number of queries in the last two commands
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-cex-cache=false --use-query-log=all:pc,all:smt2,solver:pc,solver:smt2 --write-pcs --write-cvcs --write-smt2s %t1.bc 2> %t2.log
+// RUN: %klee --output-dir=%t.klee-out --use-cex-cache=false --use-query-log=all:pc,all:smt2,solver:pc,solver:smt2 --write-pcs --write-core-solver-queries --write-smt2s %t1.bc 2> %t2.log
 // RUN: %kleaver -print-ast %t.klee-out/all-queries.pc > %t3.log
 // RUN: %kleaver -print-ast %t3.log > %t4.log
 // RUN: diff %t3.log %t4.log
