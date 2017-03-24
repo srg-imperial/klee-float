@@ -142,10 +142,17 @@ void Z3Solver::setCoreSolverTimeout(double timeout) {
 char *Z3SolverImpl::getConstraintLog(const Query &query,
                                      const char **fileExtension) {
   std::vector<Z3ASTHandle> assumptions;
+  // We use a different builder here because we don't want to interfere
+  // with the solver's builder because it may change the solver builder's
+  // cache.
+  //
+  // In particular using the same builder causes problems with the array
+  // ackermannization code.
+  Z3Builder temp_builder;
   for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
                                                ie = query.constraints.end();
        it != ie; ++it) {
-    assumptions.push_back(builder->construct(*it));
+    assumptions.push_back(temp_builder.construct(*it));
   }
   ::Z3_ast *assumptionsArray = NULL;
   int numAssumptions = query.constraints.size();
@@ -162,10 +169,11 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
   // the negation of the equivalent i.e.
   // ∃ X Constraints(X) ∧ ¬ query(X)
   Z3ASTHandle formula = Z3ASTHandle(
-      Z3_mk_not(builder->ctx, builder->construct(query.expr)), builder->ctx);
+      Z3_mk_not(temp_builder.ctx, temp_builder.construct(query.expr)),
+      temp_builder.ctx);
 
   ::Z3_string result = Z3_benchmark_to_smtlib_string(
-      builder->ctx,
+      temp_builder.ctx,
       /*name=*/"Emited by klee::Z3SolverImpl::getConstraintLog()",
       /*logic=*/"",
       /*status=*/"unknown",
@@ -180,6 +188,11 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
   if (fileExtension) {
     *fileExtension = "smt2";
   }
+
+  // We need to trigger a dereference before the `temp_builder` gets destroyed.
+  // We do this indirectly by emptying `assumptions` and assigning to `formula`.
+  assumptions.clear();
+  formula = Z3ASTHandle(NULL, temp_builder.ctx);
 
   // Client is responsible for freeing the returned C-string
   return strdup(result);
