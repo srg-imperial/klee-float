@@ -359,7 +359,11 @@ Executor::Executor(const InterpreterOptions &opts, InterpreterHandler *ih)
       interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_PC_FILE_NAME),
-      interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME));
+      interpreterHandler->getOutputFilename(SOLVER_QUERIES_PC_FILE_NAME),
+      interpreterHandler->getOutputFilename(
+          ALL_QUERIES_CORE_SOLVER_FILE_NAME_NO_EXT),
+      interpreterHandler->getOutputFilename(
+          SOLVER_QUERIES_CORE_SOLVER_LANG_NAME_NO_EXT));
 
   this->solver = new TimingSolver(solver, this, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);

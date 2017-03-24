@@ -32,12 +32,17 @@ extern llvm::cl::opt<bool> CoreSolverOptimizeDivides;
 extern llvm::cl::opt<bool> UseAssignmentValidatingSolver;
 
 ///The different query logging solvers that can switched on/off
-enum QueryLoggingSolverType
-{
-    ALL_PC,       ///< Log all queries (un-optimised) in .pc (KQuery) format
-    ALL_SMTLIB,   ///< Log all queries (un-optimised)  .smt2 (SMT-LIBv2) format
-    SOLVER_PC,    ///< Log queries passed to solver (optimised) in .pc (KQuery) format
-    SOLVER_SMTLIB ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
+enum QueryLoggingSolverType {
+  ALL_PC,     ///< Log all queries (un-optimised) in .pc (KQuery) format
+  ALL_SMTLIB, ///< Log all queries (un-optimised)  .smt2 (SMT-LIBv2) format
+  ALL_CORE_SOLVER_LANG, ///< Log all queries (un-optimised) in core solver's
+                        ///native format
+  SOLVER_PC,     ///< Log queries passed to solver (optimised) in .pc (KQuery)
+                 ///format
+  SOLVER_SMTLIB, ///< Log queries passed to solver (optimised) in .smt2
+                 ///(SMT-LIBv2) format
+  SOLVER_CORE_SOLVER_LANG ///< Log queries passed to solver in core solver's
+                          ///native format
 };
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking

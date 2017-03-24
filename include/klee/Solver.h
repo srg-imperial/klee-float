@@ -323,6 +323,12 @@ namespace klee {
   Solver *createSMTLIBLoggingSolver(Solver *s, std::string path,
                                     int minQueryTimeToLog);
 
+  /// createCoreSolverLangLoggingSolver - Create a solver which will forward all
+  /// queries
+  /// after writing them to the given path in the core solver's
+  /// native format.
+  Solver *createCoreSolverLangLoggingSolver(Solver *s, std::string path,
+                                            int minQueryTimeToLog);
 
   /// createDummySolver - Create a dummy solver implementation which always
   /// fails.

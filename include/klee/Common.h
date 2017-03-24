@@ -21,12 +21,16 @@ namespace klee {
     const char SOLVER_QUERIES_SMT2_FILE_NAME[]="solver-queries.smt2";
     const char ALL_QUERIES_PC_FILE_NAME[]="all-queries.pc";
     const char SOLVER_QUERIES_PC_FILE_NAME[]="solver-queries.pc";
+    const char ALL_QUERIES_CORE_SOLVER_FILE_NAME_NO_EXT[]="all-queries.core_solver.";
+    const char SOLVER_QUERIES_CORE_SOLVER_LANG_NAME_NO_EXT[]="solver-queries.core_solver.";
 
     Solver *constructSolverChain(Solver *coreSolver,
                                  std::string querySMT2LogPath,
                                  std::string baseSolverQuerySMT2LogPath,
                                  std::string queryPCLogPath,
-                                 std::string baseSolverQueryPCLogPath);
+                                 std::string baseSolverQueryPCLogPath,
+                                 std::string queryCoreSolverLangLogPath,
+                                 std::string baseCoreSolverLangLogPath);
 }
 
 
