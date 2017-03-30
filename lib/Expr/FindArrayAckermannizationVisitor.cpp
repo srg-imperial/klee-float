@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "FindArrayAckermannizationVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace klee {
 
@@ -62,9 +63,48 @@ bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) c
   return false;
 }
 
+ref<Expr> ArrayAckermannizationInfo::getReplacement() const {
+  const Array *theArray = getArray();
+  // Should be replaced with a plain variable
+  if (theArray->isSymbolicArray())
+    return ref<Expr>(NULL);
+
+  // Replacement is read from a constant array. Make the equivilent
+  // ConstantExpr.
+  assert(theArray->isConstantArray() && "array should be constant");
+  size_t bitWidth = theArray->size * theArray->range;
+  assert((64 % theArray->range) == 0 &&
+         "array range must divide exactly into 64");
+  size_t chunks = (bitWidth + 63) / 64;
+  std::vector<uint64_t> bits(chunks);
+  assert(bits.size() == chunks);
+  size_t currentConstantArrayIndex = 0;
+  for (size_t chunkIndex = 0; chunkIndex < chunks; ++chunkIndex) {
+    size_t currentConstantArrayBitsRead = 0;
+    uint64_t chunkData = 0;
+    while (currentConstantArrayBitsRead < 64) {
+      assert(currentConstantArrayIndex < theArray->constantValues.size());
+      ref<ConstantExpr> chunkFragment =
+          theArray->constantValues[currentConstantArrayIndex];
+      uint64_t value = chunkFragment->getZExtValue();
+      assert(currentConstantArrayBitsRead < 64 && "would overshift");
+      chunkData |= (value) << currentConstantArrayBitsRead;
+      currentConstantArrayBitsRead += chunkFragment->getWidth();
+      ++currentConstantArrayIndex;
+    }
+    bits[chunkIndex] = chunkData;
+  }
+  // Finally make the APInt
+  llvm::APInt largeConstant(
+      /*numBits=*/bitWidth,
+      /*bigVal=*/llvm::ArrayRef<uint64_t>(bits.data(), bits.size()));
+  return ConstantExpr::alloc(largeConstant);
+}
+
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
-    bool recursive)
-    : ExprVisitor(recursive) {}
+    bool recursive, bool ackermannizeConstantArrays)
+    : ExprVisitor(recursive),
+      ackermannizeConstantArrays(ackermannizeConstantArrays) {}
 
 std::vector<ArrayAckermannizationInfo> *
 FindArrayAckermannizationVisitor::getOrInsertAckermannizationInfo(
@@ -124,11 +164,10 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
       goto failedMatch;
     }
 
-    // FIXME: We can probably handle constant arrays using bitwise masking,
-    // or-ing and shifting. For now say we can't ackermannize this array
-    if (theArray->isConstantArray()) {
+    if (!ackermannizeConstantArrays && theArray->isConstantArray()) {
       goto failedMatch;
     }
+
   } else {
     goto failedMatch;
   }
@@ -250,10 +289,7 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
     goto failedMatch;
   }
 
-  // FIXME: Figure out how to handle constant arrays. We can probably generate
-  // large constants but we can't return immediatly as there may be updates to
-  // handle.  For now say that they can't be ackermannized
-  if (theArray->isConstantArray()) {
+  if (!ackermannizeConstantArrays && theArray->isConstantArray()) {
     goto failedMatch;
   }
 
