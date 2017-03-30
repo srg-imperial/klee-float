@@ -101,7 +101,7 @@ Z3Builder::~Z3Builder() {
   // Clear caches so exprs/sorts gets freed before the destroying context
   // they aren associated with.
   clearConstructCache();
-  clearReplacementVariables();
+  clearReplacements();
   _arr_hash.clear();
   Z3_del_context(ctx);
   closeInteractionLog();
@@ -492,8 +492,8 @@ Z3ASTHandle Z3Builder::getArrayForUpdate(const Array *root,
 Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   // See if a replacement variable should be used instead of constructing
   // the replacement expression.
-  ExprHashMap<Z3ASTHandle>::iterator replIt = replaceWithVariable.find(e);
-  if (replIt != replaceWithVariable.end()) {
+  ExprHashMap<Z3ASTHandle>::iterator replIt = replaceWithExpr.find(e);
+  if (replIt != replaceWithExpr.end()) {
     if (width_out)
       *width_out = e->getWidth();
     return replIt->second;
@@ -1395,8 +1395,8 @@ Z3ASTHandle Z3Builder::getRoundingModeSort(llvm::APFloat::roundingMode rm) {
 Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
                                               const char *name) {
 #ifndef NDEBUG
-  ExprHashMap<Z3ASTHandle>::iterator it = replaceWithVariable.find(e);
-  assert(it == replaceWithVariable.end() &&
+  ExprHashMap<Z3ASTHandle>::iterator it = replaceWithExpr.find(e);
+  assert(it == replaceWithExpr.end() &&
          "Cannot add replacement for an expression that "
          "already has a replacement");
 #endif
@@ -1406,17 +1406,33 @@ Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
   Z3SortHandle sort = getBvSort(e->getWidth());
   Z3_symbol s = Z3_mk_string_symbol(ctx, name);
   Z3ASTHandle newVar = Z3ASTHandle(Z3_mk_const(ctx, s, sort), ctx);
-  replaceWithVariable.insert(std::make_pair(e, newVar));
+  replaceWithExpr.insert(std::make_pair(e, newVar));
   return newVar;
 }
 
-void Z3Builder::clearReplacementVariables() {
+Z3ASTHandle Z3Builder::addReplacementExpr(const ref<Expr> e,
+                                          const ref<Expr> replacement) {
+
+#ifndef NDEBUG
+  ExprHashMap<Z3ASTHandle>::iterator it = replaceWithExpr.find(e);
+  assert(it == replaceWithExpr.end() &&
+         "Cannot add replacement for an expression that "
+         "already has a replacement");
+#endif
+
+  Z3ASTHandle replacementZ3Expr =
+      Z3ASTHandle(constructActual(replacement, NULL), ctx);
+  replaceWithExpr.insert(std::make_pair(e, replacementZ3Expr));
+  return replacementZ3Expr;
+}
+
+void Z3Builder::clearReplacements() {
   // FIXME: Try to find a way to avoid doing this. We don't always
   // need to clear everything in the cache.
   // We have to clear the cached update expressions because they may
   // use replacement variables.
   _arr_hash.clearUpdates();
-  replaceWithVariable.clear();
+  replaceWithExpr.clear();
 }
 }
 #endif // ENABLE_Z3
