@@ -53,21 +53,25 @@ private:
                          std::vector<std::vector<unsigned char> > *values,
                          bool &hasSolution);
 bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
+void ackermannizeArrays(Z3Builder *z3Builder, const Query &query,
+                        FindArrayAckermannizationVisitor &faav,
+                        std::map<const ArrayAckermannizationInfo *, Z3ASTHandle>
+                            &arrayReplacements);
 
 public:
-  Z3SolverImpl();
-  ~Z3SolverImpl();
+Z3SolverImpl();
+~Z3SolverImpl();
 
-  char *getConstraintLog(const Query &);
-  void setCoreSolverTimeout(double _timeout) {
-    assert(_timeout >= 0.0 && "timeout must be >= 0");
-    timeout = _timeout;
+char *getConstraintLog(const Query &);
+void setCoreSolverTimeout(double _timeout) {
+  assert(_timeout >= 0.0 && "timeout must be >= 0");
+  timeout = _timeout;
 
-    unsigned int timeoutInMilliSeconds = (unsigned int)((timeout * 1000) + 0.5);
-    if (timeoutInMilliSeconds == 0)
-      timeoutInMilliSeconds = UINT_MAX;
-    Z3_params_set_uint(builder->ctx, solverParameters, timeoutParamStrSymbol,
-                       timeoutInMilliSeconds);
+  unsigned int timeoutInMilliSeconds = (unsigned int)((timeout * 1000) + 0.5);
+  if (timeoutInMilliSeconds == 0)
+    timeoutInMilliSeconds = UINT_MAX;
+  Z3_params_set_uint(builder->ctx, solverParameters, timeoutParamStrSymbol,
+                     timeoutInMilliSeconds);
   }
 
   bool computeTruth(const Query &, bool &isValid);
@@ -231,34 +235,7 @@ bool Z3SolverImpl::internalRunSolver(
   std::map<const ArrayAckermannizationInfo*,Z3ASTHandle> arrayReplacements;
   FindArrayAckermannizationVisitor faav(/*recursive=*/false);
   if (Z3AckermannizeArrays) {
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                           ie = query.constraints.end();
-         it != ie; ++it) {
-      faav.visit(*it);
-    }
-    faav.visit(query.expr);
-    int counter = 0; // Used to create unique names
-    for (FindArrayAckermannizationVisitor::ArrayToAckermannizationInfoMapTy::
-             const_iterator aaii = faav.ackermannizationInfo.begin(),
-                            aaie = faav.ackermannizationInfo.end();
-         aaii != aaie; ++aaii) {
-      const std::vector<ArrayAckermannizationInfo> &replacements = aaii->second;
-      for (std::vector<ArrayAckermannizationInfo>::const_iterator
-               i = replacements.begin(),
-               ie = replacements.end();
-           i != ie; ++i) {
-        // Taking a pointer like this is dangerous. If the std::vector<> gets
-        // resized the data might be invalidated.
-        const ArrayAckermannizationInfo* aaInfo = &(*i); // Safe?
-        std::string str;
-        llvm::raw_string_ostream os(str);
-        os << aaInfo->getArray()->name << "_ackermann_" << counter;
-        Z3ASTHandle replacementVar = builder->addReplacementVariable(
-            aaInfo->toReplace, os.str().c_str());
-        ++counter;
-        arrayReplacements[aaInfo] = replacementVar;
-      }
-    }
+    ackermannizeArrays(this->builder, query, faav, arrayReplacements);
   }
 
   for (ConstraintManager::const_iterator it = query.constraints.begin(),
@@ -308,7 +285,7 @@ bool Z3SolverImpl::internalRunSolver(
   if (Z3AckermannizeArrays) {
     // Remove any replacements we made as accumulating these across
     // solver runs might not be valid.
-    builder->clearReplacementVariables();
+    builder->clearReplacements();
   }
 
   Z3_solver_dec_ref(builder->ctx, theSolver);
@@ -381,11 +358,10 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
                    ie = aais->end();
                i != ie; ++i) {
             const ArrayAckermannizationInfo* info = &(*i);
-            if ((offset * 8) < info->contiguousLSBitIndex ||
-                (((offset + 1) * 8) -1) > info->contiguousMSBitIndex) {
+            if (!(info->containsByte(offset))) {
               continue;
             }
-            
+
             // This is the ackermannized region for this offset.
             Z3ASTHandle replacementVariable = arrayReplacements[info];
             assert((offset*8) >= info->contiguousLSBitIndex);
@@ -513,6 +489,51 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
 
   Z3_ast_vector_dec_ref(builder->ctx, constraints);
   return success;
+}
+
+void Z3SolverImpl::ackermannizeArrays(
+    Z3Builder *z3Builder, const Query &query,
+    FindArrayAckermannizationVisitor &faav,
+    std::map<const ArrayAckermannizationInfo *, Z3ASTHandle>
+        &arrayReplacements) {
+  for (ConstraintManager::const_iterator it = query.constraints.begin(),
+                                         ie = query.constraints.end();
+       it != ie; ++it) {
+    faav.visit(*it);
+  }
+  faav.visit(query.expr);
+  for (FindArrayAckermannizationVisitor::ArrayToAckermannizationInfoMapTy::
+           const_iterator aaii = faav.ackermannizationInfo.begin(),
+                          aaie = faav.ackermannizationInfo.end();
+       aaii != aaie; ++aaii) {
+    const std::vector<ArrayAckermannizationInfo> &replacements = aaii->second;
+    for (std::vector<ArrayAckermannizationInfo>::const_iterator
+             i = replacements.begin(),
+             ie = replacements.end();
+         i != ie; ++i) {
+      // Taking a pointer like this is dangerous. If the std::vector<> gets
+      // resized the data might be invalidated.
+      const ArrayAckermannizationInfo *aaInfo = &(*i); // Safe?
+      // Replace with variable
+      std::string str;
+      llvm::raw_string_ostream os(str);
+      os << aaInfo->getArray()->name << "_ackermann";
+      assert(aaInfo->toReplace.size() > 0);
+      Z3ASTHandle replacementVar;
+      for (ExprHashSet::const_iterator ei = aaInfo->toReplace.begin(),
+                                       ee = aaInfo->toReplace.end();
+           ei != ee; ++ei) {
+        ref<Expr> toReplace = *ei;
+        if (replacementVar.isNull()) {
+          replacementVar = z3Builder->getFreshBitVectorVariable(
+              toReplace->getWidth(), os.str().c_str());
+        }
+        bool success = z3Builder->addReplacementExpr(toReplace, replacementVar);
+        assert(success && "Failed to add replacement variable");
+      }
+      arrayReplacements[aaInfo] = replacementVar;
+    }
+  }
 }
 
 SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {

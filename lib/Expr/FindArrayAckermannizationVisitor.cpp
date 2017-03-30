@@ -7,6 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 #include "FindArrayAckermannizationVisitor.h"
+#include "llvm/ADT/ArrayRef.h"
+
+namespace {
+using namespace klee;
+ref<Expr> getFirstExpr(const ExprHashSet &hs) {
+  ExprHashSet::const_iterator e = hs.begin();
+  if (e == hs.end()) {
+    return ref<Expr>(NULL);
+  }
+  return *e;
+}
+}
 
 namespace klee {
 
@@ -14,9 +26,13 @@ ArrayAckermannizationInfo::ArrayAckermannizationInfo()
     : contiguousMSBitIndex(0), contiguousLSBitIndex(0) {}
 
 const Array *ArrayAckermannizationInfo::getArray() const {
-  if (ReadExpr *re = dyn_cast<ReadExpr>(toReplace)) {
+  ref<Expr> firstExpr = getFirstExpr(toReplace);
+  if (firstExpr.isNull()) {
+    return NULL;
+  }
+  if (ReadExpr *re = dyn_cast<ReadExpr>(firstExpr)) {
     return re->updates.root;
-  } else if (ConcatExpr *ce = dyn_cast<ConcatExpr>(toReplace)) {
+  } else if (ConcatExpr *ce = dyn_cast<ConcatExpr>(firstExpr)) {
     assert(ce->getKid(0)->getKind() == Expr::Read &&
            "left child must be a ReadExpr");
     ReadExpr *re = dyn_cast<ReadExpr>(ce->getKid(0));
@@ -28,6 +44,9 @@ const Array *ArrayAckermannizationInfo::getArray() const {
 
 bool ArrayAckermannizationInfo::isWholeArray() const {
   const Array *theArray = getArray();
+  if (theArray == NULL) {
+    return false;
+  }
   unsigned bitWidthOfArray = theArray->size * theArray->range;
   assert(contiguousMSBitIndex > contiguousLSBitIndex);
   if (bitWidthOfArray == getWidth()) {
@@ -45,7 +64,11 @@ void ArrayAckermannizationInfo::dump() const {
   llvm::errs() << "contiguousMSBitIndex:" << contiguousMSBitIndex << "\n";
   llvm::errs() << "contiguousLSBitIndex:" << contiguousLSBitIndex << "\n";
   llvm::errs() << "width:" << getWidth() << "\n";
-  llvm::errs() << "toReplace:\n" << toReplace << "\n";
+  llvm::errs() << "toReplace:\n" << toReplace.size() << " expressions\n\n";
+  for (ExprHashSet::const_iterator ei = toReplace.begin(), ee = toReplace.end();
+       ei != ee; ++ei) {
+    llvm::errs() << "Expr:\n" << *ei << "\n";
+  }
 }
 
 bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) const {
@@ -60,6 +83,22 @@ bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) c
     return true;
   }
   return false;
+}
+
+bool ArrayAckermannizationInfo::hasSameBounds(
+    ArrayAckermannizationInfo &other) const {
+  return (other.contiguousLSBitIndex == this->contiguousLSBitIndex) &&
+         (other.contiguousMSBitIndex == this->contiguousMSBitIndex);
+}
+
+bool ArrayAckermannizationInfo::containsByte(unsigned offset) const {
+  unsigned lsbit = offset * 8;
+  unsigned msbit = ((offset + 1) * 8) - 1;
+  return containsBit(lsbit) && containsBit(msbit);
+}
+
+bool ArrayAckermannizationInfo::containsBit(unsigned offset) const {
+  return (offset >= contiguousLSBitIndex) && (offset <= contiguousMSBitIndex);
 }
 
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
@@ -102,6 +141,7 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   ArrayAckermannizationInfo ackInfo;
   const ConcatExpr *currentConcat = &ce;
   std::vector<ref<ReadExpr> > reads;
+  ref<Expr> toReplace = ref<Expr>(const_cast<ConcatExpr *>(&ce));
   bool isFirst = true;
   unsigned MSBitIndex = 0;
   unsigned LSBitIndex = 0;
@@ -124,11 +164,13 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
       goto failedMatch;
     }
 
-    // FIXME: We can probably handle constant arrays using bitwise masking,
-    // or-ing and shifting. For now say we can't ackermannize this array
+    // We don't try to ackermannize these because reads of a constant
+    // array at a constant index should have been constant folded
+    // away already.
     if (theArray->isConstantArray()) {
       goto failedMatch;
     }
+
   } else {
     goto failedMatch;
   }
@@ -203,7 +245,7 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   }
 
   // We found a match
-  ackInfo.toReplace = ref<Expr>(const_cast<ConcatExpr *>(&ce));
+  ackInfo.toReplace.insert(toReplace);
   ackInfo.contiguousMSBitIndex = MSBitIndex;
   ackInfo.contiguousLSBitIndex = LSBitIndex;
   assert(ackInfo.contiguousMSBitIndex > ackInfo.contiguousLSBitIndex && "bit indicies incorrectly ordered");
@@ -212,17 +254,25 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   // (especially regions where the regions are completly inside another).
   // `ArrayAckermannizationInfo` needs to be worked to convey this information
   // better. For now disallow overlapping regions.
-  for (std::vector<ArrayAckermannizationInfo>::const_iterator
-           i = ackInfos->begin(),
-           ie = ackInfos->end();
+  for (std::vector<ArrayAckermannizationInfo>::iterator i = ackInfos->begin(),
+                                                        ie = ackInfos->end();
        i != ie; ++i) {
+    if (i->hasSameBounds(ackInfo)) {
+      // We already have an `ArrayAckermannizationInfo` with the
+      // same bounds. Just add this replacement expression to that.
+      i->toReplace.insert(toReplace);
+      // We don't need to check overlap conflicts because we are just
+      // adding to an existing `ArrayAckermannizationInfo` where we
+      // have already checked for this.
+      return Action::skipChildren();
+    }
     if (i->overlapsWith(ackInfo)) {
       goto failedMatch;
     }
   }
 
   ackInfos->push_back(ackInfo);
-  // We know the indices are simple constants so need to traverse children
+  // We know the indices are simple constants so no need to traverse children
   return Action::skipChildren();
 
 failedMatch :
@@ -237,6 +287,7 @@ ExprVisitor::Action
 FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
   const Array *theArray = re.updates.root;
   bool wasInsert = true;
+  ref<Expr> toReplace = ref<Expr>(const_cast<ReadExpr *>(&re));
   ArrayAckermannizationInfo ackInfo;
   std::vector<ArrayAckermannizationInfo> *ackInfos =
       getOrInsertAckermannizationInfo(theArray, &wasInsert);
@@ -250,9 +301,9 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
     goto failedMatch;
   }
 
-  // FIXME: Figure out how to handle constant arrays. We can probably generate
-  // large constants but we can't return immediatly as there may be updates to
-  // handle.  For now say that they can't be ackermannized
+  // We don't try to ackermannize these because reads of a constant
+  // array at a constant index should have been constant folded
+  // away already.
   if (theArray->isConstantArray()) {
     goto failedMatch;
   }
@@ -273,20 +324,29 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
 
   // This is an array read without constants values or updates so we
   // can definitely ackermannize this based on what we've seen so far.
-  ackInfo.toReplace = ref<Expr>(const_cast<ReadExpr *>(&re));
+  ackInfo.toReplace.insert(toReplace);
 
   // FIXME: This needs re-thinking. We should allow overlapping regions
   // (especially regions where the regions are completly inside another).
   // `ArrayAckermannizationInfo` needs to be worked to convey this information
   // better to Z3SolverImpl. For now disallow overlapping regions.
-  for (std::vector<ArrayAckermannizationInfo>::const_iterator
-           i = ackInfos->begin(),
-           ie = ackInfos->end();
+  for (std::vector<ArrayAckermannizationInfo>::iterator i = ackInfos->begin(),
+                                                        ie = ackInfos->end();
        i != ie; ++i) {
+    if (i->hasSameBounds(ackInfo)) {
+      // We already have an `ArrayAckermannizationInfo` with the
+      // same bounds. Just add this replacement expression to that.
+      i->toReplace.insert(toReplace);
+      // We don't need to check overlap conflicts because we are just
+      // adding to an existing `ArrayAckermannizationInfo` where we
+      // have already checked for this.
+      return Action::doChildren(); // Traverse index expression
+    }
     if (i->overlapsWith(ackInfo)) {
       goto failedMatch;
     }
   }
+
   ackInfos->push_back(ackInfo);
   return Action::doChildren(); // Traverse index expression
 
