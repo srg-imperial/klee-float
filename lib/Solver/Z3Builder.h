@@ -104,7 +104,7 @@ class Z3Builder {
   friend class Z3SolverImpl;
   ExprHashMap<std::pair<Z3ASTHandle, unsigned> > constructed;
   Z3ArrayExprHash _arr_hash;
-  ExprHashMap<Z3ASTHandle> replaceWithVariable;
+  ExprHashMap<Z3ASTHandle> replaceWithExpr;
   // These are additional constraints that are generated during the
   // translation to Z3's constraint language. Clients should assert
   // these.
@@ -210,7 +210,11 @@ public:
   // to add multiple replacements. The replacements are cleared
   Z3ASTHandle addReplacementVariable(const ref<Expr> e, const char* name);
   // Clear the stored replacement variables.
-  void clearReplacementVariables();
+  void clearReplacements();
+
+  // FIXME: This is a hack.
+  Z3ASTHandle addReplacementExpr(const ref<Expr> e,
+                                 const ref<Expr> replacement);
 };
 }
 

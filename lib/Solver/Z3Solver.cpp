@@ -33,6 +33,12 @@ llvm::cl::opt<bool> Z3AckermannizeArrays(
     "z3-array-ackermannize", llvm::cl::init(true),
     llvm::cl::desc("Try to ackermannize arrays before building Z3 queries "
                    "(experimental) (default true)"));
+
+llvm::cl::opt<bool> Z3AckermannizeConstantArrays(
+    "z3-const-array-ackermannize", llvm::cl::init(false),
+    llvm::cl::desc(
+        "Try to ackermannize constant arrays before building Z3 queries "
+        "(experimental) (default false)"));
 }
 
 
@@ -249,7 +255,11 @@ bool Z3SolverImpl::internalRunSolver(
 
   // Try ackermannize the arrays
   std::map<const ArrayAckermannizationInfo*,Z3ASTHandle> arrayReplacements;
-  FindArrayAckermannizationVisitor faav(/*recursive=*/false);
+  FindArrayAckermannizationVisitor faav(
+      /*recursive=*/false,
+      /*ackermannizeConstantArrays=*/Z3AckermannizeConstantArrays);
+  assert((!Z3AckermannizeConstantArrays || Z3AckermannizeArrays) &&
+         "Invalid combination");
   if (Z3AckermannizeArrays) {
     for (ConstraintManager::const_iterator it = query.constraints.begin(),
                                            ie = query.constraints.end();
@@ -270,13 +280,24 @@ bool Z3SolverImpl::internalRunSolver(
         // Taking a pointer like this is dangerous. If the std::vector<> gets
         // resized the data might be invalidated.
         const ArrayAckermannizationInfo* aaInfo = &(*i); // Safe?
-        std::string str;
-        llvm::raw_string_ostream os(str);
-        os << aaInfo->getArray()->name << "_ackermann_" << counter;
-        Z3ASTHandle replacementVar = builder->addReplacementVariable(
-            aaInfo->toReplace, os.str().c_str());
-        ++counter;
-        arrayReplacements[aaInfo] = replacementVar;
+        ref<Expr> replacement = aaInfo->getReplacement();
+        if (replacement.isNull()) {
+          // Replace with variable
+          std::string str;
+          llvm::raw_string_ostream os(str);
+          os << aaInfo->getArray()->name << "_ackermann_" << counter;
+          Z3ASTHandle replacementVar = builder->addReplacementVariable(
+              aaInfo->toReplace, os.str().c_str());
+          arrayReplacements[aaInfo] = replacementVar;
+          ++counter;
+        } else if (isa<ConstantExpr>(replacement)) {
+          // Replace with constant
+          Z3ASTHandle replacementConstant =
+              builder->addReplacementExpr(aaInfo->toReplace, replacement);
+          arrayReplacements[aaInfo] = replacementConstant;
+        } else {
+          llvm_unreachable("Unhandled ackermannization type");
+        }
       }
     }
   }
@@ -328,7 +349,7 @@ bool Z3SolverImpl::internalRunSolver(
   if (Z3AckermannizeArrays) {
     // Remove any replacements we made as accumulating these across
     // solver runs might not be valid.
-    builder->clearReplacementVariables();
+    builder->clearReplacements();
   }
 
   Z3_solver_dec_ref(builder->ctx, theSolver);
