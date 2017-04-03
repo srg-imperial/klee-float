@@ -15,15 +15,17 @@ namespace klee {
 
 class ConstraintLogConfig {
 public:
-  enum ConstraintLogConfigKind { CLCK_TOP, CLCK_Z3 };
+  enum ConstraintLogConfigKind { CLCK_Z3 };
 
 private:
   const ConstraintLogConfigKind kind;
 
 public:
   ConstraintLogConfigKind getKind() const { return kind; }
-  ConstraintLogConfig() : kind(CLCK_TOP){};
-  static bool classof(const ConstraintLogConfig *clc) { return true; }
+  // Allocate memory for a copy of this configuration.
+  // Clients must free using `delete`.
+  virtual ConstraintLogConfig *alloc() const = 0;
+  virtual ~ConstraintLogConfig() {}
 
 protected:
   ConstraintLogConfig(ConstraintLogConfigKind k) : kind(k) {}
@@ -31,12 +33,19 @@ protected:
 
 class Z3ConstraintLogConfig : public ConstraintLogConfig {
 public:
-  Z3ConstraintLogConfig() : ConstraintLogConfig(CLCK_Z3) {}
+  // Configuration settings
+  bool ackermannizeArrays;
+
+  Z3ConstraintLogConfig()
+      : ConstraintLogConfig(CLCK_Z3), ackermannizeArrays(false) {}
   static bool classof(const ConstraintLogConfig *clc) {
     return clc->getKind() == CLCK_Z3;
   }
-  // Configuration settings
-  bool ackermannizeArrays = false;
+
+  virtual ConstraintLogConfig *alloc() const {
+    ConstraintLogConfig *clc = new Z3ConstraintLogConfig(*this);
+    return clc;
+  }
 };
 }
 

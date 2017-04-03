@@ -47,13 +47,13 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
     // Create dummy query to determine file extension
     ConstraintManager cm;
     Query q(cm, ConstantExpr::alloc(0, Expr::Bool));
-    char* dummy = solver->getConstraintLog(q, &fileExtension);
+    char *dummy = solver->getConstraintLog(q, &fileExtension, /*clc=*/NULL);
     free(dummy);
     std::string filePath = baseCoreSolverLangLogPath;
     filePath += fileExtension;
 
-    solver =
-        createCoreSolverLangLoggingSolver(solver, filePath, MinQueryTimeToLog);
+    solver = createCoreSolverLangLoggingSolver(solver, filePath,
+                                               MinQueryTimeToLog, /*clc=*/NULL);
     klee_message(
         "Logging queries that reach solver in core solver's language to %s\n",
         filePath.c_str());
@@ -98,13 +98,13 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
     // Create dummy query to determine file extension
     ConstraintManager cm;
     Query q(cm, ConstantExpr::alloc(0, Expr::Bool));
-    char* dummy = solver->getConstraintLog(q, &fileExtension);
+    char *dummy = solver->getConstraintLog(q, &fileExtension, /*clc=*/NULL);
     free(dummy);
     std::string filePath = queryCoreSolverLangLogPath;
     filePath += fileExtension;
 
-    solver =
-        createCoreSolverLangLoggingSolver(solver, filePath, MinQueryTimeToLog);
+    solver = createCoreSolverLangLoggingSolver(solver, filePath,
+                                               MinQueryTimeToLog, /*clc=*/NULL);
     klee_message(
         "Logging all queries in core solver's language to %s\n",
         filePath.c_str());
