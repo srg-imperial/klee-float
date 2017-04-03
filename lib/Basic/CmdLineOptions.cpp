@@ -89,6 +89,9 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
         clEnumValN(
             SOLVER_CORE_SOLVER_LANG, "solver:core",
             "All queries reaching the solver in the solver's native format"),
+        clEnumValN(SOLVER_CORE_SOLVER_LANG_AA, "solver:core_aa",
+                   "All queries reaching the solver in the solver's native "
+                   "format with array ackermannization if supported"),
         clEnumValEnd),
     llvm::cl::CommaSeparated);
 

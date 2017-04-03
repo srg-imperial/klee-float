@@ -41,8 +41,10 @@ enum QueryLoggingSolverType {
                         ///(KQuery) format
   SOLVER_SMTLIB,        ///< Log queries passed to solver (optimised) in .smt2
                         ///(SMT-LIBv2) format
-  SOLVER_CORE_SOLVER_LANG ///< Log queries passed to solver in core solver's
-                          /// native format
+  SOLVER_CORE_SOLVER_LANG,   ///< Log queries passed to solver in core solver's
+                             /// native format
+  SOLVER_CORE_SOLVER_LANG_AA ///< Log queries passed to solver in core solver's
+  /// native format with array ackermannization if supported.
 };
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
