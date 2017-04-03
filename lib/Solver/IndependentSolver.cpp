@@ -407,7 +407,8 @@ public:
                             std::vector< std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
-  char *getConstraintLog(const Query &, const char **fileExtension);
+  char *getConstraintLog(const Query &, const char **fileExtension,
+                         const ConstraintLogConfig *);
   void setCoreSolverTimeout(double timeout);
 };
   
@@ -552,8 +553,9 @@ SolverImpl::SolverRunStatus IndependentSolver::getOperationStatusCode() {
 }
 
 char *IndependentSolver::getConstraintLog(const Query &query,
-                                          const char **fileExtension) {
-  return solver->impl->getConstraintLog(query, fileExtension);
+                                          const char **fileExtension,
+                                          const ConstraintLogConfig *clc) {
+  return solver->impl->getConstraintLog(query, fileExtension, clc);
 }
 
 void IndependentSolver::setCoreSolverTimeout(double timeout) {

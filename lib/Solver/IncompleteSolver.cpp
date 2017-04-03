@@ -140,8 +140,9 @@ SolverImpl::SolverRunStatus StagedSolverImpl::getOperationStatusCode() {
 }
 
 char *StagedSolverImpl::getConstraintLog(const Query &query,
-                                         const char **fileExtension) {
-  return secondary->impl->getConstraintLog(query, fileExtension);
+                                         const char **fileExtension,
+                                         const ConstraintLogConfig *clc) {
+  return secondary->impl->getConstraintLog(query, fileExtension, clc);
 }
 
 void StagedSolverImpl::setCoreSolverTimeout(double timeout) {

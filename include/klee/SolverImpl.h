@@ -16,6 +16,7 @@ namespace klee {
   class Array;
   class ExecutionState;
   class Expr;
+  class ConstraintLogConfig;
   struct Query;
 
   /// SolverImpl - Abstract base clase for solver implementations.
@@ -99,7 +100,8 @@ namespace klee {
     static const char* getOperationStatusString(SolverRunStatus statusCode);
 
     virtual char *getConstraintLog(const Query &query,
-                                   const char **fileExtension) {
+                                   const char **fileExtension,
+                                   const ConstraintLogConfig *) {
       // dummy
       return (NULL);
     }

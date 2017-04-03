@@ -17,9 +17,11 @@ private:
                           const std::vector<const Array *> *objects = 0) {
     char *queryText = NULL;
     if (falseQuery) {
-      queryText = solver->getConstraintLog(*falseQuery, /*fileExtension=*/NULL);
+      queryText = solver->getConstraintLog(*falseQuery, /*fileExtension=*/NULL,
+                                           /*clc=*/NULL);
     } else {
-      queryText = solver->getConstraintLog(query, /*fileExtension=*/NULL);
+      queryText =
+          solver->getConstraintLog(query, /*fileExtension=*/NULL, /*clc=*/NULL);
     }
     logBuffer << queryText;
     free(queryText);

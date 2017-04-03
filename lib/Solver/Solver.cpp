@@ -25,8 +25,9 @@ Solver::~Solver() {
   delete impl; 
 }
 
-char *Solver::getConstraintLog(const Query &query, const char **fileExtension) {
-  return impl->getConstraintLog(query, fileExtension);
+char *Solver::getConstraintLog(const Query &query, const char **fileExtension,
+                               const ConstraintLogConfig *clc) {
+  return impl->getConstraintLog(query, fileExtension, clc);
 }
 
 void Solver::setCoreSolverTimeout(double timeout) {

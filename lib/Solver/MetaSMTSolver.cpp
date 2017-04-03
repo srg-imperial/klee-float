@@ -65,7 +65,8 @@ public:
                     bool optimizeDivides);
   virtual ~MetaSMTSolverImpl();
 
-  char *getConstraintLog(const Query &, const char **fileExtension);
+  char *getConstraintLog(const Query &, const char **fileExtension,
+                         const ConstraintLogConfig *);
   void setCoreSolverTimeout(double timeout) { _timeout = timeout; }
 
   bool computeTruth(const Query &, bool &isValid);
@@ -115,9 +116,8 @@ template <typename SolverContext>
 MetaSMTSolverImpl<SolverContext>::~MetaSMTSolverImpl() {}
 
 template <typename SolverContext>
-char *
-MetaSMTSolverImpl<SolverContext>::getConstraintLog(const Query &,
-                                                   const char **fileExtension) {
+char *MetaSMTSolverImpl<SolverContext>::getConstraintLog(
+    const Query &, const char **fileExtension, const ConstraintLogConfig *clc) {
   const char *msg = "Not supported";
   char *buf = new char[strlen(msg) + 1];
   strcpy(buf, msg);
