@@ -72,7 +72,8 @@ public:
   STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides = true);
   ~STPSolverImpl();
 
-  char *getConstraintLog(const Query &);
+  char *getConstraintLog(const Query &, const char **fileExtension,
+                         const ConstraintLogConfig *);
   void setCoreSolverTimeout(double _timeout) { timeout = _timeout; }
 
   bool computeTruth(const Query &, bool &isValid);
@@ -130,7 +131,8 @@ STPSolverImpl::~STPSolverImpl() {
 /***/
 
 char *STPSolverImpl::getConstraintLog(const Query &query,
-                                      const char **fileExtension) {
+                                      const char **fileExtension,
+                                      const ConstraintLogConfig *clc) {
   vc_push(vc);
   for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
                                                ie = query.constraints.end();
@@ -383,8 +385,10 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
     : Solver(new STPSolverImpl(useForkedSTP, optimizeDivides)) {}
 
-char *STPSolver::getConstraintLog(const Query &query) {
-  return impl->getConstraintLog(query);
+char *STPSolver::getConstraintLog(const Query &query,
+                                  const char **fileExtension,
+                                  const ConstraintLogConfig *clc) {
+  return impl->getConstraintLog(query, fileExtension, clc);
 }
 
 void STPSolver::setCoreSolverTimeout(double timeout) {

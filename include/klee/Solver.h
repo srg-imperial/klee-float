@@ -19,6 +19,7 @@ namespace klee {
   class ConstraintManager;
   class Expr;
   class SolverImpl;
+  class ConstraintLogConfig;
 
   struct Query {
   public:
@@ -210,7 +211,8 @@ namespace klee {
     /// \return Constraints in the solver's native query language.
     ///         Clients must free this.
     virtual char *getConstraintLog(const Query &query,
-                                   const char **fileExtension = NULL);
+                                   const char **fileExtension = NULL,
+                                   const ConstraintLogConfig * = NULL);
     virtual void setCoreSolverTimeout(double timeout);
   };
 
@@ -228,7 +230,8 @@ namespace klee {
 
     /// getConstraintLog - Return the constraint log for the given state in CVC
     /// format.
-    virtual char *getConstraintLog(const Query &, const char **fileExtension);
+    virtual char *getConstraintLog(const Query &, const char **fileExtension,
+                                   const ConstraintLogConfig *clc);
 
     /// setCoreSolverTimeout - Set constraint solver timeout delay to the given value; 0
     /// is off.
@@ -245,7 +248,8 @@ namespace klee {
 
     /// Get the query in SMT-LIBv2 format.
     /// \return A C-style string. The caller is responsible for freeing this.
-    virtual char *getConstraintLog(const Query &, const char **fileExtension);
+    virtual char *getConstraintLog(const Query &, const char **fileExtension,
+                                   const ConstraintLogConfig *clc);
 
     /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
     /// value; 0
@@ -262,7 +266,8 @@ namespace klee {
     MetaSMTSolver(bool useForked, bool optimizeDivides);
     virtual ~MetaSMTSolver();
 
-    virtual char *getConstraintLog(const Query &, const char **fileExtension);
+    virtual char *getConstraintLog(const Query &, const char **fileExtension,
+                                   const ConstraintLogConfig *clc);
     virtual void setCoreSolverTimeout(double timeout);
 };
 

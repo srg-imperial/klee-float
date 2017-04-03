@@ -3631,7 +3631,8 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   case CORE_SOLVER_LANG: {
     Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
     const char *solverFileExtension = NULL;
-    char *log = solver->getConstraintLog(query, &solverFileExtension);
+    char *log =
+        solver->getConstraintLog(query, &solverFileExtension, /*clc=*/NULL);
     res = std::string(log);
     free(log);
 

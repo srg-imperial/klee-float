@@ -92,7 +92,8 @@ public:
                                               hasSolution);
   }
   SolverRunStatus getOperationStatusCode();
-  char *getConstraintLog(const Query &, const char **fileExtension);
+  char *getConstraintLog(const Query &, const char **fileExtension,
+                         const ConstraintLogConfig *);
   void setCoreSolverTimeout(double timeout);
 };
 
@@ -254,8 +255,9 @@ SolverImpl::SolverRunStatus CachingSolver::getOperationStatusCode() {
 }
 
 char *CachingSolver::getConstraintLog(const Query &query,
-                                      const char **fileExtension) {
-  return solver->impl->getConstraintLog(query, fileExtension);
+                                      const char **fileExtension,
+                                      const ConstraintLogConfig *clc) {
+  return solver->impl->getConstraintLog(query, fileExtension, clc);
 }
 
 void CachingSolver::setCoreSolverTimeout(double timeout) {
