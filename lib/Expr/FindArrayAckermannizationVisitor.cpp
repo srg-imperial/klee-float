@@ -72,18 +72,18 @@ ref<Expr> ArrayAckermannizationInfo::getReplacement() const {
   // Replacement is read from a constant array. Make the equivilent
   // ConstantExpr.
   assert(theArray->isConstantArray() && "array should be constant");
-  size_t bitWidth = theArray->size * theArray->range;
   assert((64 % theArray->range) == 0 &&
          "array range must divide exactly into 64");
-  size_t chunks = (bitWidth + 63) / 64;
+  size_t chunks = (getWidth() + 63) / 64;
   std::vector<uint64_t> bits(chunks);
   assert(bits.size() == chunks);
-  size_t currentConstantArrayIndex = 0;
+  size_t currentConstantArrayIndex =
+      (contiguousLSBitIndex % 8); // Start at array read
   for (size_t chunkIndex = 0; chunkIndex < chunks; ++chunkIndex) {
     size_t currentConstantArrayBitsRead = 0;
     uint64_t chunkData = 0;
-    while (currentConstantArrayBitsRead < 64) {
-      assert(currentConstantArrayIndex < theArray->constantValues.size());
+    while (currentConstantArrayBitsRead < 64 &&
+           currentConstantArrayIndex < ((contiguousMSBitIndex + 1) % 8)) {
       ref<ConstantExpr> chunkFragment =
           theArray->constantValues[currentConstantArrayIndex];
       uint64_t value = chunkFragment->getZExtValue();
@@ -96,8 +96,9 @@ ref<Expr> ArrayAckermannizationInfo::getReplacement() const {
   }
   // Finally make the APInt
   llvm::APInt largeConstant(
-      /*numBits=*/bitWidth,
+      /*numBits=*/getWidth(),
       /*bigVal=*/llvm::ArrayRef<uint64_t>(bits.data(), bits.size()));
+
   return ConstantExpr::alloc(largeConstant);
 }
 
