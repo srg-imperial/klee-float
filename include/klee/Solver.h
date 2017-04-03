@@ -333,7 +333,8 @@ namespace klee {
   /// after writing them to the given path in the core solver's
   /// native format.
   Solver *createCoreSolverLangLoggingSolver(Solver *s, std::string path,
-                                            int minQueryTimeToLog);
+                                            int minQueryTimeToLog,
+                                            const ConstraintLogConfig *);
 
   /// createDummySolver - Create a dummy solver implementation which always
   /// fails.
