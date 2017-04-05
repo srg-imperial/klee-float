@@ -187,14 +187,6 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
        it != ie; ++it) {
     assumptions.push_back(temp_builder.construct(*it));
   }
-  ::Z3_ast *assumptionsArray = NULL;
-  int numAssumptions = query.constraints.size();
-  if (numAssumptions) {
-    assumptionsArray = (::Z3_ast *)malloc(sizeof(::Z3_ast) * numAssumptions);
-    for (int index = 0; index < numAssumptions; ++index) {
-      assumptionsArray[index] = (::Z3_ast)assumptions[index];
-    }
-  }
 
   // KLEE Queries are validity queries i.e.
   // ∀ X Constraints(X) → query(X)
@@ -204,6 +196,26 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
   Z3ASTHandle formula = Z3ASTHandle(
       Z3_mk_not(temp_builder.ctx, temp_builder.construct(query.expr)),
       temp_builder.ctx);
+
+  // Now that the builder has seen all of the expressions of the query
+  // there may be additional side constraints that need to be emitted.
+  if (temp_builder.sideConstraints.size() > 0) {
+    for (std::vector<Z3ASTHandle>::const_iterator
+             it = temp_builder.sideConstraints.begin(),
+             ie = temp_builder.sideConstraints.end();
+         it != ie; ++it) {
+      assumptions.push_back(*it);
+    }
+  }
+
+  ::Z3_ast *assumptionsArray = NULL;
+  int numAssumptions = assumptions.size();
+  if (numAssumptions) {
+    assumptionsArray = (::Z3_ast *)malloc(sizeof(::Z3_ast) * numAssumptions);
+    for (int index = 0; index < numAssumptions; ++index) {
+      assumptionsArray[index] = (::Z3_ast)assumptions[index];
+    }
+  }
 
   ::Z3_string result = Z3_benchmark_to_smtlib_string(
       temp_builder.ctx,
