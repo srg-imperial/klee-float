@@ -102,6 +102,7 @@ Z3Builder::~Z3Builder() {
   // they aren associated with.
   clearConstructCache();
   clearReplacements();
+  clearSideConstraints();
   _arr_hash.clear();
   Z3_del_context(ctx);
   closeInteractionLog();
