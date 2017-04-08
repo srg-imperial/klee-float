@@ -1364,6 +1364,12 @@ Z3ASTHandle Z3Builder::toIEEEBits(Z3ASTHandle e) {
   unsigned significandBits =
       Z3_fpa_get_sbits(ctx, currentSort); // Includes implicit bit
   unsigned floatWidth = exponentBits + significandBits;
+
+  if (floatWidth == 79) {
+    // We model x86_fp80 as a 79 bit float in Z3 so we converting back
+    // we need to use a 80-bit wide bitvector.
+    floatWidth = Expr::Fl80;
+  }
   Z3SortHandle bvSort = getBvSort(floatWidth);
   Z3ASTHandle freshBv = Z3ASTHandle(
       Z3_mk_fresh_const(ctx, /*prefix=*/"fresh_to_ieee_bv_", bvSort), ctx);
