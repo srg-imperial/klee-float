@@ -78,10 +78,12 @@ void Z3ArrayExprHash::clearUpdates() {
   _update_node_hash.clear();
 }
 
-Z3Builder::Z3Builder(bool autoClearConstructCache)
-    : autoClearConstructCache(autoClearConstructCache) {
+Z3Builder::Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction)
+    : autoClearConstructCache(autoClearConstructCache),
+      useToIEEEBVFunction(useToIEEEBVFunction) {
   if (Z3LogInteractionFile.length() > 0) {
-    llvm::errs() << "Logging Z3 interaction to \"" << Z3LogInteractionFile << "\"\n";
+    llvm::errs() << "Logging Z3 interaction to \"" << Z3LogInteractionFile
+                 << "\"\n";
     Z3_open_log(Z3LogInteractionFile.c_str());
   }
 
@@ -1299,14 +1301,15 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
     case Expr::Int32:
     case Expr::Int64:
     case Expr::Int128:
-      return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+      return toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
     case 79: {
       // This is Expr::Fl80 (64 bit exponent, 15 bit significand) but due to
       // the "implicit" bit actually being implicit in x87 fp80 the sum of
       // the exponent and significand bitwidth is 79 not 80.
 
       // Get Z3's IEEE representation
-      Z3ASTHandle ieeeBits = Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+      Z3ASTHandle ieeeBits =
+          toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
 
       // Construct the x87 fp80 bit representation
       Z3ASTHandle signBit = Z3ASTHandle(
@@ -1341,6 +1344,36 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
   }
 }
 
+Z3ASTHandle Z3Builder::toIEEEBits(Z3ASTHandle e) {
+  Z3SortHandle currentSort = Z3SortHandle(Z3_get_sort(ctx, e), ctx);
+#ifndef NDEBUG
+  Z3_sort_kind kind = Z3_get_sort_kind(ctx, currentSort);
+  assert(kind == Z3_FLOATING_POINT_SORT && "e must floating point sort");
+#endif
+  if (useToIEEEBVFunction) {
+    return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+  }
+
+  // Introduce fresh bitvector variable of appropriate width and
+  // add a side constraint that this fresh variable converted
+  // to a floating point sort is equal to `e`.
+  //
+  // The purpose of doing the encoding this way is to avoid `fp.to_ieee_bv`
+  // being used in printed constraints because it is not part of SMT-LIB.
+  unsigned exponentBits = Z3_fpa_get_ebits(ctx, currentSort);
+  unsigned significandBits =
+      Z3_fpa_get_sbits(ctx, currentSort); // Includes implicit bit
+  unsigned floatWidth = exponentBits + significandBits;
+  Z3SortHandle bvSort = getBvSort(floatWidth);
+  Z3ASTHandle freshBv = Z3ASTHandle(
+      Z3_mk_fresh_const(ctx, /*prefix=*/"fresh_to_ieee_bv_", bvSort), ctx);
+
+  // Create side constraint
+  Z3ASTHandle freshBvAsFloat = castToFloat(freshBv);
+  Z3ASTHandle freshBvEqualityConstraint = eqExpr(e, freshBvAsFloat);
+  sideConstraints.push_back(freshBvEqualityConstraint);
+  return freshBv;
+}
 
 Z3SortHandle Z3Builder::getFloatSortFromBitWidth(unsigned bitWidth) {
   // FIXME: Cache these

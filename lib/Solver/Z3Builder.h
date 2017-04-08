@@ -179,13 +179,15 @@ private:
 
   Z3ASTHandle getRoundingModeSort(llvm::APFloat::roundingMode);
   Z3ASTHandle getx87FP80ExplicitSignificandIntegerBit(Z3ASTHandle);
+  Z3ASTHandle toIEEEBits(Z3ASTHandle e);
 
   bool autoClearConstructCache;
+  const bool useToIEEEBVFunction;
 
 public:
   Z3_context ctx;
 
-  Z3Builder(bool autoClearConstructCache = true);
+  Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction);
   ~Z3Builder();
 
   Z3ASTHandle getTrue();
