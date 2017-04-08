@@ -64,6 +64,11 @@ CoreSolverOptimizeDivides("solver-optimize-divides",
                  llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
                  llvm::cl::init(false));
 
+llvm::cl::opt<bool> Z3GetConstraintLogUseToIEEEBV(
+    "z3-log-use-to-ieee-bv",
+    llvm::cl::desc(
+        "When logging constraints use fp.ieee_to_bv (default=false)"),
+    llvm::cl::init(false));
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
  * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone

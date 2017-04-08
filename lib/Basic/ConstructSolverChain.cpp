@@ -54,8 +54,14 @@ Solver *constructSolverChain(Solver *coreSolver,
     std::string filePath = baseCoreSolverLangLogPath;
     filePath += fileExtension;
 
+    ConstraintLogConfig *clc = NULL;
+    Z3ConstraintLogConfig z3clc;
+    z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
+    if (CoreSolverToUse == Z3_SOLVER) {
+      clc = &z3clc;
+    }
     solver = createCoreSolverLangLoggingSolver(solver, filePath,
-                                               MinQueryTimeToLog, /*clc=*/NULL);
+                                               MinQueryTimeToLog, /*clc=*/clc);
     klee_message(
         "Logging queries that reach solver in core solver's language to %s\n",
         filePath.c_str());
@@ -78,6 +84,7 @@ Solver *constructSolverChain(Solver *coreSolver,
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
     z3clc.ackermannizeArrays = true;
+    z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
     if (CoreSolverToUse == Z3_SOLVER) {
       clc = &z3clc;
     } else {
@@ -136,8 +143,14 @@ Solver *constructSolverChain(Solver *coreSolver,
     std::string filePath = queryCoreSolverLangLogPath;
     filePath += fileExtension;
 
+    ConstraintLogConfig *clc = NULL;
+    Z3ConstraintLogConfig z3clc;
+    z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
+    if (CoreSolverToUse == Z3_SOLVER) {
+      clc = &z3clc;
+    }
     solver = createCoreSolverLangLoggingSolver(solver, filePath,
-                                               MinQueryTimeToLog, /*clc=*/NULL);
+                                               MinQueryTimeToLog, /*clc=*/clc);
     klee_message(
         "Logging all queries in core solver's language to %s\n",
         filePath.c_str());
