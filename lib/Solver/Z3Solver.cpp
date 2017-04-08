@@ -99,8 +99,10 @@ public:
 };
 
 Z3SolverImpl::Z3SolverImpl()
-    : builder(new Z3Builder(/*autoClearConstructCache=*/false)), timeout(0.0),
-      runStatusCode(SOLVER_RUN_STATUS_FAILURE), dumpedQueriesFile(0) {
+    : builder(new Z3Builder(/*autoClearConstructCache=*/false,
+                            /*useToIEEEBVFunction=*/true)),
+      timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE),
+      dumpedQueriesFile(0) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
@@ -155,14 +157,6 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
                                      const char **fileExtension,
                                      const ConstraintLogConfig *clc) {
   std::vector<Z3ASTHandle> assumptions;
-  // We use a different builder here because we don't want to interfere
-  // with the solver's builder because it may change the solver builder's
-  // cache.
-  //
-  // In particular using the same builder causes problems with the array
-  // ackermannization code.
-  Z3Builder temp_builder;
-
   Z3ConstraintLogConfig z3clcDefault;
   const Z3ConstraintLogConfig *z3clc = &z3clcDefault;
 
@@ -172,6 +166,14 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
       z3clc = z3clcParam;
     }
   }
+  // We use a different builder here because we don't want to interfere
+  // with the solver's builder because it may change the solver builder's
+  // cache.
+  //
+  // In particular using the same builder causes problems with the array
+  // ackermannization code.
+  Z3Builder temp_builder(/*autoClearConstructCache=*/false,
+                         z3clc->useToIEEEBVFunction);
 
   if (z3clc->ackermannizeArrays) {
     // Config requests to ackermannize the logged query.

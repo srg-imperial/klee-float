@@ -35,9 +35,11 @@ class Z3ConstraintLogConfig : public ConstraintLogConfig {
 public:
   // Configuration settings
   bool ackermannizeArrays;
+  bool useToIEEEBVFunction;
 
   Z3ConstraintLogConfig()
-      : ConstraintLogConfig(CLCK_Z3), ackermannizeArrays(false) {}
+      : ConstraintLogConfig(CLCK_Z3), ackermannizeArrays(false),
+        useToIEEEBVFunction(true) {}
   static bool classof(const ConstraintLogConfig *clc) {
     return clc->getKind() == CLCK_Z3;
   }
