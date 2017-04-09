@@ -40,6 +40,11 @@ llvm::cl::opt<bool> Z3AckermannizeConstantArrays(
     llvm::cl::desc(
         "Try to ackermannize constant arrays before building Z3 queries "
         "(experimental) (default false)"));
+
+llvm::cl::opt<bool> Z3SolverUseToIEEEBV(
+    "z3-solver-use-to-ieee-bv", llvm::cl::init(true),
+    llvm::cl::desc("Use fp.to_ieee_bv function in queries"
+                   "(experimental) (default true)"));
 }
 
 
@@ -100,7 +105,7 @@ public:
 
 Z3SolverImpl::Z3SolverImpl()
     : builder(new Z3Builder(/*autoClearConstructCache=*/false,
-                            /*useToIEEEBVFunction=*/true)),
+                            /*useToIEEEBVFunction=*/Z3SolverUseToIEEEBV)),
       timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE),
       dumpedQueriesFile(0) {
   assert(builder && "unable to create Z3Builder");
