@@ -64,11 +64,12 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
                  baseSolverQuerySMT2LogPath.c_str());
   }
 
+  // FIXME: Refactor this
   if (optionIsSet(queryLoggingOptions, SOLVER_CORE_SOLVER_LANG)) {
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
     z3clc.ackermannizeArrays = false;
-    z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
+    z3clc.useToIEEEBVFunction = true;
     if (CoreSolverToUse == Z3_SOLVER) {
       clc = &z3clc;
     }
@@ -79,12 +80,29 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
         "Logging queries that reach solver in core solver's language to %s\n",
         filePath.c_str());
   }
+  if (optionIsSet(queryLoggingOptions,
+                  SOLVER_CORE_SOLVER_LANG_NO_USE_FP_TO_IEEE_BV)) {
+    ConstraintLogConfig *clc = NULL;
+    Z3ConstraintLogConfig z3clc;
+    z3clc.ackermannizeArrays = false;
+    z3clc.useToIEEEBVFunction = false;
+    if (CoreSolverToUse == Z3_SOLVER) {
+      clc = &z3clc;
+    }
+    std::string filePath = getSolverPath(solver, baseCoreSolverLangLogPath, clc,
+                                         "no_fp_to_ieee_bv.");
+    solver = createCoreSolverLangLoggingSolver(solver, filePath,
+                                               MinQueryTimeToLog, /*clc=*/clc);
+    klee_message("Logging queries that reach solver avoiding use of "
+                 "fp.to_ieee_bv in core solver's language to %s\n",
+                 filePath.c_str());
+  }
 
   if (optionIsSet(queryLoggingOptions, SOLVER_CORE_SOLVER_LANG_AA)) {
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
     z3clc.ackermannizeArrays = true;
-    z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
+    z3clc.useToIEEEBVFunction = true;
     if (CoreSolverToUse == Z3_SOLVER) {
       clc = &z3clc;
     } else {
@@ -95,6 +113,27 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
     solver = createCoreSolverLangLoggingSolver(solver, filePath,
                                                MinQueryTimeToLog, /*clc=*/clc);
     klee_message("Logging all (might be ackermannized) queries in core "
+                 "solver's language to %s\n",
+                 filePath.c_str());
+  }
+  if (optionIsSet(queryLoggingOptions,
+                  SOLVER_CORE_SOLVER_LANG_AA_NO_USE_FP_TO_IEEE_BV)) {
+    ConstraintLogConfig *clc = NULL;
+    Z3ConstraintLogConfig z3clc;
+    z3clc.ackermannizeArrays = true;
+    z3clc.useToIEEEBVFunction = false;
+    if (CoreSolverToUse == Z3_SOLVER) {
+      clc = &z3clc;
+    } else {
+      llvm::errs() << "Core solver is not Z3, cannot ackermannize arrays\n";
+    }
+
+    std::string filePath = getSolverPath(solver, baseCoreSolverLangLogPath, clc,
+                                         "aa.no_fp_to_ieee_bv.");
+    solver = createCoreSolverLangLoggingSolver(solver, filePath,
+                                               MinQueryTimeToLog, /*clc=*/clc);
+    klee_message("Logging all (might be ackermannized) queries avoiding use of "
+                 "fp.to_ieee_bv in core "
                  "solver's language to %s\n",
                  filePath.c_str());
   }
@@ -134,7 +173,8 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
   if (optionIsSet(queryLoggingOptions, ALL_CORE_SOLVER_LANG)) {
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
-    z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
+    z3clc.useToIEEEBVFunction = true;
+    z3clc.ackermannizeArrays = false;
     if (CoreSolverToUse == Z3_SOLVER) {
       clc = &z3clc;
     }
