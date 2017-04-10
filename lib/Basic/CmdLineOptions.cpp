@@ -64,12 +64,6 @@ CoreSolverOptimizeDivides("solver-optimize-divides",
                  llvm::cl::desc("Optimize constant divides into add/shift/multiplies before passing to core SMT solver (default=off)"),
                  llvm::cl::init(false));
 
-llvm::cl::opt<bool> Z3GetConstraintLogUseToIEEEBV(
-    "z3-log-use-to-ieee-bv",
-    llvm::cl::desc(
-        "When logging constraints use fp.ieee_to_bv (default=false)"),
-    llvm::cl::init(false));
-
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
  * if an option is set. Unfortunately with gcc4.7 cl::bits<> is broken with LLVM2.9 and I doubt everyone
  * wants to patch their copy of LLVM just for these options.
@@ -95,6 +89,15 @@ llvm::cl::list<QueryLoggingSolverType> queryLoggingOptions(
         clEnumValN(SOLVER_CORE_SOLVER_LANG_AA, "solver:core_aa",
                    "All queries reaching the solver in the solver's native "
                    "format with array ackermannization if supported"),
+        clEnumValN(SOLVER_CORE_SOLVER_LANG_NO_USE_FP_TO_IEEE_BV,
+                   "solver:core_no_use_fp_to_ieee_bv",
+                   "All queries reaching the solver in the solver's native "
+                   "format not using fp.to_ieee_bv"),
+        clEnumValN(SOLVER_CORE_SOLVER_LANG_AA_NO_USE_FP_TO_IEEE_BV,
+                   "solver:core_aa_no_use_fp_to_ieee_bv",
+                   "All queries reaching the solver in the solver's native "
+                   "format not using fp.to_ieee_bv with array ackermannization "
+                   "if supported"),
         clEnumValEnd),
     llvm::cl::CommaSeparated);
 
