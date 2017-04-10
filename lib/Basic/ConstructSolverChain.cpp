@@ -17,7 +17,32 @@
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace {
+
+using namespace klee;
+
+std::string getSolverPath(Solver *solver, std::string& base,
+                          const ConstraintLogConfig *clc,
+                          const char *extensionPrefix = NULL) {
+  // FIXME: Kind of gross. Should probably have method on solver
+  // that just gives us the file extension.
+  // Create dummy query to determine file extension
+  const char* fileExtension = NULL;
+  ConstraintManager cm;
+  Query q(cm, ConstantExpr::alloc(0, Expr::Bool));
+  char *dummy = solver->getConstraintLog(q, &fileExtension, /*clc=*/clc);
+  free(dummy);
+  std::string filePath = base;
+  if (extensionPrefix) {
+    filePath += extensionPrefix;
+  }
+  filePath += fileExtension;
+  return filePath;
+}
+}
+
 namespace klee {
+
 Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
                              std::string queryPCLogPath,
@@ -41,24 +66,14 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
   }
 
   if (optionIsSet(queryLoggingOptions, SOLVER_CORE_SOLVER_LANG)) {
-    const char* fileExtension = NULL;
-
-    // FIXME: Kind of gross. Should probably have method on solver
-    // that just gives us the file extension.
-    // Create dummy query to determine file extension
-    ConstraintManager cm;
-    Query q(cm, ConstantExpr::alloc(0, Expr::Bool));
-    char *dummy = solver->getConstraintLog(q, &fileExtension, /*clc=*/NULL);
-    free(dummy);
-    std::string filePath = baseCoreSolverLangLogPath;
-    filePath += fileExtension;
-
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
+    z3clc.ackermannizeArrays = false;
     z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
     if (CoreSolverToUse == Z3_SOLVER) {
       clc = &z3clc;
     }
+    std::string filePath = getSolverPath(solver, baseCoreSolverLangLogPath, clc, NULL);
     solver = createCoreSolverLangLoggingSolver(solver, filePath,
                                                MinQueryTimeToLog, /*clc=*/clc);
     klee_message(
@@ -67,19 +82,6 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
   }
 
   if (optionIsSet(queryLoggingOptions, SOLVER_CORE_SOLVER_LANG_AA)) {
-    const char *fileExtension = NULL;
-
-    // FIXME: Kind of gross. Should probably have method on solver
-    // that just gives us the file extension.
-    // Create dummy query to determine file extension
-    ConstraintManager cm;
-    Query q(cm, ConstantExpr::alloc(0, Expr::Bool));
-    char *dummy = solver->getConstraintLog(q, &fileExtension, /*clc=*/NULL);
-    free(dummy);
-    std::string filePath = baseCoreSolverLangLogPath;
-    filePath += "aa."; // give different name
-    filePath += fileExtension;
-
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
     z3clc.ackermannizeArrays = true;
@@ -90,6 +92,7 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
       llvm::errs() << "Core solver is not Z3, cannot ackermannize arrays\n";
     }
 
+    std::string filePath = getSolverPath(solver, baseCoreSolverLangLogPath, clc, "aa.");
     solver = createCoreSolverLangLoggingSolver(solver, filePath,
                                                MinQueryTimeToLog, /*clc=*/clc);
     klee_message("Logging all (might be ackermannized) queries in core "
@@ -129,24 +132,13 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
   }
 
   if (optionIsSet(queryLoggingOptions, ALL_CORE_SOLVER_LANG)) {
-    const char* fileExtension = NULL;
-
-    // FIXME: Kind of gross. Should probably have method on solver
-    // that just gives us the file extension.
-    // Create dummy query to determine file extension
-    ConstraintManager cm;
-    Query q(cm, ConstantExpr::alloc(0, Expr::Bool));
-    char *dummy = solver->getConstraintLog(q, &fileExtension, /*clc=*/NULL);
-    free(dummy);
-    std::string filePath = queryCoreSolverLangLogPath;
-    filePath += fileExtension;
-
     ConstraintLogConfig *clc = NULL;
     Z3ConstraintLogConfig z3clc;
     z3clc.useToIEEEBVFunction = Z3GetConstraintLogUseToIEEEBV;
     if (CoreSolverToUse == Z3_SOLVER) {
       clc = &z3clc;
     }
+    std::string filePath = getSolverPath(solver, queryCoreSolverLangLogPath, clc, NULL);
     solver = createCoreSolverLangLoggingSolver(solver, filePath,
                                                MinQueryTimeToLog, /*clc=*/clc);
     klee_message(
