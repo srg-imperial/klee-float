@@ -1300,8 +1300,17 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
     case Expr::Int16:
     case Expr::Int32:
     case Expr::Int64:
-    case Expr::Int128:
-      return toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+    case Expr::Int128: {
+      Z3ASTHandle ieeeBits =
+          toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+#ifndef NDEBUG
+      Z3SortHandle ieeeBitsSort =
+          Z3SortHandle(Z3_get_sort(ctx, ieeeBits), ctx);
+      assert(Z3_get_sort_kind(ctx, ieeeBitsSort) == Z3_BV_SORT);
+      assert(Z3_get_bv_sort_size(ctx, ieeeBitsSort) == floatWidth);
+#endif
+      return ieeeBits;
+    }
     case 79: {
       // This is Expr::Fl80 (64 bit exponent, 15 bit significand) but due to
       // the "implicit" bit actually being implicit in x87 fp80 the sum of
@@ -1310,6 +1319,12 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
       // Get Z3's IEEE representation
       Z3ASTHandle ieeeBits =
           toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+#ifndef NDEBUG
+      Z3SortHandle ieeeBitsSort =
+          Z3SortHandle(Z3_get_sort(ctx, ieeeBits), ctx);
+      assert(Z3_get_sort_kind(ctx, ieeeBitsSort) == Z3_BV_SORT);
+      assert(Z3_get_bv_sort_size(ctx, ieeeBitsSort) == 79);
+#endif
 
       // Construct the x87 fp80 bit representation
       Z3ASTHandle signBit = Z3ASTHandle(
