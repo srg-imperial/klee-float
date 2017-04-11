@@ -1301,8 +1301,7 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
     case Expr::Int32:
     case Expr::Int64:
     case Expr::Int128: {
-      Z3ASTHandle ieeeBits =
-          toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+      Z3ASTHandle ieeeBits = toFloatTypeBits(e);
 #ifndef NDEBUG
       Z3SortHandle ieeeBitsSort =
           Z3SortHandle(Z3_get_sort(ctx, ieeeBits), ctx);
@@ -1315,33 +1314,7 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
       // This is Expr::Fl80 (64 bit exponent, 15 bit significand) but due to
       // the "implicit" bit actually being implicit in x87 fp80 the sum of
       // the exponent and significand bitwidth is 79 not 80.
-
-      // Get Z3's IEEE representation
-      Z3ASTHandle ieeeBits =
-          toIEEEBits(e); // Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
-#ifndef NDEBUG
-      Z3SortHandle ieeeBitsSort =
-          Z3SortHandle(Z3_get_sort(ctx, ieeeBits), ctx);
-      assert(Z3_get_sort_kind(ctx, ieeeBitsSort) == Z3_BV_SORT);
-      assert(Z3_get_bv_sort_size(ctx, ieeeBitsSort) == 79);
-#endif
-
-      // Construct the x87 fp80 bit representation
-      Z3ASTHandle signBit = Z3ASTHandle(
-          Z3_mk_extract(ctx, /*high=*/78, /*low=*/78, ieeeBits), ctx);
-      Z3ASTHandle exponentBits = Z3ASTHandle(
-          Z3_mk_extract(ctx, /*high=*/77, /*low=*/63, ieeeBits), ctx);
-      Z3ASTHandle significandIntegerBit =
-          getx87FP80ExplicitSignificandIntegerBit(e);
-      Z3ASTHandle significandFractionBits = Z3ASTHandle(
-          Z3_mk_extract(ctx, /*high=*/62, /*low=*/0, ieeeBits), ctx);
-
-      Z3ASTHandle x87FP80Bits =
-          Z3ASTHandle(Z3_mk_concat(ctx, signBit, exponentBits), ctx);
-      x87FP80Bits = Z3ASTHandle(
-          Z3_mk_concat(ctx, x87FP80Bits, significandIntegerBit), ctx);
-      x87FP80Bits = Z3ASTHandle(
-          Z3_mk_concat(ctx, x87FP80Bits, significandFractionBits), ctx);
+      Z3ASTHandle x87FP80Bits = toFloatTypeBits(e);
 #ifndef NDEBUG
       Z3SortHandle x87FP80BitsSort =
           Z3SortHandle(Z3_get_sort(ctx, x87FP80Bits), ctx);
@@ -1359,14 +1332,68 @@ Z3ASTHandle Z3Builder::castToBitVector(Z3ASTHandle e) {
   }
 }
 
-Z3ASTHandle Z3Builder::toIEEEBits(Z3ASTHandle e) {
+/// \param e Z3ASTHandle that is of floating point sort.
+/// \return Z3ASTHandle that represents
+/// the parameter as a bitvector. For all widths except
+/// 79 the returned bitvector is IEEE-754 compliant. For
+/// width 79 an 80-bit wide bitvector is returned that uses
+/// the x86_fp80 encoding.
+Z3ASTHandle Z3Builder::toFloatTypeBits(Z3ASTHandle e) {
   Z3SortHandle currentSort = Z3SortHandle(Z3_get_sort(ctx, e), ctx);
 #ifndef NDEBUG
   Z3_sort_kind kind = Z3_get_sort_kind(ctx, currentSort);
   assert(kind == Z3_FLOATING_POINT_SORT && "e must floating point sort");
 #endif
+  unsigned exponentBits = Z3_fpa_get_ebits(ctx, currentSort);
+  unsigned significandBits =
+      Z3_fpa_get_sbits(ctx, currentSort); // Includes implicit bit
+  unsigned floatWidth = exponentBits + significandBits;
+
   if (useToIEEEBVFunction) {
-    return Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+    Z3ASTHandle ieeeBits = Z3ASTHandle(Z3_mk_fpa_to_ieee_bv(ctx, e), ctx);
+    if (floatWidth != 79) {
+#ifndef NDEBUG
+      Z3SortHandle ieeeBitsSort = Z3SortHandle(Z3_get_sort(ctx, ieeeBits), ctx);
+      assert(Z3_get_sort_kind(ctx, ieeeBitsSort) == Z3_BV_SORT);
+      assert(Z3_get_bv_sort_size(ctx, ieeeBitsSort) == floatWidth);
+#endif
+      // These types are IEEE-754 compliant so we can just return
+      // directly.
+      return ieeeBits;
+    }
+    // This is Expr::Fl80 (64 bit exponent, 15 bit significand) but due to
+    // the "implicit" bit actually being implicit in x87 fp80 the sum of
+    // the exponent and significand bitwidth is 79 not 80.
+
+#ifndef NDEBUG
+    Z3SortHandle ieeeBitsSort = Z3SortHandle(Z3_get_sort(ctx, ieeeBits), ctx);
+    assert(Z3_get_sort_kind(ctx, ieeeBitsSort) == Z3_BV_SORT);
+    assert(Z3_get_bv_sort_size(ctx, ieeeBitsSort) == 79);
+#endif
+
+    // Construct the x87 fp80 bit representation
+    Z3ASTHandle signBit =
+        Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/78, /*low=*/78, ieeeBits), ctx);
+    Z3ASTHandle exponentBits =
+        Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/77, /*low=*/63, ieeeBits), ctx);
+    Z3ASTHandle significandIntegerBit =
+        getx87FP80ExplicitSignificandIntegerBit(e);
+    Z3ASTHandle significandFractionBits =
+        Z3ASTHandle(Z3_mk_extract(ctx, /*high=*/62, /*low=*/0, ieeeBits), ctx);
+
+    Z3ASTHandle x87FP80Bits =
+        Z3ASTHandle(Z3_mk_concat(ctx, signBit, exponentBits), ctx);
+    x87FP80Bits =
+        Z3ASTHandle(Z3_mk_concat(ctx, x87FP80Bits, significandIntegerBit), ctx);
+    x87FP80Bits = Z3ASTHandle(
+        Z3_mk_concat(ctx, x87FP80Bits, significandFractionBits), ctx);
+#ifndef NDEBUG
+    Z3SortHandle x87FP80BitsSort =
+        Z3SortHandle(Z3_get_sort(ctx, x87FP80Bits), ctx);
+    assert(Z3_get_sort_kind(ctx, x87FP80BitsSort) == Z3_BV_SORT);
+    assert(Z3_get_bv_sort_size(ctx, x87FP80BitsSort) == 80);
+#endif
+    return x87FP80Bits;
   }
 
   // Introduce fresh bitvector variable of appropriate width and
@@ -1375,10 +1402,6 @@ Z3ASTHandle Z3Builder::toIEEEBits(Z3ASTHandle e) {
   //
   // The purpose of doing the encoding this way is to avoid `fp.to_ieee_bv`
   // being used in printed constraints because it is not part of SMT-LIB.
-  unsigned exponentBits = Z3_fpa_get_ebits(ctx, currentSort);
-  unsigned significandBits =
-      Z3_fpa_get_sbits(ctx, currentSort); // Includes implicit bit
-  unsigned floatWidth = exponentBits + significandBits;
 
   if (floatWidth == 79) {
     // We model x86_fp80 as a 79 bit float in Z3 so we converting back
