@@ -25,8 +25,10 @@ struct ArrayAckermannizationInfo {
   bool isWholeArray() const;
   ArrayAckermannizationInfo();
   void dump() const;
-  bool overlapsWith(ArrayAckermannizationInfo& other) const;
-  bool hasSameBounds(ArrayAckermannizationInfo &other) const;
+  bool overlapsWith(const ArrayAckermannizationInfo &other) const;
+  bool hasSameBounds(const ArrayAckermannizationInfo &other) const;
+  bool isContainedWithin(const ArrayAckermannizationInfo &other) const;
+  bool encloses(const ArrayAckermannizationInfo &other) const;
   bool containsByte(unsigned offset) const;
   bool containsBit(unsigned offset) const;
 };
