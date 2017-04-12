@@ -518,10 +518,19 @@ void Z3SolverImpl::ackermannizeArrays(
       std::string str;
       llvm::raw_string_ostream os(str);
       os << aaInfo->getArray()->name << "_ackermann";
-      Z3ASTHandle replacementVar = z3Builder->getFreshBitVectorVariable(
-          aaInfo->toReplace->getWidth(), os.str().c_str());
-      bool success = z3Builder->addReplacementExpr(aaInfo->toReplace, replacementVar);
-      assert(success && "Failed to add replacement variable");
+      assert(aaInfo->toReplace.size() > 0);
+      Z3ASTHandle replacementVar;
+      for (ExprHashSet::const_iterator ei = aaInfo->toReplace.begin(),
+                                       ee = aaInfo->toReplace.end();
+           ei != ee; ++ei) {
+        ref<Expr> toReplace = *ei;
+        if (replacementVar.isNull()) {
+          replacementVar = z3Builder->getFreshBitVectorVariable(
+              toReplace->getWidth(), os.str().c_str());
+        }
+        bool success = z3Builder->addReplacementExpr(toReplace, replacementVar);
+        assert(success && "Failed to add replacement variable");
+      }
       arrayReplacements[aaInfo] = replacementVar;
     }
   }

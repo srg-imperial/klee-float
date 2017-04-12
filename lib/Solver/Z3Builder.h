@@ -69,6 +69,9 @@ public:
     }
     return *this;
   }
+
+  bool isNull() const { return node == NULL; }
+
   // To be specialised
   void dump();
 
