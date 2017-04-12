@@ -163,6 +163,12 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
                                      const ConstraintLogConfig *clc) {
   std::vector<Z3ASTHandle> assumptions;
   Z3ConstraintLogConfig z3clcDefault;
+
+  // Make sure that the default behaviour matches what the solver is
+  // doing.
+  z3clcDefault.useToIEEEBVFunction = this->builder->useToIEEEBVFunction;
+  z3clcDefault.ackermannizeArrays = Z3AckermannizeArrays;
+
   const Z3ConstraintLogConfig *z3clc = &z3clcDefault;
 
   if (clc) {
