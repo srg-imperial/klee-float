@@ -10,11 +10,16 @@ int main() {
   float f;
   klee_make_symbolic(&f, sizeof(f), "f");
   float result = -f;
+  if (isnan(f)) {
+    // FIXME: We don't model the sign bit in NaNs
+    // so we can't do the check here
+    assert(isnan(result));
+    return 0;
+  }
   if (signbit(f)) {
     assert(!signbit(result));
   } else {
-    if (!isnan(f))
-      assert(signbit(result));
+    assert(signbit(result));
   }
   return 0;
 }
