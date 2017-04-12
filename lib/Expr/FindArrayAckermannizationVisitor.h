@@ -25,6 +25,7 @@ struct ArrayAckermannizationInfo {
   ArrayAckermannizationInfo();
   void dump() const;
   bool overlapsWith(ArrayAckermannizationInfo& other) const;
+  bool hasSameBounds(ArrayAckermannizationInfo &other) const;
 
   // Get Replacement expression. This will return a NULL expr
   // if a replacement with a plain variable should be made and
