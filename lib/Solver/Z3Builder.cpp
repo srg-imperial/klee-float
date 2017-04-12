@@ -1471,7 +1471,7 @@ Z3ASTHandle Z3Builder::getRoundingModeSort(llvm::APFloat::roundingMode rm) {
 }
 
 Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
-                                              const char *name) {
+                                              const char *prefix) {
 #ifndef NDEBUG
   ExprHashMap<Z3ASTHandle>::iterator it = replaceWithExpr.find(e);
   assert(it == replaceWithExpr.end() &&
@@ -1482,8 +1482,8 @@ Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
   // Create fresh variable
   // Does Z3 care about the string symbol name used for variables?
   Z3SortHandle sort = getBvSort(e->getWidth());
-  Z3_symbol s = Z3_mk_string_symbol(ctx, name);
-  Z3ASTHandle newVar = Z3ASTHandle(Z3_mk_const(ctx, s, sort), ctx);
+  Z3ASTHandle newVar =
+      Z3ASTHandle(Z3_mk_fresh_const(ctx, /*prefix=*/prefix, sort), ctx);
   replaceWithExpr.insert(std::make_pair(e, newVar));
   return newVar;
 }
