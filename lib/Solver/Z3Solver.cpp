@@ -115,7 +115,7 @@ Z3SolverImpl::Z3SolverImpl()
   setCoreSolverTimeout(timeout);
 
   // HACK: This changes Z3's handling of the `to_ieee_bv` function so that
-  // we get a signal bit pattern interpretation for NaN. At the time of writing
+  // we get a single bit pattern interpretation for NaN. At the time of writing
   // without this option Z3 sometimes generates models which don't satisfy the
   // original constraints.
   //
