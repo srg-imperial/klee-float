@@ -63,6 +63,12 @@ bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) c
   return false;
 }
 
+bool ArrayAckermannizationInfo::hasSameBounds(
+    ArrayAckermannizationInfo &other) const {
+  return (other.contiguousLSBitIndex == this->contiguousLSBitIndex) &&
+         (other.contiguousMSBitIndex == this->contiguousMSBitIndex);
+}
+
 ref<Expr> ArrayAckermannizationInfo::getReplacement() const {
   const Array *theArray = getArray();
   // Should be replaced with a plain variable
@@ -256,6 +262,7 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
            i = ackInfos->begin(),
            ie = ackInfos->end();
        i != ie; ++i) {
+    assert(!(i->hasSameBounds(ackInfo)) && "FIXME");
     if (i->overlapsWith(ackInfo)) {
       goto failedMatch;
     }
@@ -320,6 +327,7 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
            i = ackInfos->begin(),
            ie = ackInfos->end();
        i != ie; ++i) {
+    assert(!(i->hasSameBounds(ackInfo)) && "FIXME");
     if (i->overlapsWith(ackInfo)) {
       goto failedMatch;
     }
