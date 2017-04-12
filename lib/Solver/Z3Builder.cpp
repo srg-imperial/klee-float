@@ -1470,22 +1470,19 @@ Z3ASTHandle Z3Builder::getRoundingModeSort(llvm::APFloat::roundingMode rm) {
   }
 }
 
-Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
-                                              const char *prefix) {
-#ifndef NDEBUG
-  ExprHashMap<Z3ASTHandle>::iterator it = replaceWithExpr.find(e);
-  assert(it == replaceWithExpr.end() &&
-         "Cannot add replacement for an expression that "
-         "already has a replacement");
-#endif
-
+Z3ASTHandle Z3Builder::getFreshBitVectorVariable(unsigned bitWidth,
+                                                 const char *prefix) {
   // Create fresh variable
-  // Does Z3 care about the string symbol name used for variables?
-  Z3SortHandle sort = getBvSort(e->getWidth());
+  Z3SortHandle sort = getBvSort(bitWidth);
   Z3ASTHandle newVar =
       Z3ASTHandle(Z3_mk_fresh_const(ctx, /*prefix=*/prefix, sort), ctx);
-  replaceWithExpr.insert(std::make_pair(e, newVar));
   return newVar;
+}
+
+bool Z3Builder::addReplacementExpr(const ref<Expr> e, Z3ASTHandle replacement) {
+  std::pair<ExprHashMap<Z3ASTHandle>::iterator, bool> result =
+      replaceWithExpr.insert(std::make_pair(e, replacement));
+  return result.second;
 }
 
 void Z3Builder::clearReplacements() {
