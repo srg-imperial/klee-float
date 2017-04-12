@@ -440,7 +440,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
                 (((offset + 1) * 8) -1) > info->contiguousMSBitIndex) {
               continue;
             }
-            
+
             // This is the ackermannized region for this offset.
             Z3ASTHandle replacementVariable = arrayReplacements[info];
             assert((offset*8) >= info->contiguousLSBitIndex);
@@ -581,7 +581,6 @@ void Z3SolverImpl::ackermannizeArrays(
     faav.visit(*it);
   }
   faav.visit(query.expr);
-  int counter = 0; // Used to create unique names
   for (FindArrayAckermannizationVisitor::ArrayToAckermannizationInfoMapTy::
            const_iterator aaii = faav.ackermannizationInfo.begin(),
                           aaie = faav.ackermannizationInfo.end();
@@ -599,11 +598,10 @@ void Z3SolverImpl::ackermannizeArrays(
         // Replace with variable
         std::string str;
         llvm::raw_string_ostream os(str);
-        os << aaInfo->getArray()->name << "_ackermann_" << counter;
+        os << aaInfo->getArray()->name << "_ackermann";
         Z3ASTHandle replacementVar = z3Builder->addReplacementVariable(
             aaInfo->toReplace, os.str().c_str());
         arrayReplacements[aaInfo] = replacementVar;
-        ++counter;
       } else if (isa<ConstantExpr>(replacement)) {
         // Replace with constant
         Z3ASTHandle replacementConstant =

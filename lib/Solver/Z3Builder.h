@@ -210,7 +210,7 @@ public:
   // all uses of the expression `e` will be replaced with the
   // fresh variable. This function can be called multiple times
   // to add multiple replacements. The replacements are cleared
-  Z3ASTHandle addReplacementVariable(const ref<Expr> e, const char* name);
+  Z3ASTHandle addReplacementVariable(const ref<Expr> e, const char *prefix);
   // Clear the stored replacement variables.
   void clearReplacements();
 
