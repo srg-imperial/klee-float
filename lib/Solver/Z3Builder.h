@@ -203,12 +203,16 @@ public:
   void clearSideConstraints() { sideConstraints.clear(); }
   void closeInteractionLog(); // Should be called before aborting
 
-  // Create a fresh variable of bitvector type that has the width
-  // of the passed in expression and during calls to `construct()`
-  // all uses of the expression `e` will be replaced with the
-  // fresh variable. This function can be called multiple times
-  // to add multiple replacements. The replacements are cleared
-  Z3ASTHandle addReplacementVariable(const ref<Expr> e, const char *prefix);
+  // Create a fresh variable of bitvector type with the specified width.
+  Z3ASTHandle getFreshBitVectorVariable(unsigned bitWidth, const char *prefix);
+
+  // Add replacement expression so that all uses of the expression `e` will be
+  // replaced with the `replacement`. This function can be called multiple
+  // times to add multiple replacements. The replacements are cleared by calling
+  // `clearReplacements`.
+  // Returns true if the replacement was successfully added.
+  bool addReplacementExpr(const ref<Expr> e, Z3ASTHandle replacement);
+
   // Clear the stored replacement variables.
   void clearReplacements();
 };
