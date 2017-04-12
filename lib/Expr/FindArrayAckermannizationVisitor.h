@@ -10,13 +10,14 @@
 #ifndef KLEE_FIND_ARRAY_ACKERMANNIZATION_VISITOR_H
 #define KLEE_FIND_ARRAY_ACKERMANNIZATION_VISITOR_H
 
+#include "klee/util/ExprHashMap.h"
 #include "klee/util/ExprVisitor.h"
 #include <map>
 
 namespace klee {
 
 struct ArrayAckermannizationInfo {
-  ref<Expr> toReplace;
+  ExprHashSet toReplace;
   unsigned contiguousMSBitIndex;
   unsigned contiguousLSBitIndex;
   unsigned getWidth() const;
