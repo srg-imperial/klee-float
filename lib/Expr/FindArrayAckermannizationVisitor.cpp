@@ -69,49 +69,9 @@ bool ArrayAckermannizationInfo::hasSameBounds(
          (other.contiguousMSBitIndex == this->contiguousMSBitIndex);
 }
 
-ref<Expr> ArrayAckermannizationInfo::getReplacement() const {
-  const Array *theArray = getArray();
-  // Should be replaced with a plain variable
-  if (theArray->isSymbolicArray())
-    return ref<Expr>(NULL);
-
-  // Replacement is read from a constant array. Make the equivilent
-  // ConstantExpr.
-  assert(theArray->isConstantArray() && "array should be constant");
-  assert((64 % theArray->range) == 0 &&
-         "array range must divide exactly into 64");
-  size_t chunks = (getWidth() + 63) / 64;
-  std::vector<uint64_t> bits(chunks);
-  assert(bits.size() == chunks);
-  size_t currentConstantArrayIndex =
-      (contiguousLSBitIndex % 8); // Start at array read
-  for (size_t chunkIndex = 0; chunkIndex < chunks; ++chunkIndex) {
-    size_t currentConstantArrayBitsRead = 0;
-    uint64_t chunkData = 0;
-    while (currentConstantArrayBitsRead < 64 &&
-           currentConstantArrayIndex < ((contiguousMSBitIndex + 1) % 8)) {
-      ref<ConstantExpr> chunkFragment =
-          theArray->constantValues[currentConstantArrayIndex];
-      uint64_t value = chunkFragment->getZExtValue();
-      assert(currentConstantArrayBitsRead < 64 && "would overshift");
-      chunkData |= (value) << currentConstantArrayBitsRead;
-      currentConstantArrayBitsRead += chunkFragment->getWidth();
-      ++currentConstantArrayIndex;
-    }
-    bits[chunkIndex] = chunkData;
-  }
-  // Finally make the APInt
-  llvm::APInt largeConstant(
-      /*numBits=*/getWidth(),
-      /*bigVal=*/llvm::ArrayRef<uint64_t>(bits.data(), bits.size()));
-
-  return ConstantExpr::alloc(largeConstant);
-}
-
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
-    bool recursive, bool ackermannizeConstantArrays)
-    : ExprVisitor(recursive),
-      ackermannizeConstantArrays(ackermannizeConstantArrays) {}
+    bool recursive)
+    : ExprVisitor(recursive) {}
 
 std::vector<ArrayAckermannizationInfo> *
 FindArrayAckermannizationVisitor::getOrInsertAckermannizationInfo(
@@ -171,7 +131,10 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
       goto failedMatch;
     }
 
-    if (!ackermannizeConstantArrays && theArray->isConstantArray()) {
+    // We don't try to ackermannize these because reads of a constant
+    // array at a constant index should have been constant folded
+    // away already.
+    if (theArray->isConstantArray()) {
       goto failedMatch;
     }
 
@@ -297,7 +260,10 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
     goto failedMatch;
   }
 
-  if (!ackermannizeConstantArrays && theArray->isConstantArray()) {
+  // We don't try to ackermannize these because reads of a constant
+  // array at a constant index should have been constant folded
+  // away already.
+  if (theArray->isConstantArray()) {
     goto failedMatch;
   }
 

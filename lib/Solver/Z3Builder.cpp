@@ -1409,22 +1409,6 @@ Z3ASTHandle Z3Builder::addReplacementVariable(const ref<Expr> e,
   return newVar;
 }
 
-Z3ASTHandle Z3Builder::addReplacementExpr(const ref<Expr> e,
-                                          const ref<Expr> replacement) {
-
-#ifndef NDEBUG
-  ExprHashMap<Z3ASTHandle>::iterator it = replaceWithExpr.find(e);
-  assert(it == replaceWithExpr.end() &&
-         "Cannot add replacement for an expression that "
-         "already has a replacement");
-#endif
-
-  Z3ASTHandle replacementZ3Expr =
-      Z3ASTHandle(constructActual(replacement, NULL), ctx);
-  replaceWithExpr.insert(std::make_pair(e, replacementZ3Expr));
-  return replacementZ3Expr;
-}
-
 void Z3Builder::clearReplacements() {
   // FIXME: Try to find a way to avoid doing this. We don't always
   // need to clear everything in the cache.
