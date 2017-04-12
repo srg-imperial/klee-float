@@ -159,7 +159,6 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   std::vector<ref<ReadExpr> > reads;
   ref<Expr> toReplace = ref<Expr>(const_cast<ConcatExpr *>(&ce));
   bool isFirst = true;
-  bool addedToExistingAI = false;
   unsigned MSBitIndex = 0;
   unsigned LSBitIndex = 0;
   unsigned widthReadSoFar = 0; // In bits
@@ -271,7 +270,6 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
   // (especially regions where the regions are completly inside another).
   // `ArrayAckermannizationInfo` needs to be worked to convey this information
   // better. For now disallow overlapping regions.
-  addedToExistingAI = false;
   for (std::vector<ArrayAckermannizationInfo>::iterator i = ackInfos->begin(),
                                                         ie = ackInfos->end();
        i != ie; ++i) {
@@ -279,19 +277,17 @@ FindArrayAckermannizationVisitor::visitConcat(const ConcatExpr &ce) {
       // We already have an `ArrayAckermannizationInfo` with the
       // same bounds. Just add this replacement expression to that.
       i->toReplace.insert(toReplace);
-      addedToExistingAI = true;
-      continue;
+      // We don't need to check overlap conflicts because we are just
+      // adding to an existing `ArrayAckermannizationInfo` where we
+      // have already checked for this.
+      return Action::skipChildren();
     }
     if (i->overlapsWith(ackInfo)) {
       goto failedMatch;
     }
   }
 
-  if (!addedToExistingAI) {
-    // Only add the new `ArrayAckermannizationInfo` if we didn't add this
-    // expression to an existing `ArrayAckermannizationInfo`.
-    ackInfos->push_back(ackInfo);
-  }
+  ackInfos->push_back(ackInfo);
   // We know the indices are simple constants so no need to traverse children
   return Action::skipChildren();
 
@@ -307,7 +303,6 @@ ExprVisitor::Action
 FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
   const Array *theArray = re.updates.root;
   bool wasInsert = true;
-  bool addedToExistingAI = false;
   ref<Expr> toReplace = ref<Expr>(const_cast<ReadExpr *>(&re));
   ArrayAckermannizationInfo ackInfo;
   std::vector<ArrayAckermannizationInfo> *ackInfos =
@@ -351,7 +346,6 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
   // (especially regions where the regions are completly inside another).
   // `ArrayAckermannizationInfo` needs to be worked to convey this information
   // better to Z3SolverImpl. For now disallow overlapping regions.
-  addedToExistingAI = false;
   for (std::vector<ArrayAckermannizationInfo>::iterator i = ackInfos->begin(),
                                                         ie = ackInfos->end();
        i != ie; ++i) {
@@ -359,19 +353,17 @@ FindArrayAckermannizationVisitor::visitRead(const ReadExpr &re) {
       // We already have an `ArrayAckermannizationInfo` with the
       // same bounds. Just add this replacement expression to that.
       i->toReplace.insert(toReplace);
-      addedToExistingAI = true;
-      continue;
+      // We don't need to check overlap conflicts because we are just
+      // adding to an existing `ArrayAckermannizationInfo` where we
+      // have already checked for this.
+      return Action::doChildren(); // Traverse index expression
     }
     if (i->overlapsWith(ackInfo)) {
       goto failedMatch;
     }
   }
 
-  if (!addedToExistingAI) {
-    // Only add the new `ArrayAckermannizationInfo` if we didn't add this
-    // expression to an existing `ArrayAckermannizationInfo`.
-    ackInfos->push_back(ackInfo);
-  }
+  ackInfos->push_back(ackInfo);
   return Action::doChildren(); // Traverse index expression
 
 failedMatch :
