@@ -182,9 +182,9 @@ private:
   Z3ASTHandle toFloatTypeBits(Z3ASTHandle e);
 
   bool autoClearConstructCache;
-  const bool useToIEEEBVFunction;
 
 public:
+  const bool useToIEEEBVFunction;
   Z3_context ctx;
 
   Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction);
