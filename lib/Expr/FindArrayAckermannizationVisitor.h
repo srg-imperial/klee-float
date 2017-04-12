@@ -26,12 +26,6 @@ struct ArrayAckermannizationInfo {
   void dump() const;
   bool overlapsWith(ArrayAckermannizationInfo& other) const;
   bool hasSameBounds(ArrayAckermannizationInfo &other) const;
-
-  // Get Replacement expression. This will return a NULL expr
-  // if a replacement with a plain variable should be made and
-  // a constant expression is returned for reads of constant
-  // arrays.
-  ref<Expr> getReplacement() const;
 };
 
 /// This class looks for opportunities to perform ackermannization (ackermann's
@@ -41,8 +35,7 @@ struct ArrayAckermannizationInfo {
 /// opportunities to apply the reduction.
 class FindArrayAckermannizationVisitor : public ExprVisitor {
 public:
-  FindArrayAckermannizationVisitor(bool recursive,
-                                   bool ackermannizeConstantArrays);
+  FindArrayAckermannizationVisitor(bool recursive);
   void clear();
 
   // FIXME: Should we hide this behind an interface?
@@ -62,7 +55,6 @@ public:
 protected:
   Action visitConcat(const ConcatExpr &);
   Action visitRead(const ReadExpr &);
-  const bool ackermannizeConstantArrays;
 };
 }
 
