@@ -69,6 +69,16 @@ bool ArrayAckermannizationInfo::hasSameBounds(
          (other.contiguousMSBitIndex == this->contiguousMSBitIndex);
 }
 
+bool ArrayAckermannizationInfo::containsByte(unsigned offset) const {
+  unsigned lsbit = offset * 8;
+  unsigned msbit = ((offset + 1) * 8) - 1;
+  return containsBit(lsbit) && containsBit(msbit);
+}
+
+bool ArrayAckermannizationInfo::containsBit(unsigned offset) const {
+  return (offset >= contiguousLSBitIndex) && (offset <= contiguousMSBitIndex);
+}
+
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
     bool recursive)
     : ExprVisitor(recursive) {}

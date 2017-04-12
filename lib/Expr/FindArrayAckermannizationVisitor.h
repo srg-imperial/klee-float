@@ -26,6 +26,8 @@ struct ArrayAckermannizationInfo {
   void dump() const;
   bool overlapsWith(ArrayAckermannizationInfo& other) const;
   bool hasSameBounds(ArrayAckermannizationInfo &other) const;
+  bool containsByte(unsigned offset) const;
+  bool containsBit(unsigned offset) const;
 };
 
 /// This class looks for opportunities to perform ackermannization (ackermann's
