@@ -71,7 +71,8 @@ void ArrayAckermannizationInfo::dump() const {
   }
 }
 
-bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) const {
+bool ArrayAckermannizationInfo::overlapsWith(
+    const ArrayAckermannizationInfo &other) const {
   // right edge of other inside this
   if (other.contiguousLSBitIndex >= this->contiguousLSBitIndex &&
       other.contiguousLSBitIndex <= this->contiguousMSBitIndex) {
@@ -86,7 +87,7 @@ bool ArrayAckermannizationInfo::overlapsWith(ArrayAckermannizationInfo& other) c
 }
 
 bool ArrayAckermannizationInfo::hasSameBounds(
-    ArrayAckermannizationInfo &other) const {
+    const ArrayAckermannizationInfo &other) const {
   return (other.contiguousLSBitIndex == this->contiguousLSBitIndex) &&
          (other.contiguousMSBitIndex == this->contiguousMSBitIndex);
 }
@@ -99,6 +100,21 @@ bool ArrayAckermannizationInfo::containsByte(unsigned offset) const {
 
 bool ArrayAckermannizationInfo::containsBit(unsigned offset) const {
   return (offset >= contiguousLSBitIndex) && (offset <= contiguousMSBitIndex);
+}
+
+// Is `this` completely contained within other?
+bool ArrayAckermannizationInfo::isContainedWithin(
+    const ArrayAckermannizationInfo &other) const {
+  if (getWidth() >= other.getWidth()) {
+    return false;
+  }
+  return other.containsBit(contiguousLSBitIndex) &&
+         other.containsBit(contiguousMSBitIndex);
+}
+
+bool ArrayAckermannizationInfo::encloses(
+    const ArrayAckermannizationInfo &other) const {
+  return other.isContainedWithin(*this);
 }
 
 FindArrayAckermannizationVisitor::FindArrayAckermannizationVisitor(
