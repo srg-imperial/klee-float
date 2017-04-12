@@ -213,10 +213,6 @@ public:
   Z3ASTHandle addReplacementVariable(const ref<Expr> e, const char *prefix);
   // Clear the stored replacement variables.
   void clearReplacements();
-
-  // FIXME: This is a hack.
-  Z3ASTHandle addReplacementExpr(const ref<Expr> e,
-                                 const ref<Expr> replacement);
 };
 }
 
