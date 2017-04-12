@@ -424,8 +424,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
                    ie = aais->end();
                i != ie; ++i) {
             const ArrayAckermannizationInfo* info = &(*i);
-            if ((offset * 8) < info->contiguousLSBitIndex ||
-                (((offset + 1) * 8) -1) > info->contiguousMSBitIndex) {
+            if (!(info->containsByte(offset))) {
               continue;
             }
 
