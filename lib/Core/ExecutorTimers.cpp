@@ -84,6 +84,29 @@ static void setupHandler() {
   ::signal(SIGALRM, onAlarm);
 }
 
+// FIXME: Use LLVM style RTTI so we can know
+// at runtime when we have a HaltTimer rather
+// than doing this disgusting hack.
+static Executor::Timer *hack_haltTimer = NULL;
+const Executor::TimerInfo *Executor::getHaltTimer() const {
+  if (hack_haltTimer == NULL)
+    return NULL;
+  Executor::TimerInfo* ht = NULL;
+  for (std::vector<TimerInfo *>::const_iterator tii = timers.begin(),
+                                                tiie = timers.end();
+       tii != tiie; ++tii) {
+    TimerInfo *timerInfo = *tii;
+    if (timerInfo) {
+      // This is such a hack
+      if (timerInfo->timer == hack_haltTimer) {
+        ht = timerInfo;
+        break;
+      }
+    }
+  }
+  return ht;
+}
+
 void Executor::initTimers() {
   static bool first = true;
 
@@ -93,7 +116,9 @@ void Executor::initTimers() {
   }
 
   if (MaxTime) {
-    addTimer(new HaltTimer(this), MaxTime.getValue());
+    HaltTimer *ht = new HaltTimer(this);
+    hack_haltTimer = ht; // HACK
+    addTimer(ht, MaxTime.getValue());
   }
 }
 

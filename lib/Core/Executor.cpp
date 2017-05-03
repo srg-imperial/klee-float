@@ -370,7 +370,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
-  this->solver = new TimingSolver(solver, EqualitySubstitution);
+  this->solver = new TimingSolver(solver, this, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 
   if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
@@ -3835,6 +3835,11 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
          "Returned alignment must be a power of two");
   return alignment;
 }
+
+double Executor::getCoreSolverTimeout() const {
+  return coreSolverTimeout;
+}
+
 ///
 
 Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,
