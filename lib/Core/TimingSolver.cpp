@@ -54,9 +54,12 @@ cl::opt<double> DynamicSolverTimeoutMinQueryTimeDuringPathExploration(
 // HACK: This really belongs in the Executor but the Executor doesn't seem
 // completely consistent in the way in the way it sets the timeout so we hack
 // setting it here instead.
-void setDynamicTimeout(TimingSolver *s) {
+// Returns true if the underlying solver should be executed.
+bool setDynamicTimeout(TimingSolver *s) {
   if (!DynamicSolverTimeout)
-    return;
+    return true;
+
+  bool shouldRunSolver = true;
 
   // HACK: Try to get the HaltTimer
   static const Executor::TimerInfo *ht = NULL;
@@ -157,10 +160,19 @@ void setDynamicTimeout(TimingSolver *s) {
   }
   assert(isinf(timeoutToUse) == 0);
   assert(!isnan(timeoutToUse));
-  s->solver->setCoreSolverTimeout(timeoutToUse);
-  KLEE_DEBUG_WITH_TYPE("dynamic_solver_timeout",
-                       llvm::errs() << "Using dynamic solver timeout of "
-                                    << timeoutToUse << " seconds\n");
+  if (timeoutToUse > 0.0) {
+    s->solver->setCoreSolverTimeout(timeoutToUse);
+    KLEE_DEBUG_WITH_TYPE("dynamic_solver_timeout",
+                         llvm::errs() << "Using dynamic solver timeout of "
+                                      << timeoutToUse << " seconds\n");
+  } else {
+    KLEE_DEBUG_WITH_TYPE(
+        "dynamic_solver_timeout",
+        llvm::errs()
+            << "0.0 or negative timeout computed. Not invoking solver.\n");
+    shouldRunSolver = false;
+  }
+  return shouldRunSolver;
 }
 }
 
@@ -186,7 +198,9 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
-  setDynamicTimeout(this);
+  if (!setDynamicTimeout(this)) {
+    return false;
+  }
   bool success = solver->evaluate(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();
@@ -210,7 +224,9 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
-  setDynamicTimeout(this);
+  if (!setDynamicTimeout(this)) {
+    return false;
+  }
   bool success = solver->mustBeTrue(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();
@@ -257,7 +273,9 @@ bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr,
   if (simplifyExprs)
     expr = state.constraints.simplifyExpr(expr);
 
-  setDynamicTimeout(this);
+  if (!setDynamicTimeout(this)) {
+    return false;
+  }
   bool success = solver->getValue(Query(state.constraints, expr), result);
 
   sys::TimeValue delta = util::getWallTimeVal();
@@ -279,7 +297,9 @@ TimingSolver::getInitialValues(const ExecutionState& state,
 
   sys::TimeValue now = util::getWallTimeVal();
 
-  setDynamicTimeout(this);
+  if (!setDynamicTimeout(this)) {
+    return false;
+  }
   bool success = solver->getInitialValues(Query(state.constraints,
                                                 ConstantExpr::alloc(0, Expr::Bool)), 
                                           objects, result);
@@ -294,6 +314,11 @@ TimingSolver::getInitialValues(const ExecutionState& state,
 
 std::pair< ref<Expr>, ref<Expr> >
 TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
-  setDynamicTimeout(this);
+  if (!setDynamicTimeout(this)) {
+    // FIXME: Implementation doesn't actually define how to handle the solver
+    // not succeeding. Just do this for now. If we do this we will likely
+    // trigger a crash.
+    return std::make_pair(ref<Expr>(NULL), ref<Expr>(NULL));
+  }
   return solver->getRange(Query(state.constraints, expr));
 }
