@@ -25,16 +25,16 @@ cl::opt<std::string> InputFile(cl::desc("<input bytecode>"), cl::Positional,
 enum ExitCodes { SUCCESS, FAIL_TO_OPEN = 1, FAIL_TO_PARSE = 2 };
 
 struct BCSTats {
-  uint64_t num_functions_defns; // Function definitions
-  uint64_t num_functions_decls; // Function declarations
+  uint64_t num_function_defns; // Function definitions
+  uint64_t num_function_decls; // Function declarations
   uint64_t num_branches;        // Number of branches in module
 
-  BCSTats() : num_functions_defns(0), num_functions_decls(0), num_branches(0){};
+  BCSTats() : num_function_defns(0), num_function_decls(0), num_branches(0){};
 
   void dump(llvm::raw_ostream &os) {
     os << "num_branches: " << num_branches
-       << "\nnum_functions_defns: " << num_functions_defns
-       << "\nnum_functions_decls: " << num_functions_decls << "\n";
+       << "\nnum_function_defns: " << num_function_defns
+       << "\nnum_function_decls: " << num_function_decls << "\n";
   }
 
   void dump() { dump(errs()); }
@@ -65,10 +65,10 @@ int main(int argc, char **argv) {
   for (Module::iterator func = m->begin(), fie = m->end(); func != fie;
        ++func) {
     if (func->isDeclaration()) {
-      ++moduleStats.num_functions_decls;
+      ++moduleStats.num_function_decls;
       continue;
     }
-    ++moduleStats.num_functions_defns;
+    ++moduleStats.num_function_defns;
     errs() << "Processing: " << func->getName() << "\n";
 
     // TODO: Implement algorithm to count number of symbolic bytes.
