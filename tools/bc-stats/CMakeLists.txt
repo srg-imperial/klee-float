@@ -13,6 +13,7 @@ add_executable(bc-stats
 set(LLVM_COMPONENTS
   core
   bitreader
+  ipo
   support
 )
 

@@ -10,24 +10,37 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO.h"
 #include <string>
+#include <vector>
 
 using namespace llvm;
 
 namespace {
 cl::opt<std::string> InputFile(cl::desc("<input bytecode>"), cl::Positional,
                                cl::init("-"));
+
+cl::opt<std::string>
+    EntryPoint("entry-point",
+               cl::desc("Entry Point to use for DCE. By default don't do DCE"),
+               cl::init(""));
 }
 
-enum ExitCodes { SUCCESS, FAIL_TO_OPEN = 1, FAIL_TO_PARSE = 2 };
+enum ExitCodes {
+  SUCCESS,
+  FAIL_TO_OPEN = 1,
+  FAIL_TO_PARSE = 2,
+  FAIL_TO_FIND_ENTRY_POINT = 3
+};
 
 struct BCSTats {
   uint64_t num_function_defns; // Function definitions
   uint64_t num_function_decls; // Function declarations
-  uint64_t num_branches;        // Number of branches in module
+  uint64_t num_branches;       // Number of branches in module
 
   BCSTats() : num_function_defns(0), num_function_decls(0), num_branches(0){};
 
@@ -48,6 +61,7 @@ int main(int argc, char **argv) {
   OwningPtr<MemoryBuffer> BufferPtr;
   std::string errorMsg = "";
   error_code ec = MemoryBuffer::getFileOrSTDIN(InputFile.c_str(), BufferPtr);
+
   if (ec) {
     errs() << "Failed to open \"" << InputFile << "\"\n";
     return FAIL_TO_OPEN;
@@ -58,6 +72,20 @@ int main(int argc, char **argv) {
     errs() << "Failed to parse bitcode file: " << errorMsg << "\n";
     return FAIL_TO_PARSE;
   }
+
+  PassManager PM;
+  std::vector<const char *> exportFuncs;
+  if (EntryPoint.size() > 0) {
+    if (m->getFunction(EntryPoint) == NULL) {
+      errs() << "Cannot find entry point function \"" << EntryPoint << "\"\n";
+      return FAIL_TO_FIND_ENTRY_POINT;
+    }
+    exportFuncs.push_back(EntryPoint.c_str());
+    // This will remove dead globals
+    PM.add(createInternalizePass(exportFuncs));
+    PM.add(createGlobalDCEPass());
+  }
+  PM.run(*m);
 
   BCSTats moduleStats;
 
