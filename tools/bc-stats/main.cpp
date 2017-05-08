@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#include "klee/Internal/Support/Debug.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -107,14 +108,18 @@ int main(int argc, char **argv) {
            ++ii) {
         // This covers BranchInst, SwitchInst, IndirectBrInst, ReturnInst, etc..
         if (TerminatorInst *ti = dyn_cast<TerminatorInst>(ii)) {
-          errs() << "Found terminator instruction\n";
-          ti->dump();
+          KLEE_DEBUG_WITH_TYPE("branching",
+                               errs() << "Found terminator instruction\n");
+          KLEE_DEBUG_WITH_TYPE("branching", ti->dump());
           uint64_t successors = ti->getNumSuccessors();
           if (successors) {
             num_branches_in_function += (successors - 1);
-            errs() << "successors: " << successors << "\n";
+            KLEE_DEBUG_WITH_TYPE(
+                "branching", errs() << "successors: " << successors << "\n");
             if (successors > 1)
-              errs() << "Adding " << (successors - 1) << " branches\n";
+              KLEE_DEBUG_WITH_TYPE("branching",
+                                   errs() << "Adding " << (successors - 1)
+                                          << " branches\n");
           }
         }
       }
