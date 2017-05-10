@@ -26,6 +26,8 @@
 
 using namespace klee;
 using namespace llvm;
+using ::std::isinf;
+using ::std::isnan;
 
 namespace {
 cl::opt<bool>

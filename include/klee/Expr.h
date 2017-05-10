@@ -1082,6 +1082,12 @@ public:                                                 \
     static bool classof(const  _class_kind ## Expr *) { \
       return true;                                      \
     }                                                   \
+                                                        \
+  protected:                                            \
+    int compareContents(const Expr &b) const {          \
+      /* No attributes to compare.*/                    \
+      return 0;                                         \
+    }                                                   \
 };
 
 UNARY_EXPR_CLASS(FpClassify)
@@ -1523,6 +1529,12 @@ public:                                                  \
     static bool classof(const  _class_kind ## Expr *) {  \
       return true;                                       \
     }                                                    \
+	                                                     \
+  protected:                                             \
+    virtual int compareContents(const Expr &b) const {   \
+      /* No attributes to compare. */                    \
+      return 0;                                          \
+    }                                                    \
 };
 
 FLOAT_UNARY_EXPR_CLASS(FAbs)
@@ -1567,6 +1579,12 @@ public:                                                                         
     }                                                                                           \
     static bool classof(const  _class_kind ## Expr *) {                                         \
       return true;                                                                              \
+    }                                                                                           \
+	                                                                                            \
+  protected:                                                                                    \
+    virtual int compareContents(const Expr &b) const {                                          \
+      /* No attributes to compare. */                                                           \
+      return 0;                                                                                 \
     }                                                                                           \
 };
 
@@ -1624,6 +1642,12 @@ public:                                                              \
     static bool classof(const  _class_kind ## Expr *) {              \
       return true;                                                   \
     }                                                                \
+	                                                                 \
+  protected:                                                         \
+    virtual int compareContents(const Expr &b) const {               \
+      /* No attributes to compare. */                                \
+      return 0;                                                      \
+    }                                                                \
 };                                                                   \
 
 FLOAT_BINARY_EXPR_CLASS(FMin)
@@ -1673,6 +1697,12 @@ public:                                                                         
     }                                                                                                \
     static bool classof(const  _class_kind ## Expr *) {                                              \
       return true;                                                                                   \
+    }                                                                                                \
+	                                                                                                 \
+  protected:                                                                                         \
+    virtual int compareContents(const Expr &b) const {                                               \
+      /* No attributes to compare. */                                                                \
+      return 0;                                                                                      \
     }                                                                                                \
 };                                                                                                   \
 
@@ -1734,6 +1764,11 @@ public:
     return E->getKind() == Expr::FSelect;
   }
   static bool classof(const FSelectExpr *) { return true; }
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    return 0;
+  }
 };
 
 class FConstantExpr : public FExpr {
@@ -1779,6 +1814,15 @@ public:
   /// \param Res specifies the string for the result to be placed in
   /// \param radix specifies the base (e.g. 2,10,16). The default is base 10
   void toString(std::string &Res) const;
+
+  int compareContents(const Expr &b) const {
+    const FConstantExpr &cb = static_cast<const FConstantExpr &>(b);
+    if (getWidth() != cb.getWidth())
+      return getWidth() < cb.getWidth() ? -1 : 1;
+    if (value.bitwiseIsEqual(cb.value) || !correctHiddenBit || !cb.correctHiddenBit)
+      return 0;
+	return value.bitcastToAPInt().ult(cb.value.bitcastToAPInt()) ? -1 : 1;
+  }
   
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
     assert(0 && "rebuild() on FConstantExpr");
