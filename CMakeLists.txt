@@ -259,7 +259,8 @@ endif()
 ################################################################################
 # C++ version
 ################################################################################
-option(USE_CXX11 "Use C++11" OFF)
+# HACK: Aachen changes need C++11
+option(USE_CXX11 "Use C++11" ON)
 if ("${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.5.0")
   message(STATUS "Using LLVM >= 3.5.0. Forcing using C++11")
   set(USE_CXX11 ON CACHE BOOL "Use C++11" FORCE)
