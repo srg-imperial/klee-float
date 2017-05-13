@@ -225,7 +225,8 @@ static bool EvaluateInputAST(const char *Filename,
                                    getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
                                    getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
                                    getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
-                                   getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME));
+                                   getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME),
+                                   getQueryLogPath(SOLVER_QUERIES_CORE_SOLVER_FILE_NAME));
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),

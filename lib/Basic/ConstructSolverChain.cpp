@@ -20,7 +20,8 @@ Solver *constructSolverChain(Solver *coreSolver,
                              std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
                              std::string queryKQueryLogPath,
-                             std::string baseSolverQueryKQueryLogPath) {
+                             std::string baseSolverQueryKQueryLogPath,
+                             std::string baseSolverCoreSolverLogPath) {
   Solver *solver = coreSolver;
 
   if (optionIsSet(queryLoggingOptions, SOLVER_KQUERY)) {
@@ -35,6 +36,13 @@ Solver *constructSolverChain(Solver *coreSolver,
                                        MinQueryTimeToLog);
     klee_message("Logging queries that reach solver in .smt2 format to %s\n",
                  baseSolverQuerySMT2LogPath.c_str());
+  }
+
+  if (optionIsSet(queryLoggingOptions, SOLVER_CORE_SOLVER_LANG)) {
+    solver = createCoreSolverLangLoggingSolver(solver, baseSolverCoreSolverLogPath,
+                                       MinQueryTimeToLog);
+    klee_message("Logging queries that reach solver in native solver format to %s\n",
+                 baseSolverCoreSolverLogPath.c_str());
   }
 
   if (UseFastCexSolver)

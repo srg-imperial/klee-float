@@ -368,7 +368,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
-      interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
+      interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME),
+      interpreterHandler->getOutputFilename(SOLVER_QUERIES_CORE_SOLVER_FILE_NAME));
 
   this->solver = new TimingSolver(solver, this, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);

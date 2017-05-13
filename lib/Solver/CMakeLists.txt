@@ -11,6 +11,7 @@ klee_add_component(kleaverSolver
   CexCachingSolver.cpp
   ConstantDivision.cpp
   CoreSolver.cpp
+  CoreSolverLangLoggingSolver.cpp
   DummySolver.cpp
   FastCexSolver.cpp
   IncompleteSolver.cpp

@@ -35,7 +35,8 @@ enum QueryLoggingSolverType
     ALL_KQUERY,   ///< Log all queries (un-optimised) in .kquery (KQuery) format
     ALL_SMTLIB,   ///< Log all queries (un-optimised)  .smt2 (SMT-LIBv2) format
     SOLVER_KQUERY,///< Log queries passed to solver (optimised) in .kquery (KQuery) format
-    SOLVER_SMTLIB ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
+    SOLVER_SMTLIB, ///< Log queries passed to solver (optimised) in .smt2 (SMT-LIBv2) format
+    SOLVER_CORE_SOLVER_LANG ///< Log queries in core solver's language
 };
 
 /* Using cl::list<> instead of cl::bits<> results in quite a bit of ugliness when it comes to checking
