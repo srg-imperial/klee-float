@@ -39,6 +39,10 @@ llvm::cl::opt<bool> Z3SolverUseToIEEEBV(
     "z3-solver-use-to-ieee-bv", llvm::cl::init(true),
     llvm::cl::desc("Use fp.to_ieee_bv function in queries"
                    "(experimental) (default true)"));
+
+llvm::cl::opt<std::string> Z3LogInteractionFile(
+    "z3-log-interaction", llvm::cl::init(""),
+    llvm::cl::desc("Log interaction with Z3 to the specified path"));
 }
 
 
@@ -99,7 +103,8 @@ public:
 
 Z3SolverImpl::Z3SolverImpl()
     : builder(new Z3Builder(/*autoClearConstructCache=*/false,
-                            /*useToIEEEBVFunction=*/Z3SolverUseToIEEEBV)),
+                            /*useToIEEEBVFunction=*/Z3SolverUseToIEEEBV,
+                            /*z3LogInteractionFile=*/Z3LogInteractionFile.c_str())),
       timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE),
       dumpedQueriesFile(0) {
   assert(builder && "unable to create Z3Builder");
@@ -177,8 +182,11 @@ char *Z3SolverImpl::getConstraintLog(const Query &query,
   //
   // In particular using the same builder causes problems with the array
   // ackermannization code.
+  // NOTE: The builder does not set `z3LogInteractionFile` to avoid conflicting
+  // with whatever the solver's builder is set to do.
   Z3Builder temp_builder(/*autoClearConstructCache=*/false,
-                         z3clc->useToIEEEBVFunction);
+                         z3clc->useToIEEEBVFunction,
+                         /*z3LogInteractionFile=*/NULL);
 
   if (z3clc->ackermannizeArrays) {
     // Config requests to ackermannize the logged query.

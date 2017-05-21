@@ -112,6 +112,7 @@ class Z3Builder {
   // translation to Z3's constraint language. Clients should assert
   // these.
   std::vector<Z3ASTHandle> sideConstraints;
+  std::string z3LogInteractionFile;
 
 private:
   Z3ASTHandle bvOne(unsigned width);
@@ -190,7 +191,15 @@ public:
   const bool useToIEEEBVFunction;
   Z3_context ctx;
 
-  Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction);
+  /// \param autoClearConstructCache
+  /// \param useToIEEEBVFunction
+  /// \param _z3LogInteractionFile - If not NULL will cause Z3 API
+  /// interaction log to opened at the specified path. This log is
+  /// global so if multiple `Z3Builder`s are created only one can
+  /// specifiy the path and all `Z3Builder`s will log their API calls.
+  /// The others must NULL for this parameter.
+  Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction,
+            const char *z3LogInteractionFile);
   ~Z3Builder();
 
   Z3ASTHandle getTrue();

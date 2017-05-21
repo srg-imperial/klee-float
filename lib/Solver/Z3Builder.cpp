@@ -27,9 +27,8 @@ llvm::cl::opt<bool> UseConstructHashZ3(
     llvm::cl::desc("Use hash-consing during Z3 query construction."),
     llvm::cl::init(true));
 
-llvm::cl::opt<std::string> Z3LogInteractionFile(
-    "z3-log-interaction", llvm::cl::init(""),
-    llvm::cl::desc("Log interaction with Z3 to the specified path"));
+// FIXME: This should be std::atomic<bool>
+bool Z3InterationLogOpen = false;
 }
 
 namespace klee {
@@ -61,9 +60,9 @@ void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
   }
   llvm::errs() << "Error: Incorrect use of Z3. [" << ec << "] " << errorMsg
                << "\n";
-  if (Z3LogInteractionFile.length() > 0) {
-    Z3_close_log();
-  }
+  // NOTE: The current implementation of `Z3_close_log()` can be safely
+  // called even if the log isn't open.
+  Z3_close_log();
   abort();
 }
 
@@ -78,13 +77,19 @@ void Z3ArrayExprHash::clearUpdates() {
   _update_node_hash.clear();
 }
 
-Z3Builder::Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction)
-    : autoClearConstructCache(autoClearConstructCache),
+Z3Builder::Z3Builder(bool autoClearConstructCache, bool useToIEEEBVFunction,
+                     const char* z3LogInteractionFileArg)
+    : z3LogInteractionFile(""),
+      autoClearConstructCache(autoClearConstructCache),
       useToIEEEBVFunction(useToIEEEBVFunction) {
-  if (Z3LogInteractionFile.length() > 0) {
-    llvm::errs() << "Logging Z3 interaction to \"" << Z3LogInteractionFile
+  if (z3LogInteractionFileArg)
+    this->z3LogInteractionFile = std::string(z3LogInteractionFileArg);
+  if (z3LogInteractionFile.length() > 0) {
+    llvm::errs() << "Logging Z3 interaction to \"" << z3LogInteractionFile
                  << "\"\n";
-    Z3_open_log(Z3LogInteractionFile.c_str());
+    assert(!Z3InterationLogOpen && "interaction log should not already be open");
+    Z3_open_log(z3LogInteractionFile.c_str());
+    Z3InterationLogOpen = true;
   }
 
   // FIXME: Should probably let the client pass in a Z3_config instead
@@ -111,8 +116,9 @@ Z3Builder::~Z3Builder() {
 }
 
 void Z3Builder::closeInteractionLog() {
-  if (Z3LogInteractionFile.length() > 0) {
+  if (z3LogInteractionFile.length() > 0) {
     Z3_close_log();
+    Z3InterationLogOpen = false;
   }
 }
 
