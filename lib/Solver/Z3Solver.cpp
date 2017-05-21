@@ -43,6 +43,10 @@ llvm::cl::opt<bool> Z3SolverUseToIEEEBV(
 llvm::cl::opt<std::string> Z3LogInteractionFile(
     "z3-log-interaction", llvm::cl::init(""),
     llvm::cl::desc("Log interaction with Z3 to the specified path"));
+
+llvm::cl::opt<unsigned> Z3VerbosityLevel(
+    "z3-verbosity", llvm::cl::init(0),
+    llvm::cl::desc("Z3 verboseity level (default=0)"));
 }
 
 
@@ -122,6 +126,12 @@ Z3SolverImpl::Z3SolverImpl()
   // https://github.com/Z3Prover/z3/issues/507
   Z3_global_param_set("rewriter.hi_fp_unspecified", "true");
 
+  // Set verbosity
+  std::string underlyingString;
+  llvm::raw_string_ostream ss(underlyingString);
+  ss << Z3VerbosityLevel;
+  ss.flush();
+  Z3_global_param_set("verbose", underlyingString.c_str());
   if (!Z3QueryDumpFile.empty()) {
     std::string error;
     // FIXME: This partially comes from KleeHandler::openOutputFile(). That
