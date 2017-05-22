@@ -47,6 +47,11 @@ llvm::cl::opt<std::string> Z3LogInteractionFile(
 llvm::cl::opt<unsigned> Z3VerbosityLevel(
     "z3-verbosity", llvm::cl::init(0),
     llvm::cl::desc("Z3 verboseity level (default=0)"));
+
+llvm::cl::opt<bool> Z3UseDefaultTactic(
+    "z3-use-default-tactic", llvm::cl::init(false),
+    llvm::cl::desc("Use \"default\" tactic instead of Z3_mk_simple_solver"
+                   "(experimental) (default false)"));
 }
 
 
@@ -309,7 +314,16 @@ bool Z3SolverImpl::internalRunSolver(
   // impact vs making one global solver and using push and pop?
   // TODO: is the "simple_solver" the right solver to use for
   // best performance?
-  Z3_solver theSolver = Z3_mk_simple_solver(builder->ctx);
+  Z3_tactic theTactic = NULL;
+  Z3_solver theSolver = NULL;
+  if (Z3UseDefaultTactic) {
+    theTactic = Z3_mk_tactic(builder->ctx, "default");
+    Z3_tactic_inc_ref(builder->ctx, theTactic);
+    theSolver = Z3_mk_solver_from_tactic(builder->ctx, theTactic);
+  }
+  else {
+    theSolver = Z3_mk_simple_solver(builder->ctx);
+  }
   Z3_solver_inc_ref(builder->ctx, theSolver);
   Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
 
@@ -373,6 +387,8 @@ bool Z3SolverImpl::internalRunSolver(
   }
 
   Z3_solver_dec_ref(builder->ctx, theSolver);
+  if (Z3UseDefaultTactic)
+    Z3_tactic_dec_ref(builder->ctx, theTactic);
   // Clear the builder's cache to prevent memory usage exploding.
   // By using ``autoClearConstructCache=false`` and clearning now
   // we allow Z3_ast expressions to be shared from an entire
