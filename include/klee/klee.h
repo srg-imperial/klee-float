@@ -152,9 +152,6 @@ extern "C" {
   /* Print range for given argument and tagged with name */
   void klee_print_range(const char * name, int arg );
 
-  /* Merge current states together if possible */
-  void klee_merge();
-
 #ifdef __cplusplus
 #define KLEE_BOOL_TYPE bool
 #else
