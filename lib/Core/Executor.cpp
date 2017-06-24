@@ -2868,7 +2868,6 @@ void Executor::continueState(ExecutionState &state){
   }
 }
 
-
 void Executor::terminateState(ExecutionState &state) {
   if (replayKTest && replayPosition!=replayKTest->numObjects) {
     klee_warning_once(replayKTest,

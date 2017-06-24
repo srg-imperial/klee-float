@@ -125,7 +125,8 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
-    roundingMode(state.roundingMode)
+    roundingMode(state.roundingMode),
+    openMergeStack(state.openMergeStack)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
