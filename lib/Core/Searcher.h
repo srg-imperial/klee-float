@@ -10,11 +10,12 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "klee/ExecutionState.h"
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
-#include <set>
 #include <map>
 #include <queue>
+#include <set>
+#include <vector>
 
 namespace llvm {
   class BasicBlock;
@@ -24,60 +25,59 @@ namespace llvm {
 }
 
 namespace klee {
-  template<class T> class DiscretePDF;
-  class ExecutionState;
-  class Executor;
+template <class T, class Compare> class DiscretePDF;
+class Executor;
 
-  class Searcher {
-  public:
-    virtual ~Searcher();
+class Searcher {
+public:
+  virtual ~Searcher();
 
-    virtual ExecutionState &selectState() = 0;
+  virtual ExecutionState &selectState() = 0;
 
-    virtual void update(ExecutionState *current,
-                        const std::vector<ExecutionState *> &addedStates,
-                        const std::vector<ExecutionState *> &removedStates) = 0;
+  virtual void update(ExecutionState *current,
+                      const std::vector<ExecutionState *> &addedStates,
+                      const std::vector<ExecutionState *> &removedStates) = 0;
 
-    virtual bool empty() = 0;
+  virtual bool empty() = 0;
 
-    // prints name of searcher as a klee_message()
-    // TODO: could probably make prettier or more flexible
-    virtual void printName(llvm::raw_ostream &os) {
-      os << "<unnamed searcher>\n";
-    }
+  // prints name of searcher as a klee_message()
+  // TODO: could probably make prettier or more flexible
+  virtual void printName(llvm::raw_ostream &os) {
+    os << "<unnamed searcher>\n";
+  }
 
-    // pgbovine - to be called when a searcher gets activated and
-    // deactivated, say, by a higher-level searcher; most searchers
-    // don't need this functionality, so don't have to override.
-    virtual void activate() {}
-    virtual void deactivate() {}
+  // pgbovine - to be called when a searcher gets activated and
+  // deactivated, say, by a higher-level searcher; most searchers
+  // don't need this functionality, so don't have to override.
+  virtual void activate() {}
+  virtual void deactivate() {}
 
-    // utility functions
+  // utility functions
 
-    void addState(ExecutionState *es, ExecutionState *current = 0) {
-      std::vector<ExecutionState *> tmp;
-      tmp.push_back(es);
-      update(current, tmp, std::vector<ExecutionState *>());
-    }
+  void addState(ExecutionState *es, ExecutionState *current = 0) {
+    std::vector<ExecutionState *> tmp;
+    tmp.push_back(es);
+    update(current, tmp, std::vector<ExecutionState *>());
+  }
 
-    void removeState(ExecutionState *es, ExecutionState *current = 0) {
-      std::vector<ExecutionState *> tmp;
-      tmp.push_back(es);
-      update(current, std::vector<ExecutionState *>(), tmp);
-    }
+  void removeState(ExecutionState *es, ExecutionState *current = 0) {
+    std::vector<ExecutionState *> tmp;
+    tmp.push_back(es);
+    update(current, std::vector<ExecutionState *>(), tmp);
+  }
 
-    enum CoreSearchType {
-      DFS,
-      BFS,
-      RandomState,
-      RandomPath,
-      NURS_CovNew,
-      NURS_MD2U,
-      NURS_Depth,
-      NURS_ICnt,
-      NURS_CPICnt,
-      NURS_QC
-    };
+  enum CoreSearchType {
+    DFS,
+    BFS,
+    RandomState,
+    RandomPath,
+    NURS_CovNew,
+    NURS_MD2U,
+    NURS_Depth,
+    NURS_ICnt,
+    NURS_CPICnt,
+    NURS_QC
+  };
   };
 
   class DFSSearcher : public Searcher {
@@ -134,7 +134,26 @@ namespace klee {
     };
 
   private:
-    DiscretePDF<ExecutionState*> *states;
+    // This provides a custom comparison function to `DiscretePDF<>` so that it
+    // doesn't rely on pointer addresses for ordering. Instead we use the
+    // `ExecutionState`'s uniqueID.
+    struct ExecutionStateLessThanCmp {
+      bool operator()(const ExecutionState *lhs,
+                      const ExecutionState *rhs) const {
+        if (lhs == rhs) {
+          return false;
+        }
+        assert(lhs != NULL);
+        assert(rhs != NULL);
+#ifndef NDEBUG
+        if (lhs != rhs) {
+          assert(lhs->uniqueID != rhs->uniqueID);
+        }
+#endif
+        return lhs->uniqueID < rhs->uniqueID;
+      }
+    };
+    DiscretePDF<ExecutionState *, ExecutionStateLessThanCmp> *states;
     WeightType type;
     bool updateWeights;
     
