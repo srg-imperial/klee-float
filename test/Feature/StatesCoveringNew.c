@@ -24,7 +24,13 @@ void f2(void) {}
 void f3(void) {}
 
 int main() {
-  int x = klee_range(0, 256, "x");
+  // int x = klee_range(0, 256, "x");
+  // Workaround broken prefex cex implementation.
+  // See https://github.com/klee/klee/issues/706
+  int x = 0;
+  klee_make_symbolic(&x, sizeof(x), "x");
+  klee_assume(x >= 0);
+  klee_assume(x < 256);
 
   if (x == 17) {
     f0();
