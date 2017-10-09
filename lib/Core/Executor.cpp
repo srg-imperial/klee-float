@@ -374,6 +374,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   this->solver = new TimingSolver(solver, this, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 
+  initializeSearchOptions();
+
   if (optionIsSet(DebugPrintInstructions, FILE_ALL) ||
       optionIsSet(DebugPrintInstructions, FILE_COMPACT) ||
       optionIsSet(DebugPrintInstructions, FILE_SRC)) {
