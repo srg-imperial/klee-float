@@ -5,22 +5,12 @@
 
 set -e
 
-EXPECTED_COMSYS_IMG_SHA256="sha256:c83f50ae1271b17b1eeb27a0e3ebf4f659bfdb96134d35358df0355e3ce26d2f"
-
 # Check the base image version
 BASE_IMG="comsys/klee-dev-fpbench-prebuilt:latest"
 
 docker inspect --format "ok" ${BASE_IMG}
 if [ "$?" -ne 0 ]; then
   echo "Could not find image ${BASE_IMG}"
-fi
-
-COMSYS_IMG_SHA256=$(docker inspect --format "{{.Id}}" ${BASE_IMG})
-
-if [ "X${COMSYS_IMG_SHA256}" != "X${EXPECTED_COMSYS_IMG_SHA256}" ]; then
-  echo "Unexpected base image: ${COMSYS_IMG_SHA256}"
-  echo "Expect base image is: ${EXPECTED_COMSYS_IMG_SHA256}"
-  exit 1
 fi
 
 SCRIPTS_PATH=$( cd ${BASH_SOURCE[0]%/*} ; echo "$PWD" )
