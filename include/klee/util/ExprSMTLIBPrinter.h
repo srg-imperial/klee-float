@@ -116,8 +116,8 @@ public:
     ABBR_NAMED ///< Abbreviate with :named annotations.
   };
 
-  /// Different supported SMTLIBv2 sorts (a.k.a type) in QF_AUFBV
-  enum SMTLIB_SORT { SORT_BITVECTOR, SORT_BOOL };
+  /// Different supported SMTLIBv2 sorts (a.k.a type) in QF_FPABV
+  enum SMTLIB_SORT { SORT_BITVECTOR, SORT_BOOL, SORT_FP };
 
   /// Allows the way Constant bitvectors are printed to be changed.
   /// This setting is persistent across queries.
@@ -238,7 +238,7 @@ protected:
   SMTLIB_SORT getSort(const ref<Expr> &e);
 
   /// Print an expression but cast it to a particular SMTLIBv2 sort first.
-  void printCastToSort(const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT sort);
+  void printCastToSort(const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT sort, ExprSMTLIBPrinter::SMTLIB_SORT constSort = SORT_BITVECTOR);
 
   // Resets various internal objects for a new query
   void reset();
@@ -278,14 +278,14 @@ protected:
 
   /// Print a Constant in the format specified by the current "Constant Display
   /// Mode"
-  void printConstant(const ref<ConstantExpr> &e);
+  void printConstant(const ref<ConstantExpr> &e, ExprSMTLIBPrinter::SMTLIB_SORT constSort = SORT_BITVECTOR);
 
   /// Recursively print expression
   /// \param e is the expression to print
   /// \param expectedSort is the sort we want. If "e" is not of the right type a
   /// cast will be performed.
   /// \param abbrMode the abbreviation mode to use for this expression
-  void printExpression(const ref<Expr> &e, SMTLIB_SORT expectedSort);
+  void printExpression(const ref<Expr> &e, SMTLIB_SORT expectedSort, ExprSMTLIBPrinter::SMTLIB_SORT constSort = SORT_BITVECTOR);
 
   /// Scan Expression recursively for Arrays in expressions. Found arrays are
   /// added to
@@ -323,7 +323,7 @@ protected:
 
   // For the set of operators that take sort "s" arguments
   void printSortArgsExpr(const ref<Expr> &e,
-                                 ExprSMTLIBPrinter::SMTLIB_SORT s);
+                         ExprSMTLIBPrinter::SMTLIB_SORT s, ExprSMTLIBPrinter::SMTLIB_SORT c = SORT_BITVECTOR);
 
   /// For the set of operators that come in two sorts (e.g. (and () ()) (bvand
   /// () ()) )
@@ -369,7 +369,7 @@ private:
   getSMTLIBOptionString(ExprSMTLIBPrinter::SMTLIBboolOptions option);
 
   /// Print expression without top-level abbreviations
-  void printFullExpression(const ref<Expr> &e, SMTLIB_SORT expectedSort);
+  void printFullExpression(const ref<Expr> &e, SMTLIB_SORT expectedSort, ExprSMTLIBPrinter::SMTLIB_SORT constSort = SORT_BITVECTOR);
 
   /// Print an assert statement for the given expr.
   void printAssert(const ref<Expr> &e);
